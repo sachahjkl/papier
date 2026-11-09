@@ -125,21 +125,40 @@ image_size :: proc(b: []u8) -> (w, h: int) {
 	return be(b[16:20]), be(b[20:24])
 }
 
-// The text of HTML without its tags, its blanks run together (for a preview: the entities stay as they are).
+// The text of HTML without its tags, its blanks run together (for a preview: the entities stay as they are). A tag that
+// is not inline (a paragraph, a heading, a line break, a cell) parts the words on its two sides.
 strip_tags :: proc(html: string, allocator := context.temp_allocator) -> string {
 	b := strings.builder_make(allocator)
-	in_tag, blank := false, false
-	for c in html {
-		switch {
-		case c == '<': in_tag = true
-		case c == '>': in_tag = false
-		case in_tag:
-		case c == ' ' || c == '\n' || c == '\t' || c == '\r':
-			blank = strings.builder_len(b) > 0
-		case:
-			if blank { strings.write_byte(&b, ' '); blank = false }
-			strings.write_rune(&b, c)
+	blank := false
+	for i := 0; i < len(html); i += 1 {
+		c := html[i]
+		if c == '<' {
+			end := strings.index_byte(html[i:], '>')
+			if end < 0 { break }
+			if !inline_tag(html[i + 1:i + end]) { blank = strings.builder_len(b) > 0 }
+			i += end
+			continue
 		}
+		if c == ' ' || c == '\n' || c == '\t' || c == '\r' {
+			blank = strings.builder_len(b) > 0
+			continue
+		}
+		if blank { strings.write_byte(&b, ' '); blank = false }
+		strings.write_byte(&b, c)
 	}
 	return strings.to_string(b)
+}
+
+// Whether the tag whose text (between < and >) is `tag` keeps its words in the line: <b>, </em>, <a href=...>.
+@(private = "file")
+inline_tag :: proc(tag: string) -> bool {
+	t := strings.trim_prefix(tag, "/")
+	n := 0
+	for n < len(t) && t[n] != ' ' && t[n] != '/' && t[n] != '\t' && t[n] != '\n' { n += 1 }
+	switch strings.to_lower(t[:n], context.temp_allocator) {
+	case "a", "abbr", "b", "bdi", "bdo", "cite", "code", "data", "dfn", "em", "font", "i", "kbd", "mark", "q", "s", "samp",
+	     "small", "span", "strong", "sub", "sup", "time", "u", "var", "wbr":
+		return true
+	}
+	return false
 }

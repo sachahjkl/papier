@@ -69,6 +69,8 @@ classify_picks_the_main_representation :: proc(t: ^testing.T) {
 @(test)
 html_without_text_is_read_without_its_tags :: proc(t: ^testing.T) {
 	testing.expect_value(t, strip_tags("<p>one\n  <b>two</b></p>"), "one two")
+	testing.expect_value(t, strip_tags("<h2>Notes</h2><p>Papier <b>0.1</b>keeps<br>it</p>"), "Notes Papier 0.1keeps it")
+	testing.expect_value(t, strip_tags(`<a href="x">link</a>ed`), "linked")
 }
 
 // A program that offers its markup as text too (wl-copy -t text/html): the entry is HTML, keyed and previewed by it.

@@ -5,7 +5,7 @@ package papier
 // one poll on the Wayland connection, the socket and an eventfd: 0 % CPU at rest. It is the history's only writer; the
 // window reads the index again when `version` moves.
 //
-// What the window must do (show, hide, quit) goes back to it through `requests` and a wake of its window.
+// What the window must do (show, hide, quit) goes back to it through `asked`, in order, and a wake of its window.
 
 import "core:fmt"
 import "core:sync"
@@ -24,8 +24,7 @@ DAEMON_NAME :: "papier.daemon"
 RECEIVE_WAIT_MS :: 1500
 
 // What the watcher asks of the window (a bit set, atomic).
-Request :: enum u32 { Show, Hide, Toggle, Quit, Reload }
-Requests :: bit_set[Request; u32]
+Request :: enum u8 { Show, Hide, Toggle, Quit, Reload }
 
 Watcher :: struct {
 	settings:  Settings,             // the watcher's own copy
@@ -37,7 +36,7 @@ Watcher :: struct {
 	wake_fd:   posix.FD,             // eventfd: the window's commands are queued
 	mutex:     sync.Mutex,
 	queue:     [dynamic]Command,     // guarded by `mutex`
-	requests:  u32,                  // atomic: Requests for the window
+	asked:     [dynamic]Request,     // for the window, in the order they came (a hide then a show ends shown); guarded by `mutex`
 	version:   u64,                  // atomic: bumped after each change of the index on the disk
 	stop:      bool,                 // atomic
 	error:     string,               // why it stopped, when it did by itself (read after the thread ended)
@@ -65,6 +64,7 @@ watcher_stop :: proc(wt: ^Watcher) {
 	}
 	posix.close(wt.wake_fd)
 	delete(wt.queue)
+	delete(wt.asked)
 	settings_free(&wt.settings)
 	delete(wt.error)
 }
@@ -76,9 +76,13 @@ watcher_send :: proc(wt: ^Watcher, c: Command) {
 	watcher_poke(wt)
 }
 
-// The requests for the window since the last call.
-watcher_take_requests :: proc(wt: ^Watcher) -> Requests {
-	return transmute(Requests)sync.atomic_exchange(&wt.requests, 0)
+// The requests for the window since the last call, in the order they came (temp allocator).
+watcher_take_requests :: proc(wt: ^Watcher) -> []Request {
+	sync.guard(&wt.mutex)
+	out := make([]Request, len(wt.asked), context.temp_allocator)
+	copy(out, wt.asked[:])
+	clear(&wt.asked)
+	return out
 }
 
 @(private = "file")
@@ -89,7 +93,9 @@ watcher_poke :: proc(wt: ^Watcher) {
 
 @(private = "file")
 watcher_request :: proc(wt: ^Watcher, r: Request) {
-	sync.atomic_or(&wt.requests, transmute(u32)Requests{r})
+	sync.mutex_lock(&wt.mutex)
+	append(&wt.asked, r)
+	sync.mutex_unlock(&wt.mutex)
 	platform.wake(wt.window)
 }
 

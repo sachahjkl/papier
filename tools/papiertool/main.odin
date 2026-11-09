@@ -25,6 +25,7 @@ COMMANDS :: [?]Command{
 	{name = "test", about = "the tests of the program, of its packages and of this tool", run = run_test},
 	{name = "check", about = "odin check of the program and of this tool (-vet), the tests, then a release build", run = run_check},
 	{name = "logo", about = "assets/logo*.png, drawn by the toolkit's paint package", run = run_logo},
+	{name = "shots", about = "[--out folder]: the pictures of the README and the site, the program's own frames in a sway nobody sees", run = run_shots},
 	{name = "live", about = "[--keep]: the real program in a sway nobody sees: copies of each kind, a secret, the window hidden and shown", run = run_live},
 }
 

@@ -38,6 +38,7 @@ App :: struct {
 	watcher:    Watcher,
 	tray:       ^platform.Tray,
 	devtools:   ^devtools.Server,   // TOOLKIT_DEVTOOLS=<port>: driven and captured over the Chrome DevTools Protocol
+	palette_applied: string,        // the theme the palette was last made from (owned)
 	visible:    bool,
 	hide_due:   bool,               // app_hide was asked: the window goes after this frame
 	quit:       bool,
@@ -140,6 +141,7 @@ app_free :: proc(app: ^App) {
 	delete(app.ids)
 	delete(app.query)
 	delete(app.status)
+	delete(app.palette_applied)
 	ui.field_destroy(&app.search)
 	ui.vlist_destroy(&app.vl)
 	history.close(&app.store)
@@ -151,7 +153,12 @@ app_free :: proc(app: ^App) {
 @(private = "file")
 app_params :: proc(h: ^host.Host, bp: ^ui.Build_Params) {
 	app := (^App)(h.user)
-	ui.apply_palette(&app.shared.theme, palette_of(app.settings.theme))
+	// (only when it changes: a palette applied starts a cross-fade, which asks for frames)
+	if app.settings.theme != app.palette_applied {
+		ui.apply_palette(&app.shared.theme, palette_of(app.settings.theme))
+		delete(app.palette_applied)
+		app.palette_applied = strings.clone(app.settings.theme)
+	}
 	bp.base = ui.Style{pref = {.X = ui.text_size(), .Y = ui.px(28)}, font = app.shared.font, font_size = app.settings.font_size, text_pad = 6, cursor = .Arrow}
 }
 
@@ -174,16 +181,20 @@ app_input :: proc(h: ^host.Host, events: []platform.Event) -> []platform.Event {
 // Shows the window as a new look at the history: the newest first, the search empty, the keyboard in it.
 app_show :: proc(app: ^App) {
 	app_reload(app)
+	// a new look, unless the window is shown and stays so (a hide asked in this step, then a show: a new look, in place)
+	if !app.visible || app.hide_due {
+		ui.field_clear(&app.search)
+		app.filter = .All
+		refilter(app)
+		select_row(app, 0)
+		ui.vlist_scroll_to(&app.vl, 0)
+	}
+	app.hide_due = false
 	if app.visible {
 		platform.raise_window(app.main.win)
+		app.main.settle = max(app.main.settle, FRAMES_AT_SHOW)
 		return
 	}
-	ui.field_clear(&app.search)
-	app.filter = .All
-	refilter(app)
-	select_row(app, 0)
-	ui.vlist_scroll_to(&app.vl, 0)
-	app.hide_due = false
 	host.host_show(&app.main)
 	app.visible = true
 	app.main.settle = max(app.main.settle, FRAMES_AT_SHOW)
@@ -238,17 +249,20 @@ app_reload :: proc(app: ^App) {
 // What the watcher asked for.
 @(private = "file")
 app_requests :: proc(app: ^App) {
-	r := watcher_take_requests(&app.watcher)
-	if .Quit in r { app.quit = true; return }
-	if .Reload in r {
-		config.prefs_destroy(&app.prefs)
-		prefs_open(&app.prefs, nil)
-		settings_free(&app.settings)
-		app.settings = prefs_read(&app.prefs)
+	// (in the order they came: a hide then a show ends shown, whatever came between two steps of the loop)
+	for r in watcher_take_requests(&app.watcher) {
+		switch r {
+		case .Quit: app.quit = true; return
+		case .Reload:
+			config.prefs_destroy(&app.prefs)
+			prefs_open(&app.prefs, nil)
+			settings_free(&app.settings)
+			app.settings = prefs_read(&app.prefs)
+		case .Toggle: if app.visible && !app.hide_due { app_hide(app) } else { app_show(app) }
+		case .Show:   app_show(app)
+		case .Hide:   app_hide(app)
+		}
 	}
-	if .Toggle in r { if app.visible { app_hide(app) } else { app_show(app) } }
-	if .Show in r { app_show(app) }
-	if .Hide in r { app_hide(app) }
 	app_reload(app)
 }
 
@@ -257,7 +271,7 @@ app_tray :: proc(app: ^App) {
 	if app.tray == nil { return }
 	for e in platform.tray_poll(app.tray) {
 		#partial switch e.kind {
-		case .Click: if app.visible { app_hide(app) } else { app_show(app) }
+		case .Click: if app.visible && !app.hide_due { app_hide(app) } else { app_show(app) }
 		case .Menu_Item:
 			switch Tray_Item(e.item) {
 			case .Show:  app_show(app)

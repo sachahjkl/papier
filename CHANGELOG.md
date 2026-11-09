@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-09
+
 ### Fixed
 - **papier is in no task bar while hidden** (gui_toolkit 0.114.2): started with `--hidden`, its window was a toplevel
   with no picture, and ShojiWM's task bar listed it. The toplevel is now made when the window shows.
@@ -74,3 +76,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.1.3]: https://github.com/sachahjkl/papier/releases/tag/v0.1.3
 [0.1.4]: https://github.com/sachahjkl/papier/releases/tag/v0.1.4
 [0.1.5]: https://github.com/sachahjkl/papier/releases/tag/v0.1.5
+[0.1.6]: https://github.com/sachahjkl/papier/releases/tag/v0.1.6

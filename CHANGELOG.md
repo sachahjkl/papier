@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-09
+
 ### Changed
 - Windows: the Setup's dialog can be resized from its edges and its corner; what it says scrolls when it is small, its
   buttons stay under it. It is gui_toolkit 0.127.0.
@@ -170,3 +172,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.5.2]: https://github.com/sachahjkl/papier/releases/tag/v0.5.2
 [0.6.0]: https://github.com/sachahjkl/papier/releases/tag/v0.6.0
 [0.7.0]: https://github.com/sachahjkl/papier/releases/tag/v0.7.0
+[0.7.1]: https://github.com/sachahjkl/papier/releases/tag/v0.7.1

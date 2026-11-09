@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-09
+
 ### Added
 - **Windows**: papier shows the system's clipboard history (the one Win+V shows), searched and filtered as on Linux, at
   a shortcut of its own (`picker.shortcut`, Win+Shift+V by default). Enter puts an entry back on the clipboard; an
@@ -150,3 +152,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.5.0]: https://github.com/sachahjkl/papier/releases/tag/v0.5.0
 [0.5.1]: https://github.com/sachahjkl/papier/releases/tag/v0.5.1
 [0.5.2]: https://github.com/sachahjkl/papier/releases/tag/v0.5.2
+[0.6.0]: https://github.com/sachahjkl/papier/releases/tag/v0.6.0

@@ -7,7 +7,7 @@
 <p align="center">
 <a href="https://github.com/sachahjkl/papier/actions/workflows/ci.yml"><img src="https://github.com/sachahjkl/papier/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 <a href="https://github.com/sachahjkl/papier/releases/latest"><img src="https://img.shields.io/github/v/release/sachahjkl/papier?color=cbbca3" alt="release"></a>
-<a href="https://sachahjkl.github.io/papier/"><img src="https://img.shields.io/badge/site-github.io-8a7a62" alt="site"></a>
+<a href="https://paper.sacha.house/"><img src="https://img.shields.io/badge/site-paper.sacha.house-8a7a62" alt="site"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-555" alt="MIT"></a>
 </p>
 

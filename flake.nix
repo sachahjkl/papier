@@ -129,7 +129,7 @@
 
       meta = {
         description = "The clipboard's history for Linux (Wayland)";
-        homepage = "https://sachahjkl.github.io/papier/";
+        homepage = "https://paper.sacha.house/";
         license = lib.licenses.mit;
         platforms = [system];
         mainProgram = "papier";

@@ -16,7 +16,7 @@ VERSION_MARK :: "{{version}}"
 
 // Where the site is published, what it is: the one place that says it.
 SITE_META :: tk_site.Meta{
-	url         = "https://sachahjkl.github.io/papier/",
+	url         = "https://paper.sacha.house/",
 	name        = "papier",
 	repository  = REPOSITORY,
 	tagline     = "The clipboard's history for Linux",

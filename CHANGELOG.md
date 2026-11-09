@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-09
+
 ### Added
 - **Windows: Setup.** A start of the downloaded `papier.exe` offers to install papier for you: the program in
   `%LOCALAPPDATA%\Programs\papier`, the Start menu, the start with the session, `papier` on the PATH with `papier.com`,
@@ -163,3 +165,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.5.1]: https://github.com/sachahjkl/papier/releases/tag/v0.5.1
 [0.5.2]: https://github.com/sachahjkl/papier/releases/tag/v0.5.2
 [0.6.0]: https://github.com/sachahjkl/papier/releases/tag/v0.6.0
+[0.7.0]: https://github.com/sachahjkl/papier/releases/tag/v0.7.0

@@ -39,10 +39,10 @@ ROW_EM    :: 2.05
 STATUS_EM :: 1.9
 // The grip between the search and the filters: its width in ems, its lines' share of the bar's height, their spacing in
 // logical pixels and their opacity (of the weak text's colour).
-GRIP_EM     :: 2.4
-GRIP_HEIGHT :: 0.36
-GRIP_GAP_PX :: 4
-GRIP_ALPHA  :: 0.7
+GRIP_EM     :: 2.2
+GRIP_HEIGHT :: 0.3
+GRIP_GAP_PX :: 3
+GRIP_ALPHA  :: 0.45
 
 KIND_ICONS := [history.Kind]string{.Text = ICO_TEXT, .Html = ICO_RICH, .Image = ICO_IMAGE, .Files = ICO_FILES, .Other = ICO_DATA}
 KIND_LABELS := [history.Kind]string{.Text = "Text", .Html = "Rich text", .Image = "Image", .Files = "Files", .Other = "Data"}
@@ -238,7 +238,8 @@ build_title :: proc(app: ^App, em: f32) {
 		}
 		// a grip between the search and the filters: the window is moved from there (an empty part of the title bar)
 		d := ui.frame_new(Grip_Draw)
-		d^ = {ui.color("weak"), ui.scale()}
+		d^.scale = ui.scale()
+		if ui.tags("weak") { d.color = ui.color("text") }
 		ui.next({width = ui.px(em * GRIP_EM), height = ui.pct(1)})
 		ui.custom("###grip", grip_draw, d)
 		ui.next({width = ui.px(em * FILTER_EM), height = ui.px(ui.dense(em * 1.95))})
@@ -253,7 +254,8 @@ build_title :: proc(app: ^App, em: f32) {
 @(private = "file")
 Grip_Draw :: struct { color: ui.Color, scale: f32 }
 
-// Three short vertical lines in the middle of the grip, faint: they say "hold here" without drawing the eye.
+// Three short vertical lines in the middle of the grip, faint: they say "hold here" without drawing the eye. (Their
+// colour is the weak text's: `ui.color("text")` under the tag "weak"; a name the theme lacks gives its missing colour.)
 @(private = "file")
 grip_draw :: proc(b: ^ui.Box, user: rawptr, dc: ^draw.Context) {
 	d := (^Grip_Draw)(user)

@@ -5,6 +5,10 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **The grip is grey**: its lines asked the theme for a colour name it lacks, and got the violet that marks a missing
+  name. They take the weak text's colour, finer and shorter.
+
 ## [0.1.2] - 2026-11-09
 
 ### Added

@@ -5,6 +5,10 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Settings: a change (a theme chosen, a switch) is saved when `~/.config/papier` does not exist yet. It was lost, and
+  the preferences read back from no file put the old value back. It is gui_toolkit 0.123.0.
+
 ## [0.5.1] - 2026-11-09
 
 ### Fixed

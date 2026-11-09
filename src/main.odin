@@ -152,7 +152,6 @@ cmd_set :: proc(prefs: ^config.Prefs, args: []string) -> int {
 		return 1
 	}
 	path := prefs_file()
-	_ = os.make_directory_all(path[:strings.last_index_byte(path, '/')])
 	if !config.save_user(prefs, path) { fmt.eprintfln("papier: %s cannot be written", path); return 1 }
 	command_send({verb = .Reload})
 	return 0

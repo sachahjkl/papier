@@ -37,6 +37,12 @@ TITLE_EM  :: 2.7
 FILTER_EM :: 23   // the filter's segmented control
 ROW_EM    :: 2.05
 STATUS_EM :: 1.9
+// The grip between the search and the filters: its width in ems, its lines' share of the bar's height, their spacing in
+// logical pixels and their opacity (of the weak text's colour).
+GRIP_EM     :: 2.4
+GRIP_HEIGHT :: 0.36
+GRIP_GAP_PX :: 4
+GRIP_ALPHA  :: 0.7
 
 KIND_ICONS := [history.Kind]string{.Text = ICO_TEXT, .Html = ICO_RICH, .Image = ICO_IMAGE, .Files = ICO_FILES, .Other = ICO_DATA}
 KIND_LABELS := [history.Kind]string{.Text = "Text", .Html = "Rich text", .Image = "Image", .Files = "Files", .Other = "Data"}
@@ -230,13 +236,35 @@ build_title :: proc(app: ^App, em: f32) {
 			select_row(app, 0)
 			ui.vlist_scroll_to(&app.vl, 0)
 		}
-		ui.spacer(ui.px(em * 0.6))
+		// a grip between the search and the filters: the window is moved from there (an empty part of the title bar)
+		d := ui.frame_new(Grip_Draw)
+		d^ = {ui.color("weak"), ui.scale()}
+		ui.next({width = ui.px(em * GRIP_EM), height = ui.pct(1)})
+		ui.custom("###grip", grip_draw, d)
 		ui.next({width = ui.px(em * FILTER_EM), height = ui.px(ui.dense(em * 1.95))})
 		sel := int(app.filter)
 		if ui.segmented("###filter", filter_labels[:], &sel) { set_filter(app, Filter(sel)) }
 		ui.spacer(ui.px(em * 0.3))
 		if icon_action(app, "close", ICO_CLOSE, "Hide (Escape)", em) { app_hide(app) }
 		ui.spacer(ui.px(em * 0.4))
+	}
+}
+
+@(private = "file")
+Grip_Draw :: struct { color: ui.Color, scale: f32 }
+
+// Three short vertical lines in the middle of the grip, faint: they say "hold here" without drawing the eye.
+@(private = "file")
+grip_draw :: proc(b: ^ui.Box, user: rawptr, dc: ^draw.Context) {
+	d := (^Grip_Draw)(user)
+	c := d.color
+	c.a *= GRIP_ALPHA
+	mid := (b.rect.min + b.rect.max) * 0.5
+	w, gap := max(1, d.scale), GRIP_GAP_PX * d.scale
+	h := (b.rect.max.y - b.rect.min.y) * GRIP_HEIGHT
+	for i in -1 ..= 1 {
+		x := mid.x + f32(i) * gap - w * 0.5
+		draw.rect(dc, {{x, mid.y - h * 0.5}, {x + w, mid.y + h * 0.5}}, c, radius = w * 0.5)
 	}
 }
 

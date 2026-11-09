@@ -5,6 +5,10 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **A grip in the title bar**: three faint lines between the search and the filters mark a place reserved to move the
+  window.
+
 ## [0.1.1] - 2026-11-09
 
 ### Fixed

@@ -111,7 +111,12 @@ watcher_main :: proc(wt: ^Watcher) {
 		return
 	}
 	defer wlclip.disconnect(&wt.client)
-	history.open(&wt.store, history_dir(wt.settings.persist))
+	if ok, why := history.open(&wt.store, history_dir(wt.settings.persist)); !ok {
+		wt.error = fmt.aprintf("papier: the history cannot be opened: %s", why)
+		fmt.eprintln(wt.error)
+		watcher_request(wt, .Quit)
+		return
+	}
 	defer history.close(&wt.store)
 	watcher_trim(wt)
 	if !instance.owner_start(&wt.owner, watcher_message, wt) { fmt.eprintln("papier: the command socket cannot be opened") }
@@ -201,12 +206,12 @@ watcher_apply :: proc(wt: ^Watcher, c: Command) {
 		changed = watcher_trim(wt)
 		watcher_request(wt, .Reload)
 	}
-	if changed { watcher_saved(wt) }
+	if changed { watcher_changed(wt) }
 }
 
 @(private = "file")
-watcher_saved :: proc(wt: ^Watcher) {
-	if !history.save(&wt.store) { fmt.eprintln("papier: the history cannot be written"); return }
+// The window reads the list again.
+watcher_changed :: proc(wt: ^Watcher) {
 	sync.atomic_add(&wt.version, 1)
 	platform.wake(wt.window)
 }
@@ -235,7 +240,7 @@ watcher_selection :: proc(wt: ^Watcher, w: wlclip.Which) {
 		return
 	}
 	watcher_trim(wt)
-	watcher_saved(wt)
+	watcher_changed(wt)
 }
 
 @(private = "file")
@@ -243,7 +248,7 @@ watcher_trim :: proc(wt: ^Watcher) -> bool {
 	max_age := i64(wt.settings.max_age_days) * 24 * 3600 * 1000
 	if history.trim(&wt.store, wt.settings.max_entries, max_age, now_ms()) == 0 { return false }
 	history.collect(&wt.store)
-	watcher_saved(wt)
+	watcher_changed(wt)
 	return true
 }
 

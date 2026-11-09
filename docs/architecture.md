@@ -18,8 +18,8 @@ papier --hidden ─┬─ the window's thread (app.odin, view.odin)
 
 - **The watcher** sleeps in one `poll` on three descriptors: the Wayland connection of the data-control protocol, the
   instance socket (commands of other processes), an eventfd (commands of the window). It is the only writer of the
-  history. After each change it saves the index and bumps a version; the window reads the index again when the version
-  moves.
+  history. Each change is one transaction of the database; then it bumps a version, and the window reads the list again
+  when the version moves.
 - **The window** sleeps in the toolkit's wait: its own Wayland connection, its wake, the session bus (the tray). It asks
   the watcher by a queue (copy, pin, delete, clear) and the watcher asks it by another (show, hide, toggle, reload, quit),
   in order: a hide then a show that come between two steps of the loop end shown.
@@ -57,19 +57,25 @@ tested.
 
 ## The history (src/history)
 
-- **Blobs**: the bytes of each type, in a file named by the 64-bit XXH3 hash of the bytes. The same bytes are stored once.
-  A blob is written before the entry that names it.
-- **The index**: a text file, one line per entry and one per type, written whole and renamed over the old one: a reader
-  sees the old list or the new one.
+One SQLite database, `history.db`, in WAL mode. SQLite is linked into papier: its amalgamation is in `ext/sqlite`, and
+`papiertool build` compiles it (with FTS5).
+
+- **entries**: an entry's id, the time of its last copy, its pin, its kind, its key and its preview.
+- **reps**: its types, in order: the MIME type, the hash of the bytes, their size.
+- **blobs**: the bytes, by their 64-bit XXH3 hash. The same bytes are stored once.
+- **texts**: the whole text of each entry, in a full-text index (FTS5, trigrams): the search finds a word past the
+  preview.
+- **Transactions**: each change (a copy, an edit, a removal, a trim) is one transaction: another connection sees the old
+  list or the new one. The image decoder reads the bytes through a connection of its own.
 - **Keys**: a copy whose key is already there moves that entry to the top.
-- **Limits**: `trim` drops the entries past the count or the age, pinned ones aside; `collect` deletes the blobs that no
+- **Limits**: `trim` drops the entries past the count or the age, pinned ones aside; `collect` deletes the bytes that no
   entry names.
 
 ## The window (src/view.odin)
 
 The interface is built again at each frame (immediate mode), and only when something changed. The list is the toolkit's
-virtual list: it builds the rows in view, whatever the length of the history. The search reads lower-case copies of the
-previews, made once per reading of the index. An image is decoded on a thread of its own (src/decoder.odin) when its
+virtual list: it builds the rows in view, whatever the length of the history. The search looks for each word of three letters or more in
+the whole text (the full-text index), and for a shorter word in a lower-case copy of the preview. An image is decoded on a thread of its own (src/decoder.odin) when its
 entry is selected: the newest selection wins, and the window makes one texture of the picture when the decoder wakes it.
 
 ## Tests

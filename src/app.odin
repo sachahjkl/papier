@@ -99,7 +99,10 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner) -> in
 		platform.set_placement(win, p)
 	}
 
-	history.open(&app.store, history_dir(app.settings.persist))
+	if ok, why := history.open(&app.store, history_dir(app.settings.persist)); !ok {
+		fmt.eprintfln("papier: the history cannot be opened: %s", why)
+		return 1
+	}
 	refilter(app)
 	if !watcher_start(&app.watcher, owner, win, &app.prefs) {
 		fmt.eprintln("papier: the clipboard watcher cannot start")

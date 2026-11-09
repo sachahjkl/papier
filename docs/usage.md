@@ -126,10 +126,10 @@ papier get "$(papier list 100 | awk -F'\t' '$2 ~ /^image/ { print $1; exit }')" 
 
 | What | Where |
 |---|---|
-| The history | `$XDG_DATA_HOME/papier` (`~/.local/share/papier`): `index` and `blobs/` |
+| The history | `$XDG_DATA_HOME/papier` (`~/.local/share/papier`): `history.db` |
 | The history, with `history.persist` off | `$XDG_RUNTIME_DIR/papier`: gone at the end of the session |
 | The preferences | `$XDG_CONFIG_HOME/papier/prefs` (`~/.config/papier/prefs`) |
 | The window's size and place | `$XDG_STATE_HOME/papier/window` (`~/.local/state/papier/window`) |
 
-The index is a text file, written atomically. Each blob is the bytes of one type of one copy, named by the hash of its
-bytes: the same bytes are stored once.
+`history.db` is a SQLite database: `sqlite3 ~/.local/share/papier/history.db` reads it. The bytes of each type of each
+copy are stored once, by their hash. The search reads the whole text of each copy.

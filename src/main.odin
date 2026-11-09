@@ -90,8 +90,10 @@ start :: proc(prefs: ^config.Prefs, verb: string) -> int {
 }
 
 @(private = "file")
-open_store :: proc(prefs: ^config.Prefs, s: ^history.Store) {
-	history.open(s, history_dir(config.bool_of(prefs, "history.persist")))
+open_store :: proc(prefs: ^config.Prefs, s: ^history.Store) -> bool {
+	ok, why := history.open(s, history_dir(config.bool_of(prefs, "history.persist")))
+	if !ok { fmt.eprintfln("papier: the history cannot be opened: %s", why) }
+	return ok
 }
 
 @(private = "file")
@@ -99,7 +101,7 @@ cmd_list :: proc(prefs: ^config.Prefs, args: []string) -> int {
 	count := 20
 	if len(args) > 0 { count = strconv.parse_int(args[0]) or_else count }
 	s: history.Store
-	open_store(prefs, &s)
+	if !open_store(prefs, &s) { return 1 }
 	defer history.close(&s)
 	now := now_ms()
 	for e in s.entries[:min(count, len(s.entries))] {
@@ -114,7 +116,7 @@ cmd_get :: proc(prefs: ^config.Prefs, args: []string) -> int {
 	id, ok := strconv.parse_u64(args[0])
 	if !ok { fmt.eprint(USAGE); return 2 }
 	s: history.Store
-	open_store(prefs, &s)
+	if !open_store(prefs, &s) { return 1 }
 	defer history.close(&s)
 	at := history.find(&s, id)
 	if at < 0 { fmt.eprintfln("papier: no entry %d", id); return 1 }

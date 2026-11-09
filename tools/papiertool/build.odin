@@ -44,9 +44,43 @@ build_text :: proc() -> bool {
 	}
 }
 
+// SQLite, from its amalgamation in ext/sqlite (3.54.1), compiled into build/sqlite/libsqlite3.a: the history's database
+// (src/sqlite links it). Built again when its sources or the flags below change (the stamp beside it).
+SQLITE_DIR   :: "ext/sqlite"
+SQLITE_OUT   :: "build/sqlite"
+SQLITE_LIB   :: "build/sqlite/libsqlite3.a"
+SQLITE_STAMP :: "build/sqlite/STAMP"
+// FTS5 for the search; no extensions loaded at run time, no deprecated or shared-cache code; double quotes only for names.
+SQLITE_FLAGS :: [?]string{
+	"-O2", "-fPIC", "-w",
+	"-DSQLITE_ENABLE_FTS5", "-DSQLITE_THREADSAFE=1", "-DSQLITE_DQS=0", "-DSQLITE_DEFAULT_MEMSTATUS=0",
+	"-DSQLITE_OMIT_LOAD_EXTENSION", "-DSQLITE_OMIT_DEPRECATED", "-DSQLITE_OMIT_SHARED_CACHE", "-DSQLITE_LIKE_DOESNT_MATCH_BLOBS",
+}
+
+build_sqlite :: proc() -> bool {
+	when ODIN_OS == .Linux {
+		source, err := os.read_entire_file(SQLITE_DIR + "/sqlite3.c", context.temp_allocator)
+		if err != nil { fmt.eprintln("papiertool: " + SQLITE_DIR + "/sqlite3.c cannot be read"); return false }
+		flags := SQLITE_FLAGS
+		stamp := toolbox.sha256_hex(transmute([]u8)strings.concatenate({toolbox.sha256_hex(source), strings.join(flags[:], " ", context.temp_allocator)}, context.temp_allocator))
+		if old, e := os.read_entire_file(SQLITE_STAMP, context.temp_allocator); e == nil && string(old) == stamp && os.exists(SQLITE_LIB) { return true }
+		_ = os.make_directory_all(SQLITE_OUT)
+		object := SQLITE_OUT + "/sqlite3.o"
+		cmd := make([dynamic]string, context.temp_allocator)
+		append(&cmd, "cc", "-c", SQLITE_DIR + "/sqlite3.c", "-o", object)
+		append(&cmd, ..flags[:])
+		if !toolbox.run(cmd[:], {echo = true}) { return false }
+		_ = os.remove(SQLITE_LIB)
+		if !toolbox.run({"ar", "rcs", SQLITE_LIB, object}, {echo = true}) { return false }
+		if os.write_entire_file(SQLITE_STAMP, transmute([]u8)stamp) != nil { return false }
+		fmt.printfln("built %s", SQLITE_LIB)
+	}
+	return true
+}
+
 run_build :: proc(args: []string) -> int {
 	release := len(args) > 0 && args[0] == "release"
-	if !build_text() { return 1 }
+	if !build_text() || !build_sqlite() { return 1 }
 	_ = os.make_directory("build")
 	mode := release ? []string{"-o:speed"} : []string{"-debug"}
 	extra := make([dynamic]string, context.temp_allocator)
@@ -58,7 +92,7 @@ run_build :: proc(args: []string) -> int {
 }
 
 run_test :: proc(args: []string) -> int {
-	if !build_text() { return 1 }
+	if !build_text() || !build_sqlite() { return 1 }
 	_ = os.make_directory("build")
 	for pkg in TEST_PACKAGES {
 		name, _ := strings.replace_all(pkg, "/", "_", context.temp_allocator)

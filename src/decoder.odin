@@ -8,8 +8,8 @@ import "base:runtime"
 import "core:strings"
 import "core:sync"
 import "core:thread"
-import os "core:os"
 import "gt:platform"
+import "history"
 
 Decoder :: struct {
 	thread:  ^thread.Thread,
@@ -23,9 +23,10 @@ Decoder :: struct {
 	ready:   bool,
 }
 
-// What to decode: the entry, the file of its image and the image's MIME type (owned by the decoder's heap).
+// What to decode: the entry, the store that holds its image (its directory) and the image's hash and MIME type (owned
+// by the decoder's heap).
 @(private = "file")
-Decode_Ask :: struct { id: u64, path, mime: string }
+Decode_Ask :: struct { id: u64, dir: string, hash: u64, mime: string }
 
 // A decoded picture: RGBA, straight alpha, `size.x * size.y * 4` bytes, owned by whoever took it (decoded_free).
 Decoded :: struct {
@@ -50,18 +51,18 @@ decoder_stop :: proc(d: ^Decoder) {
 	thread.destroy(d.thread)
 	d.thread = nil
 	heap := runtime.heap_allocator()
-	if d.asked { delete(d.ask.path, heap); delete(d.ask.mime, heap) }
+	if d.asked { delete(d.ask.dir, heap); delete(d.ask.mime, heap) }
 	if d.ready { decoded_free(&d.done) }
 	d.asked, d.ready = false, false
 }
 
 // Asks for the picture of entry `id`, in place of any ask not yet started.
-decoder_ask :: proc(d: ^Decoder, id: u64, path, mime: string) {
+decoder_ask :: proc(d: ^Decoder, id: u64, dir: string, hash: u64, mime: string) {
 	heap := runtime.heap_allocator()
 	sync.mutex_lock(&d.mutex)
 	defer sync.mutex_unlock(&d.mutex)
-	if d.asked { delete(d.ask.path, heap); delete(d.ask.mime, heap) }
-	d.ask = {id, strings.clone(path, heap), strings.clone(mime, heap)}
+	if d.asked { delete(d.ask.dir, heap); delete(d.ask.mime, heap) }
+	d.ask = {id, strings.clone(dir, heap), hash, strings.clone(mime, heap)}
 	d.asked = true
 	sync.cond_signal(&d.cond)
 }
@@ -94,13 +95,13 @@ decoder_run :: proc(data: rawptr) {
 		sync.mutex_unlock(&d.mutex)
 
 		out := Decoded{id = ask.id}
-		if bytes, err := os.read_entire_file(ask.path, context.allocator); err == nil {
+		if bytes := history.blob_read_in(ask.dir, ask.hash); bytes != nil {
 			if img, ok := platform.clipboard_image_decode(ask.mime, bytes, context.allocator); ok {
 				out.rgba, out.size, out.ok = img.rgba, img.size, true
 			}
 			delete(bytes)
 		}
-		delete(ask.path)
+		delete(ask.dir)
 		delete(ask.mime)
 
 		sync.mutex_lock(&d.mutex)

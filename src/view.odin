@@ -87,11 +87,14 @@ refilter :: proc(app: ^App) {
 		for e in app.store.entries { append(&app.lowered, strings.to_lower(e.preview)) }
 	}
 	words := strings.fields(strings.to_lower(app.query, context.temp_allocator), context.temp_allocator)
+	// the words long enough for the full-text index are looked for in the whole text; the shorter ones in the preview
+	found, indexed := history.search(&app.store, words)
 	clear(&app.shown)
 	clear(&app.ids)
 	outer: for e, i in app.store.entries {
 		if !filter_keeps(app.filter, e) { continue }
-		for w in words { if !strings.contains(app.lowered[i], w) { continue outer } }
+		if indexed && e.id not_in found { continue }
+		for w in words { if len(w) < history.SEARCH_WORD_MIN && !strings.contains(app.lowered[i], w) { continue outer } }
 		append(&app.shown, i)
 		append(&app.ids, e.id)
 	}
@@ -395,7 +398,7 @@ view_load :: proc(app: ^App, e: ^history.Entry) {
 		for r, i in e.reps { if strings.has_prefix(r.mime, "image/") { at = i; break } }
 		if at < 0 { break }
 		app.view.image, app.view.loading = at, true
-		decoder_ask(&app.decoder, e.id, history.blob_path(&app.store, e.reps[at].hash), e.reps[at].mime)
+		decoder_ask(&app.decoder, e.id, app.store.dir, e.reps[at].hash, e.reps[at].mime)
 	case .Files:
 		app.view.text = strings.clone(e.preview)
 	case .Text, .Html, .Other:

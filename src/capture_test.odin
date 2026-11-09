@@ -71,6 +71,18 @@ html_without_text_is_read_without_its_tags :: proc(t: ^testing.T) {
 	testing.expect_value(t, strip_tags("<p>one\n  <b>two</b></p>"), "one two")
 }
 
+// A program that offers its markup as text too (wl-copy -t text/html): the entry is HTML, keyed and previewed by it.
+@(test)
+markup_offered_as_text_is_html :: proc(t: ^testing.T) {
+	markup := transmute([]u8)string("<p>rich <b>bold</b></p>")
+	reps := []history.Rep_Data{{TEXT_MIME, markup}, {HTML_MIME, markup}}
+	kind, main, preview, ok := classify(reps)
+	testing.expect(t, ok)
+	testing.expect_value(t, kind, history.Kind.Html)
+	testing.expect_value(t, main, 1)
+	testing.expect_value(t, preview, "rich bold")
+}
+
 @(test)
 commands_read_back :: proc(t: ^testing.T) {
 	for c in ([]Command{{.Copy, 42}, {.Clear, 0}, {.Pin, 7}}) {

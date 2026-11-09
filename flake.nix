@@ -73,7 +73,8 @@
     formatter.${system} = pkgs.alejandra;
 
     devShells.${system}.default = pkgs.mkShell {
-      packages = [odin] ++ (with pkgs; [cargo rustc]) ++ preCommitCheck.enabledPackages;
+      # (sway and wl-clipboard: papiertool live)
+      packages = [odin] ++ (with pkgs; [cargo rustc sway wl-clipboard]) ++ preCommitCheck.enabledPackages;
       buildInputs = [pkgs.fontconfig];
       shellHook =
         preCommitCheck.shellHook

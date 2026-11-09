@@ -227,6 +227,9 @@ app_reload :: proc(app: ^App) {
 	app.seen = v
 	keep := selected_id(app)
 	history.reload(&app.store)
+	// (the order may have changed with the count the same: an entry copied again moves to the top)
+	for s in app.lowered { delete(s) }
+	clear(&app.lowered)
 	refilter(app)
 	if keep != 0 { for id, i in app.ids { if id == keep { app.vl.sel = i; break } } }
 	app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT)

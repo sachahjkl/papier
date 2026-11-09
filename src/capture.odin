@@ -75,6 +75,8 @@ classify :: proc(reps: []history.Rep_Data, allocator := context.temp_allocator) 
 		case is_files_mime(r.mime):               files = i
 		}
 	}
+	// a program that offers its markup as text too (wl-copy -t text/html does): the entry is the HTML
+	if text >= 0 && html >= 0 && string(reps[text].data) == string(reps[html].data) { text = -1 }
 	switch {
 	case files >= 0:
 		paths := platform.uri_list_to_paths(string(reps[files].data), allocator)

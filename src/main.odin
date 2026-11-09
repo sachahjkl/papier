@@ -25,6 +25,10 @@ USAGE :: `papier: a clipboard manager for Linux
   papier copy <id>            put an entry back on the clipboard
   papier pin | unpin | delete <id>
   papier clear                remove every entry that is not pinned
+  papier install [--no-autostart] [--no-path]
+                              the launcher, the icons, ~/.local/bin/papier and the start with the session
+  papier uninstall            take them away (the history stays)
+  papier status               what is installed, and whether papier runs
   papier prefs                every preference, its value and what it does
   papier set <name> <value>   change a preference (saved; the running papier reads it again)
   papier version
@@ -52,6 +56,9 @@ run :: proc(all_args: []string) -> int {
 		return 0
 	case "list":    return cmd_list(&prefs, rest)
 	case "get":     return cmd_get(&prefs, rest)
+	case "install":   return cmd_install(rest)
+	case "uninstall": return cmd_uninstall(rest)
+	case "status":    return cmd_status(rest)
 	case "prefs":   return cmd_prefs(&prefs)
 	case "set":     return cmd_set(&prefs, rest)
 	case "version", "--version":

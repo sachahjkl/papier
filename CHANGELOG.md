@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-09
+
 ### Added
 - **Settings** (Ctrl+, or the gear of the title bar): every preference on four pages (Appearance, Window, History,
   Capture), the search, a switch, a choice, a slider or a field for each, the themes as cards in their own colours.
@@ -112,3 +114,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.1.6]: https://github.com/sachahjkl/papier/releases/tag/v0.1.6
 [0.2.0]: https://github.com/sachahjkl/papier/releases/tag/v0.2.0
 [0.3.0]: https://github.com/sachahjkl/papier/releases/tag/v0.3.0
+[0.4.0]: https://github.com/sachahjkl/papier/releases/tag/v0.4.0

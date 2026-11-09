@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-11-09
+
 ### Fixed
 - **No spin at the end of a wait** (gui_toolkit 0.114.1): on Wayland, a wait with less than a millisecond left returned at
   once, and the loop woke about 150 times before its deadline.
@@ -67,3 +69,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.1.2]: https://github.com/sachahjkl/papier/releases/tag/v0.1.2
 [0.1.3]: https://github.com/sachahjkl/papier/releases/tag/v0.1.3
 [0.1.4]: https://github.com/sachahjkl/papier/releases/tag/v0.1.4
+[0.1.5]: https://github.com/sachahjkl/papier/releases/tag/v0.1.5

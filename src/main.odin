@@ -18,6 +18,7 @@ USAGE :: `papier: the clipboard's history
 
   papier                      show the history (start papier when it does not run)
   papier --hidden             start papier in the notification area (for the session's start)
+  papier --setup              install papier for you, repair or upgrade the install, or uninstall it
   papier toggle               show the history, or hide it when it is shown (for a key binding)
   papier show | hide | quit
   papier list [count]         the newest entries: id, kind, age, a line of text
@@ -47,7 +48,7 @@ run :: proc(all_args: []string) -> int {
 	verb := len(args) > 0 ? args[0] : ""
 	rest := len(args) > 1 ? args[1:] : nil
 	switch verb {
-	case "", "--hidden", "toggle":
+	case "", "--hidden", "toggle", "--setup":
 		return start(&prefs, verb)
 	case "show", "hide", "quit", "copy", "pin", "unpin", "delete", "clear", "reload":
 		c, ok := command_parse(strings.join(args[:], " ", context.temp_allocator))
@@ -76,10 +77,10 @@ run :: proc(all_args: []string) -> int {
 @(private = "file")
 start :: proc(prefs: ^config.Prefs, verb: string) -> int {
 	hidden := verb == "--hidden"
-	message := hidden ? "ping" : verb == "toggle" ? "toggle" : "show"
+	message := hidden ? "ping" : verb == "toggle" ? "toggle" : verb == "--setup" ? "setup" : "show"
 	outcome, owner := instance.acquire({name = DAEMON_NAME, wait_ms = 1500}, transmute([]u8)message)
 	switch outcome {
-	case .First:          return app_run(prefs, hidden, owner)
+	case .First:          return app_run(prefs, hidden, owner, setup_asked = verb == "--setup")
 	case .Forwarded:      return 0
 	case .Other_Instance: return 0
 	case .Unresponsive:

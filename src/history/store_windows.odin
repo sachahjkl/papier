@@ -46,6 +46,8 @@ System :: struct {
 	next_id:  u64,
 	classify: Classify,
 	failure:  winrt.HRESULT,       // what the last call that failed answered (system_failure)
+	changed:  proc(user: rawptr),  // system_start's: the system's history changed
+	changed_user: rawptr,
 }
 
 @(private = "file") snapshot: Snapshot
@@ -124,7 +126,9 @@ system_start :: proc(classify: Classify, changed: proc(user: rawptr), user: rawp
 	system.statics, hr = winrt.factory(CLASS_CLIPBOARD, IID_IClipboardStatics2)
 	if !winrt.ok(hr) || system.statics == nil { system.failure = hr; return .No_Runtime }
 	if changed != nil {
-		h := winrt.event_handler_make(winrt.event_handler_iid(SIG_HISTORY_CHANGED_ARGS), changed, user)
+		system.changed, system.changed_user = changed, user
+		on_change :: proc(user: rawptr, sender: rawptr, args: rawptr) { system.changed(system.changed_user) }
+		h := winrt.event_handler_make(winrt.event_handler_iid(SIG_HISTORY_CHANGED_ARGS), on_change, nil)
 		statics(system.statics).add_HistoryChanged(system.statics, h, &system.token)
 		winrt.release(h)   // (the system keeps its own reference until the remove)
 	}

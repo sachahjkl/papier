@@ -6,13 +6,16 @@ Windows 10 (1809) or later, with the clipboard history on (Settings > System > C
 shows the system's history, the one Win+V shows. The system keeps it (its last 25 copies, and the ones you pin with
 Win+V); papier reads it, puts an entry back, removes one, clears it.
 
-```powershell
-Expand-Archive papier-0.6.0-windows-x64.zip
-.\papier-0.6.0-windows-x64\papier.exe install   # --no-autostart, --no-path: leave a part out
-```
+Unzip the archive and start `papier.exe`: its Setup offers to install it for you. Install copies it to
+`%LOCALAPPDATA%\Programs\papier` and writes a launcher in the Start menu, `papier` on your PATH, its start with the
+session (the `Run` key of your user: `papier --hidden`, in the notification area) and the Settings > Apps entry. The
+same dialog repairs, upgrades (start the newer `papier.exe`) or removes the install: `papier --setup`, or Settings >
+Apps > Papier > Uninstall. Keep standalone runs the copy where it is, and the Setup does not ask again.
 
-`papier install` puts a launcher in the Start menu, `papier` on your PATH, and its start with the session (the `Run`
-key of your user: `papier --hidden`, in the notification area). Win+Shift+V shows the window from any program
+`papier install` integrates the copy where it is, with no Setup (`--no-autostart`, `--no-path`: leave a part out). With the PATH comes `papier.com` beside `papier.exe`:
+papier has a window and no console of its own, so in cmd or PowerShell `papier` runs `papier.com`, which gives a command
+(`papier list`, `papier set`…) its output and its exit code, and gives the prompt back at once for `papier` and
+`papier toggle`. Win+Shift+V shows the window from any program
 (`papier set picker.shortcut <keys>` for others). The system reads its history only for the program in the foreground:
 papier reads it again each time its window shows.
 

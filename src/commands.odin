@@ -8,12 +8,12 @@ import "core:strconv"
 import "core:strings"
 import instance "gt:instance"
 
-Verb :: enum u8 { Ping, Show, Hide, Toggle, Quit, Copy, Pin, Unpin, Delete, Clear, Reload, Copy_Plain, Add_Text, Replace_Text, Refresh }
+Verb :: enum u8 { Ping, Show, Hide, Toggle, Quit, Copy, Pin, Unpin, Delete, Clear, Reload, Copy_Plain, Add_Text, Replace_Text, Refresh, Setup }
 
 COMMAND_NAMES := [Verb]string{
 	.Ping = "ping", .Show = "show", .Hide = "hide", .Toggle = "toggle", .Quit = "quit",
 	.Copy = "copy", .Pin = "pin", .Unpin = "unpin", .Delete = "delete", .Clear = "clear", .Reload = "reload",
-	.Copy_Plain = "copy-plain", .Add_Text = "add-text", .Replace_Text = "replace-text", .Refresh = "refresh",
+	.Copy_Plain = "copy-plain", .Add_Text = "add-text", .Replace_Text = "replace-text", .Refresh = "refresh", .Setup = "setup",
 }
 
 // The verbs that name an entry.

@@ -144,6 +144,7 @@ remove_entry :: proc(app: ^App, id: u64) {
 // The keys of the window, taken before the search field sees them.
 @(private = "file")
 view_keys :: proc(app: ^App) {
+	if app.setup.open { return }   // (the dialog has the keyboard)
 	if app.settings_open { settings_keys(app); return }
 	if app.edit.active { edit_keys(app); return }
 	if ui.key_press(.Comma, {.Ctrl}) { settings_toggle(app); return }
@@ -187,6 +188,7 @@ view_build :: proc(h: ^host.Host, size: host.Vec2) {
 	page := ui.build_box({.Draw_Background}, "###page")
 	if ui.parent(page) { build_page(app, em) }
 	entry_menu_build(app, em)
+	setup_build(app, em)
 }
 
 @(private = "file")

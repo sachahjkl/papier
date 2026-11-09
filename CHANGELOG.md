@@ -5,6 +5,16 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Windows: Setup.** A start of the downloaded `papier.exe` offers to install papier for you: the program in
+  `%LOCALAPPDATA%\Programs\papier`, the Start menu, the start with the session, `papier` on the PATH with `papier.com`,
+  and the Settings > Apps entry. The same dialog repairs, upgrades or removes the install (`papier --setup`; Settings >
+  Apps > Papier > Uninstall opens it). It shows where everything is; a path is shown whole on hover and copied by its
+  button. It is gui_toolkit's `setup`.
+- **Windows**: `papier.com`, the console launcher, beside `papier.exe` (`papier install` writes it with the PATH entry).
+  In cmd or PowerShell, `papier list`, `papier get`, `papier set`… give their output and their exit code; `papier`,
+  `papier --hidden` and `papier toggle` give the prompt back. It is gui_toolkit's console launcher.
+
 ## [0.6.0] - 2026-11-09
 
 ### Added

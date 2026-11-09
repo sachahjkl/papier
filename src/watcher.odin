@@ -18,7 +18,7 @@ import "gt:platform"
 DAEMON_NAME :: "papier.daemon"
 
 // What the watcher asks of the window.
-Request :: enum u8 { Show, Hide, Toggle, Quit, Reload }
+Request :: enum u8 { Show, Hide, Toggle, Quit, Reload, Setup }
 
 Watcher :: struct {
 	using system: Watcher_System,   // what the system's side keeps (watcher_linux.odin, watcher_windows.odin)

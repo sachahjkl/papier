@@ -107,6 +107,7 @@ watcher_apply :: proc(wt: ^Watcher, c: Command) {
 	case .Hide:   watcher_request(wt, .Hide)
 	case .Toggle: watcher_request(wt, .Toggle)
 	case .Quit:   watcher_request(wt, .Quit)
+	case .Setup:  watcher_request(wt, .Setup)
 	case .Refresh: watcher_refresh(wt)
 	case .Copy:
 		if !history.system_copy(c.id) { errf("papier: entry %d cannot be put on the clipboard", c.id) }

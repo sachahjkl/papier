@@ -14,6 +14,7 @@ Window_State :: struct {
 	place:  [2]int,    // the window's top left corner, screen pixels
 	placed: bool,      // `place` was read (X11)
 	split:  f32,       // the list's width, logical pixels (0: a share of the window)
+	setup:  string,    // what the user answered the Setup (setup.CHOICE_*; owned)
 }
 
 
@@ -32,6 +33,8 @@ state_parse :: proc(text: string) -> (s: Window_State) {
 			x, ok1 := strconv.parse_int(f[1])
 			y, ok2 := strconv.parse_int(f[2])
 			if ok1 && ok2 { s.place, s.placed = {x, y}, true }
+		case f[0] == "setup" && len(f) == 2:
+			s.setup = strings.clone(f[1])
 		case f[0] == "split" && len(f) == 2:
 			if v, ok := strconv.parse_f32(f[1]); ok && v > 0 { s.split = v }
 		}
@@ -44,6 +47,7 @@ state_format :: proc(s: Window_State, allocator := context.temp_allocator) -> st
 	if s.size != {} { fmt.sbprintf(&b, "size %d %d\n", s.size.x, s.size.y) }
 	if s.placed { fmt.sbprintf(&b, "place %d %d\n", s.place.x, s.place.y) }
 	if s.split > 0 { fmt.sbprintf(&b, "split %.0f\n", s.split) }
+	if s.setup != "" { fmt.sbprintf(&b, "setup %s\n", s.setup) }
 	return strings.to_string(b)
 }
 

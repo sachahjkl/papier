@@ -16,6 +16,7 @@ import instance "gt:instance"
 import "gt:platform"
 import prefs_page "gt:prefs_page"
 import "gt:render"
+import setup "gt:setup"
 import "gt:ui"
 import "history"
 
@@ -71,11 +72,15 @@ App :: struct {
 	settings_page: prefs_page.Page,
 	sel_rect:   ui.Rect,            // the selected row, as last built (where the Menu key opens the menu)
 	room:       f32,                // the window's width at this build, logical pixels
+	setup:      setup.Dialog,       // the Setup (setup_view.odin)
+	logo:       render.Texture,     // its logo (made at its first show)
+	logo_made:  bool,
+	launch_after: string,           // the installed copy, started once this one has ended (owned; "": none)
 	status:     string,             // a message for the status bar (owned), until status_until (ui clock, ms)
 	status_until: f64,
 }
 
-app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner) -> int {
+app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup_asked := false) -> int {
 	app := new(App)
 	defer free(app)
 	app.prefs = prefs^
@@ -128,6 +133,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner) -> in
 
 	// (hidden at start: the window is made and never shown, it has had no frame: nothing to take off the screen)
 	if !hidden { app_show(app) }
+	if setup_asked { setup_open(app) } else if !hidden { setup_offer(app) }
 	for !app.quit {
 		if app.visible {
 			host.hosts_wait({h})
@@ -144,12 +150,20 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner) -> in
 	}
 
 	app_remember(app)
-	watcher_stop(&app.watcher)
+	watcher_stop(&app.watcher)   // (the instance is let go: the installed copy, started below, is the running papier)
 	decoder_stop(&app.decoder)
 	devtools.stop(app.devtools)
 	view_clear(app)
+	if app.logo_made { render.destroy_texture(&app.shared.r, app.logo) }
 	host.host_close(h)
+	setup.finish(&app.setup, setup_config())
+	launch := app.launch_after
+	app.launch_after = ""
 	app_free(app)
+	if launch != "" {
+		if !setup.launch(launch) { errf("papier: %s does not start", launch) }
+		delete(launch)
+	}
 	return 0
 }
 
@@ -166,6 +180,9 @@ app_free :: proc(app: ^App) {
 	entry_menu_free(&app.menu)
 	ui.area_destroy(&app.edit.area)
 	prefs_page.destroy(&app.settings_page)
+	setup.destroy(&app.setup)
+	delete(app.launch_after)
+	delete(app.place.setup)
 	history.close(&app.store)
 	settings_free(&app.settings)
 	config.prefs_destroy(&app.prefs)
@@ -313,6 +330,7 @@ app_requests :: proc(app: ^App) {
 		case .Toggle: app_toggle(app)
 		case .Show:   app_show(app)
 		case .Hide:   app_hide(app)
+		case .Setup:  app_show(app); setup_open(app)
 		}
 	}
 	app_reload(app)

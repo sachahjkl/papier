@@ -124,6 +124,7 @@ watcher_apply :: proc(wt: ^Watcher, c: Command) {
 	case .Hide:   watcher_request(wt, .Hide)
 	case .Toggle: watcher_request(wt, .Toggle)
 	case .Quit:   watcher_request(wt, .Quit)
+	case .Setup:  watcher_request(wt, .Setup)
 	case .Copy:   changed = watcher_serve(wt, c.id, true)
 	case .Copy_Plain: changed = watcher_serve(wt, c.id, true, plain = true)
 	case .Add_Text:

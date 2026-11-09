@@ -82,9 +82,31 @@ build_sqlite :: proc() -> bool {
 	return true
 }
 
+// papier.com, the console launcher (gui_toolkit's tools/console_launcher) that papier embeds (src/integration.odin): its
+// mark, and its rules: a command waits; no argument, --hidden and toggle, which may become the running papier, do not.
+LAUNCHER_OUT :: "build/papier.com"
+LAUNCHER_DEFINES :: [?]string{
+	"-define:LAUNCHER_MARK=(papier console launcher)",
+	"-define:LAUNCHER_DEFAULT=wait",
+	"-define:LAUNCHER_OTHERS=(none),toggle,--hidden",
+}
+
+build_launcher :: proc() -> bool {
+	when ODIN_OS == .Windows {
+		_ = os.make_directory_all("build")
+		cmd := make([dynamic]string, context.temp_allocator)
+		append(&cmd, "odin", "build", fmt.tprintf("%s/tools/console_launcher", toolkit()), "-vet", "-subsystem:console", "-o:size", fmt.tprintf("-out:%s", LAUNCHER_OUT))
+		defines := LAUNCHER_DEFINES
+		append(&cmd, ..defines[:])
+		return toolbox.run(cmd[:], {echo = true})
+	} else {
+		return true
+	}
+}
+
 run_build :: proc(args: []string) -> int {
 	release := len(args) > 0 && args[0] == "release"
-	if !build_text() || !build_sqlite() { return 1 }
+	if !build_text() || !build_sqlite() || !build_launcher() { return 1 }
 	_ = os.make_directory("build")
 	mode := release ? []string{"-o:speed"} : []string{"-debug"}
 	extra := make([dynamic]string, context.temp_allocator)
@@ -98,7 +120,7 @@ run_build :: proc(args: []string) -> int {
 }
 
 run_test :: proc(args: []string) -> int {
-	if !build_text() || !build_sqlite() { return 1 }
+	if !build_text() || !build_sqlite() || !build_launcher() { return 1 }
 	_ = os.make_directory("build")
 	for pkg in TEST_PACKAGES {
 		name, _ := strings.replace_all(pkg, "/", "_", context.temp_allocator)
@@ -110,8 +132,27 @@ run_test :: proc(args: []string) -> int {
 }
 
 run_check :: proc(args: []string) -> int {
+	if !build_launcher() { return 1 }   // (papier embeds it: odin check reads it)
 	if !toolbox.run(odin_cmd("check", "src", nil), {echo = true}) { return 1 }
 	if !toolbox.run({"odin", "check", "tools/papiertool", collection(), "-vet"}, {echo = true}) { return 1 }
 	if run_test(nil) != 0 { return 1 }
-	return run_build({"release"})
+	if run_build({"release"}) != 0 { return 1 }
+	return check_launcher()
+}
+
+// Windows: papier.com, beside the release, gives papier's output and its exit code through a pipe.
+check_launcher :: proc() -> int {
+	when ODIN_OS == .Windows {
+		out, code := toolbox.capture({LAUNCHER_OUT, "version"})
+		source, _ := os.read_entire_file(VERSION_FILE, context.temp_allocator)
+		want := fmt.tprintf("papier %s", version_of(string(source)))
+		if code != 0 || strings.trim_space(out) != want {
+			fmt.eprintfln("papiertool: papier.com version gave %q (exit code %d), not %q", strings.trim_space(out), code, want)
+			return 1
+		}
+		_, bad := toolbox.capture({LAUNCHER_OUT, "no-such-command"})
+		if bad != 2 { fmt.eprintfln("papiertool: papier.com no-such-command ended with %d, not papier's 2", bad); return 1 }
+		fmt.println("papier.com: papier's output and exit codes")
+	}
+	return 0
 }

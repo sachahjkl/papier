@@ -12,7 +12,7 @@ import config "gt:config"
 import instance "gt:instance"
 import "history"
 
-APP_VERSION :: "0.2.0"
+APP_VERSION :: "0.3.0"
 
 USAGE :: `papier: a clipboard manager for Linux
 

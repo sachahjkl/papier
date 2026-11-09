@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-11-09
+
 ### Changed
 - The icons are gui_toolkit's Lucide set (0.129.0): papier carries no copy of the font of its own.
 
@@ -176,3 +178,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.6.0]: https://github.com/sachahjkl/papier/releases/tag/v0.6.0
 [0.7.0]: https://github.com/sachahjkl/papier/releases/tag/v0.7.0
 [0.7.1]: https://github.com/sachahjkl/papier/releases/tag/v0.7.1
+[0.7.2]: https://github.com/sachahjkl/papier/releases/tag/v0.7.2

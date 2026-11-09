@@ -1,14 +1,7 @@
 // papier: a clipboard manager for Linux (Wayland), on gui_toolkit.
 //
-//   papier                      the picker: search the history, Enter puts an entry back on the clipboard
-//   papier daemon               watches the clipboard and keeps the history (start it with the session)
-//   papier list [count]         the newest entries: id, kind, age, a line of text
-//   papier get <id> [mime]      the bytes of an entry on the standard output
-//   papier copy <id>            puts an entry back on the clipboard
-//   papier pin|unpin|delete <id>, papier clear, papier quit
-//   papier prefs                every preference, its value and what it does
-//   papier set <name> <value>   changes a preference (saved; the daemon reads it again)
-//   --pref name=value           a preference for this run only
+// One process for the session keeps the history and lives in the notification area; its window comes up in a few
+// milliseconds (app.odin). A start of `papier` when it runs hands it a command and ends.
 package papier
 
 import "core:fmt"
@@ -16,20 +9,25 @@ import "core:os"
 import "core:strconv"
 import "core:strings"
 import config "gt:config"
+import instance "gt:instance"
 import "history"
 
-USAGE :: `papier: a clipboard manager
+APP_VERSION :: "0.1.0"
 
-  papier                      open the picker
-  papier daemon               watch the clipboard and keep the history
-  papier list [count]         list the newest entries
-  papier get <id> [mime]      write the bytes of an entry to the standard output
+USAGE :: `papier: a clipboard manager for Linux
+
+  papier                      show the history (start papier when it does not run)
+  papier --hidden             start papier in the notification area (for the session's start)
+  papier toggle               show the history, or hide it when it is shown (for a key binding)
+  papier show | hide | quit
+  papier list [count]         the newest entries: id, kind, age, a line of text
+  papier get <id> [mime]      the bytes of an entry on the standard output
   papier copy <id>            put an entry back on the clipboard
-  papier pin|unpin|delete <id>
+  papier pin | unpin | delete <id>
   papier clear                remove every entry that is not pinned
-  papier quit                 stop the daemon
-  papier prefs                list the preferences
-  papier set <name> <value>   change a preference
+  papier prefs                every preference, its value and what it does
+  papier set <name> <value>   change a preference (saved; the running papier reads it again)
+  papier version
   --pref name=value           a preference for this run only
 `
 
@@ -42,25 +40,46 @@ run :: proc(all_args: []string) -> int {
 	args, problems := prefs_open(&prefs, all_args)
 	defer config.prefs_destroy(&prefs)
 	for p in problems { fmt.eprintfln("papier: %s", p) }
-	if len(args) == 0 { return picker_run(&prefs) }
-	verb, rest := args[0], args[1:]
+	verb := len(args) > 0 ? args[0] : ""
+	rest := len(args) > 1 ? args[1:] : nil
 	switch verb {
-	case "daemon":           return daemon_run(all_args)
-	case "list":             return cmd_list(&prefs, rest)
-	case "get":              return cmd_get(&prefs, rest)
-	case "copy", "pin", "unpin", "delete", "clear", "quit", "reload":
+	case "", "--hidden", "toggle":
+		return start(&prefs, verb)
+	case "show", "hide", "quit", "copy", "pin", "unpin", "delete", "clear", "reload":
 		c, ok := command_parse(strings.join(args[:], " ", context.temp_allocator))
 		if !ok { fmt.eprint(USAGE); return 2 }
-		if !command_send(c, start = c.verb == .Copy) { fmt.eprintln("papier: the daemon does not run (papier daemon)"); return 1 }
+		if !command_send(c) { fmt.eprintln("papier: papier does not run (start it with: papier --hidden)"); return 1 }
 		return 0
-	case "prefs":            return cmd_prefs(&prefs)
-	case "set":              return cmd_set(&prefs, rest)
+	case "list":    return cmd_list(&prefs, rest)
+	case "get":     return cmd_get(&prefs, rest)
+	case "prefs":   return cmd_prefs(&prefs)
+	case "set":     return cmd_set(&prefs, rest)
+	case "version", "--version":
+		fmt.printfln("papier %s", APP_VERSION)
+		return 0
 	case "help", "-h", "--help":
 		fmt.print(USAGE)
 		return 0
 	}
 	fmt.eprint(USAGE)
 	return 2
+}
+
+// The running papier is asked to show (or toggle) its window; when none runs, this process becomes it.
+@(private = "file")
+start :: proc(prefs: ^config.Prefs, verb: string) -> int {
+	hidden := verb == "--hidden"
+	message := hidden ? "ping" : verb == "toggle" ? "toggle" : "show"
+	outcome, owner := instance.acquire({name = DAEMON_NAME, wait_ms = 1500}, transmute([]u8)message)
+	switch outcome {
+	case .First:          return app_run(prefs, hidden, owner)
+	case .Forwarded:      return 0
+	case .Other_Instance: return 0
+	case .Unresponsive:
+		fmt.eprintln("papier: a papier runs and does not answer")
+		return 1
+	}
+	return 1
 }
 
 @(private = "file")

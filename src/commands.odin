@@ -1,18 +1,19 @@
 package papier
 
-// What the picker and the command line ask the daemon: one line of text, "<verb> [id]", over the instance socket. Only the
-// daemon writes the history; the others read it and ask.
+// What another process asks the running papier: one line of text, "<verb> [id]", over the instance socket. Only the
+// running papier writes the history; the command line reads it and asks.
 
 import "core:fmt"
-import "core:os"
 import "core:strconv"
 import "core:strings"
-import "core:time"
 import instance "gt:instance"
 
-Verb :: enum u8 { Ping, Copy, Pin, Unpin, Delete, Clear, Reload, Quit }
+Verb :: enum u8 { Ping, Show, Hide, Toggle, Quit, Copy, Pin, Unpin, Delete, Clear, Reload }
 
-COMMAND_NAMES := [Verb]string{.Ping = "ping", .Copy = "copy", .Pin = "pin", .Unpin = "unpin", .Delete = "delete", .Clear = "clear", .Reload = "reload", .Quit = "quit"}
+COMMAND_NAMES := [Verb]string{
+	.Ping = "ping", .Show = "show", .Hide = "hide", .Toggle = "toggle", .Quit = "quit",
+	.Copy = "copy", .Pin = "pin", .Unpin = "unpin", .Delete = "delete", .Clear = "clear", .Reload = "reload",
+}
 
 // The verbs that name an entry.
 VERBS_WITH_ID :: bit_set[Verb]{.Copy, .Pin, .Unpin, .Delete}
@@ -44,34 +45,9 @@ command_parse :: proc(text: string) -> (c: Command, ok: bool) {
 	return
 }
 
-// How long a start of the daemon is waited for before a command is given up.
-DAEMON_START_WAIT_MS :: 3000
-DAEMON_RETRY_MS      :: 50
-SEND_WAIT_MS         :: 1000
+SEND_WAIT_MS :: 1000
 
-// Sends `c` to the daemon. `start`: a daemon that does not run is started first (detached), and waited for.
-command_send :: proc(c: Command, start := false) -> bool {
-	msg := transmute([]u8)command_format(c)
-	if instance.send({name = DAEMON_NAME, wait_ms = SEND_WAIT_MS}, msg) == .Forwarded { return true }
-	if !start || !daemon_spawn() { return false }
-	deadline := time.tick_add(time.tick_now(), DAEMON_START_WAIT_MS * time.Millisecond)
-	for time.tick_diff(time.tick_now(), deadline) > 0 {
-		time.sleep(DAEMON_RETRY_MS * time.Millisecond)
-		if instance.send({name = DAEMON_NAME, wait_ms = SEND_WAIT_MS}, msg) == .Forwarded { return true }
-	}
-	return false
-}
-
-// Whether a daemon answers.
-daemon_running :: proc() -> bool {
-	return instance.send({name = DAEMON_NAME, wait_ms = 200}, transmute([]u8)string("ping")) == .Forwarded
-}
-
-// Starts `papier daemon` as a process of its own (it outlives this one).
-daemon_spawn :: proc() -> bool {
-	exe, err := os.get_executable_path(context.temp_allocator)
-	if err != nil { return false }
-	_, perr := os.process_start({command = {exe, "daemon"}})
-	if perr != nil { return false }
-	return true
+// Sends `c` to the running papier. False when none runs.
+command_send :: proc(c: Command) -> bool {
+	return instance.send({name = DAEMON_NAME, wait_ms = SEND_WAIT_MS}, transmute([]u8)command_format(c)) == .Forwarded
 }

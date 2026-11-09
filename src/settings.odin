@@ -10,7 +10,6 @@ import "gt:platform"
 
 APP_NAME :: "papier"
 
-PALETTE_NAMES := []string{"midnight", "daylight", "graphite", "nord", "dracula", "gruvbox", "tokyo-night", "catppuccin", "catppuccin-latte", "one-dark", "everforest", "solarized", "solarized-light"}
 
 PREF_DEFS := [?]config.Def{
 	{name = "history.max_entries", description = "How many entries the history keeps, pinned ones aside. 0: no limit.", kind = .Int, default = {i = 1000}, min = 0, max = 1_000_000, bounded = true},
@@ -26,10 +25,10 @@ PREF_DEFS := [?]config.Def{
 	{name = "capture.ignore_mimes", description = "MIME types, separated by commas: a copy that offers one of them is not recorded.", kind = .String, default = {s = ""}},
 	{name = "clipboard.keep", description = "When the program that owned the clipboard quits and empties it, put the last entry back.", kind = .Bool, default = {b = true}},
 	{name = "picker.close_on_copy", description = "Close the picker when an entry is copied.", kind = .Bool, default = {b = true}},
-	{name = "picker.theme", description = "The picker's colours.", kind = .String, default = {s = "midnight"}, choices = PALETTE_NAMES},
+	{name = "picker.theme", description = "The window's colours: papier, papier light, or a palette of the toolkit by its name (Midnight, Daylight, Nord, Gruvbox, Tokyo Night, Catppuccin...).", kind = .String, default = {s = "papier"}},
 	{name = "picker.width", description = "The picker's width, in logical pixels.", kind = .Int, default = {i = 900}, min = 320, max = 4000, bounded = true},
 	{name = "picker.height", description = "The picker's height, in logical pixels.", kind = .Int, default = {i = 560}, min = 240, max = 4000, bounded = true},
-	{name = "picker.font_size", description = "The picker's text size, in logical pixels.", kind = .Float, default = {f = 15}, min = 8, max = 40, bounded = true},
+	{name = "picker.font_size", description = "The picker's text size, in logical pixels.", kind = .Float, default = {f = 14}, min = 8, max = 40, bounded = true},
 }
 
 // The values the program reads, copied out of the registry (prefs_read).

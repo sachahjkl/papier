@@ -56,3 +56,43 @@ jobs:
             build/live/*.log
             build/live/*.png
           if-no-files-found: warn
+
+  # Windows: odin check -vet, the unit tests (the system's clipboard history, turned on for the runner's user, read and
+  # changed through the Windows Runtime), a release build of the windows subsystem, the archive.
+  windows:
+    name: Windows x64
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ./ext/gui_toolkit/.github/actions/setup-odin
+
+      - name: The clipboard history on
+        shell: pwsh
+        run: |
+          New-Item -Path HKCU:\Software\Microsoft\Clipboard -Force | Out-Null
+          Set-ItemProperty -Path HKCU:\Software\Microsoft\Clipboard -Name EnableClipboardHistory -Value 1 -Type DWord
+          # (the user's clipboard service reads the setting at its start: started again, it takes it; a runner's session
+          # may still have none, and the test says so)
+          Get-Service cbdhsvc_* -ErrorAction SilentlyContinue | ForEach-Object { Restart-Service $_.Name -Force -ErrorAction Continue }
+
+      - name: papiertool check, package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          odin build tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papiertool.exe -vet
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          build/papiertool.exe check
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          build/papiertool.exe package
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: papier-windows-x64-${{ github.sha }}
+          path: build/dist/*
+          if-no-files-found: warn

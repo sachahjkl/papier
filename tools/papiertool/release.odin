@@ -2,8 +2,9 @@ package papiertool
 
 // What a release is made of, the same steps on a laptop and in the release workflow:
 //
-//   package [version]       build/dist: papier-<version>-linux-x64.tar.gz (the program, its licences, the README and the
-//                           changelog) and SHA256SUMS.txt; the version is APP_VERSION's when none is given
+//   package [version]       build/dist: papier-<version>-linux-x64.tar.gz on Linux, papier-<version>-windows-x64.zip
+//                           on Windows (the program, its licences, the README and the changelog), and the archive's
+//                           SHA-256 beside it (<archive>.sha256); the version is APP_VERSION's when none is given
 //   notes <version>         the changelog's section of that version (the notes of its GitHub release)
 //   ship <version> [--dry-run]
 //                           from a clean master: the changelog's [Unreleased] becomes [<version>] with today's date,
@@ -127,27 +128,38 @@ run_package :: proc(args: []string) -> int {
 		if asked != version { fmt.eprintfln("papiertool: the tag says %s, APP_VERSION %s", asked, version); return 1 }
 	}
 	if !os.exists(PROGRAM) { fmt.eprintfln("papiertool: %s is not built (papiertool build release)", PROGRAM); return 1 }
-	name := fmt.tprintf("papier-%s-linux-x64", version)
+	when ODIN_OS == .Windows {
+		name := fmt.tprintf("papier-%s-windows-x64", version)
+		exe, archive := "papier.exe", fmt.tprintf("%s.zip", name)
+	} else {
+		name := fmt.tprintf("papier-%s-linux-x64", version)
+		exe, archive := "papier", fmt.tprintf("%s.tar.gz", name)
+	}
 	stage := fmt.tprintf("%s/%s", DIST_DIR, name)
 	_ = os.remove_all(DIST_DIR)
 	if os.make_directory_all(stage) != nil { fmt.eprintfln("papiertool: %s cannot be made", stage); return 1 }
 	files := DIST_FILES
-	for f in ([]string{PROGRAM}) { if !copy_file(f, fmt.tprintf("%s/papier", stage)) { return 1 } }
+	if !copy_file(PROGRAM, fmt.tprintf("%s/%s", stage, exe)) { return 1 }
 	for f in files {
 		base := f[strings.last_index_byte(f, '/') + 1:]
 		if !copy_file(f, fmt.tprintf("%s/%s", stage, base)) { return 1 }
 	}
-	// (the symbols are a third of the program: a crash in a release is read again with a build of its tag)
-	if !toolbox.run({"strip", fmt.tprintf("%s/papier", stage)}) { return 1 }
-	_ = os.chmod(fmt.tprintf("%s/papier", stage), {.Read_User, .Write_User, .Execute_User, .Read_Group, .Execute_Group, .Read_Other, .Execute_Other})
-	archive := fmt.tprintf("%s.tar.gz", name)
-	if !toolbox.run({"tar", "--owner=0", "--group=0", "--numeric-owner", "-czf", archive, name}, {dir = DIST_DIR}) { return 1 }
+	when ODIN_OS == .Windows {
+		// (tar.exe of Windows 10 and later: -a picks the zip format by the name)
+		if !toolbox.run({"tar", "-a", "-cf", archive, name}, {dir = DIST_DIR}) { return 1 }
+	} else {
+		// (the symbols are a third of the program: a crash in a release is read again with a build of its tag)
+		if !toolbox.run({"strip", fmt.tprintf("%s/papier", stage)}) { return 1 }
+		_ = os.chmod(fmt.tprintf("%s/papier", stage), {.Read_User, .Write_User, .Execute_User, .Read_Group, .Execute_Group, .Read_Other, .Execute_Other})
+		if !toolbox.run({"tar", "--owner=0", "--group=0", "--numeric-owner", "-czf", archive, name}, {dir = DIST_DIR}) { return 1 }
+	}
 	_ = os.remove_all(stage)
 	sum, ok := toolbox.sha256_file(fmt.tprintf("%s/%s", DIST_DIR, archive))
 	if !ok { return 1 }
+	// (one file per archive: the Linux and the Windows jobs of a release each upload their own)
 	sums := fmt.tprintf("%s  %s\n", sum, archive)
-	if os.write_entire_file(fmt.tprintf("%s/SHA256SUMS.txt", DIST_DIR), sums) != nil { return 1 }
-	fmt.printfln("wrote %s/%s and %s/SHA256SUMS.txt", DIST_DIR, archive, DIST_DIR)
+	if os.write_entire_file(fmt.tprintf("%s/%s.sha256", DIST_DIR, archive), sums) != nil { return 1 }
+	fmt.printfln("wrote %s/%s and %s/%s.sha256", DIST_DIR, archive, DIST_DIR, archive)
 	return 0
 }
 

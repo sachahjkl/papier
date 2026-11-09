@@ -17,6 +17,9 @@ Set one for a single run: `papier --pref picker.font_size=16`.
 
 ## The preferences
 
+On Windows, the system keeps the history (Settings > System > Clipboard): the `history.*`, `capture.*` and
+`clipboard.*` preferences are Linux's, and `picker.shortcut` is Windows's.
+
 | Name | Type | Default | What it does |
 |---|---|---|---|
 | `history.max_entries` | integer, 0 to 1000000 | 1000 | How many entries the history keeps, pinned ones aside. 0: no limit. |
@@ -39,6 +42,7 @@ Set one for a single run: `papier --pref picker.font_size=16`.
 | `picker.width` | integer, 320 to 4000 | 900 | The width of the window at its first start, in logical pixels. |
 | `picker.height` | integer, 240 to 4000 | 560 | The height of the window at its first start, in logical pixels. |
 | `picker.font_size` | number, 8 to 40 | 14 | The size of the text, in logical pixels. |
+| `picker.shortcut` | text | Win+Shift+V | Windows: the keys that show the history from any program. Ctrl, Shift, Alt, Win and a key (a letter, a digit, F1 to F12, Space…), joined by `+`. Win+V stays the system's. |
 
 After the first start, papier keeps the size that you give the window; `picker.width` and `picker.height` apply again
 when `$XDG_STATE_HOME/papier/window` is deleted.

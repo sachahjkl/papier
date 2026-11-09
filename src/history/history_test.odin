@@ -1,3 +1,4 @@
+#+build !windows
 package history
 
 import "core:fmt"

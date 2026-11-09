@@ -5,6 +5,17 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Windows**: papier shows the system's clipboard history (the one Win+V shows), searched and filtered as on Linux, at
+  a shortcut of its own (`picker.shortcut`, Win+Shift+V by default). Enter puts an entry back on the clipboard; an
+  entry can be copied as plain text, edited (the edit is a new copy), removed, and the history cleared. The system keeps
+  the history and its pins (Settings > System > Clipboard). The release has a `papier-<version>-windows-x64.zip`.
+  Its CI builds it and runs its tests on Windows, where the system answers papier's reads; the runner's session has the
+  clipboard history off, so reading the entries, putting one back and removing it have not run on a real desktop yet.
+
+### Changed
+- Each archive of a release has its SHA-256 in a file beside it (`<archive>.sha256`), in place of `SHA256SUMS.txt`.
+
 ## [0.5.2] - 2026-11-09
 
 ### Fixed

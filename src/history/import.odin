@@ -1,3 +1,4 @@
+#+build !windows
 package history
 
 // The history of papier 0.4 and before: a text index and a directory of blobs. open imports it into the database once,

@@ -19,7 +19,12 @@ import "gt:render"
 import "gt:ui"
 import "history"
 
-Filter :: enum u8 { All, Text, Images, Files, Pinned }
+Filter :: enum u8 { All, Text, Images, Files, Pinned }   // (Pinned last: a system with no pins shows the others)
+
+// Whether entries can be pinned: Windows's history has pins of its own, which it does not let a program read or set.
+PINS :: ODIN_OS != .Windows
+// The filters shown.
+when PINS { FILTER_COUNT :: int(Filter.Pinned) + 1 } else { FILTER_COUNT :: int(Filter.Pinned) }
 
 
 // The tray menu's items.
@@ -81,7 +86,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner) -> in
 	platform.set_app_id(APP_NAME)
 	size := app.place.size != {} ? app.place.size : app.settings.size
 	if !host.host_open(&app.main, &app.shared, {title = "Papier", size = size, integrated_title = true}, view_build, app) {
-		fmt.eprintln("papier: no window")
+		errln("papier: no window")
 		return 1
 	}
 	h := &app.main
@@ -101,15 +106,16 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner) -> in
 	}
 
 	if ok, why := history.open(&app.store, history_dir(app.settings.persist)); !ok {
-		fmt.eprintfln("papier: the history cannot be opened: %s", why)
+		errf("papier: the history cannot be opened: %s", why)
 		return 1
 	}
 	refilter(app)
 	if !watcher_start(&app.watcher, owner, win, &app.prefs) {
-		fmt.eprintln("papier: the clipboard watcher cannot start")
+		errln("papier: the clipboard watcher cannot start")
 		return 1
 	}
 	decoder_start(&app.decoder, win)
+	app_shortcut(app)
 	app.tray = platform.tray_create(win, LOGO_PNG, "Papier")
 	if app.tray != nil {
 		platform.tray_set_menu(app.tray, {
@@ -127,7 +133,8 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner) -> in
 			host.hosts_wait({h})
 		} else {
 			platform.wait_event(win, 0)
-			_ = platform.poll_events(win, false)   // (what came while hidden: nothing for the interface)
+			// (what came while hidden is nothing for the interface, but the shortcut)
+			for e in platform.poll_events(win, false) { if e.kind == .Hotkey { app_toggle(app) } }
 		}
 		app_requests(app)
 		app_tray(app)
@@ -185,6 +192,7 @@ app_input :: proc(h: ^host.Host, events: []platform.Event) -> []platform.Event {
 			app_hide(app)
 			continue
 		}
+		if e.kind == .Hotkey { app_toggle(app); continue }
 		append(&out, e)
 	}
 	return out[:]
@@ -192,6 +200,8 @@ app_input :: proc(h: ^host.Host, events: []platform.Event) -> []platform.Event {
 
 // Shows the window as a new look at the history: the newest first, the search empty, the keyboard in it.
 app_show :: proc(app: ^App) {
+	// (Windows: the system's history is read again, now that papier is in the foreground; it comes as a reload)
+	watcher_send(&app.watcher, {verb = .Refresh})
 	app_reload(app)
 	// a new look, unless the window is shown and stays so (a hide asked in this step, then a show: a new look, in place)
 	if !app.visible || app.hide_due {
@@ -214,6 +224,30 @@ app_show :: proc(app: ^App) {
 	platform.raise_window(app.main.win)
 	app.visible = true
 	app.main.settle = max(app.main.settle, FRAMES_AT_SHOW)
+}
+
+app_toggle :: proc(app: ^App) {
+	if app.visible && !app.hide_due { app_hide(app) } else { app_show(app) }
+}
+
+// The id of papier's hotkey (platform.hotkey_register).
+HOTKEY_ID :: 1
+
+// The shortcut that shows the history from any program (picker.shortcut), registered again when it changes. Linux has
+// none of papier's own: the compositor binds `papier toggle` (docs/usage.md).
+@(private = "file")
+app_shortcut :: proc(app: ^App) {
+	when ODIN_OS == .Windows {
+		win := app.main.win
+		platform.hotkey_unregister(win, HOTKEY_ID)
+		hk, ok := platform.hotkey_parse(app.settings.shortcut)
+		switch {
+		case !ok:
+			errf("papier: picker.shortcut: %q is not a shortcut (Ctrl+Shift+V, Win+Alt+V...)", app.settings.shortcut)
+		case !platform.hotkey_register(win, HOTKEY_ID, hk):
+			errf("papier: %s is taken by another program: set another with papier set picker.shortcut <keys>", platform.hotkey_text(hk))
+		}
+	}
 }
 
 // The window goes at the end of this step of the loop: a build asks it (a key, a button), and the frame that asked ends
@@ -239,7 +273,8 @@ app_remember :: proc(app: ^App) {
 	if win == nil || !platform.is_window_visible(win) { return }
 	s := win.dpi_scale > 0 ? win.dpi_scale : 1
 	app.place.size = {int(f32(win.size.x) / s + 0.5), int(f32(win.size.y) / s + 0.5)}
-	if platform.native_surface_handles(win).backend == .X11 {
+	// (Wayland places windows itself; X11 and Windows let the program)
+	if ODIN_OS == .Windows || platform.native_surface_handles(win).backend == .X11 {
 		p := platform.get_placement(win)
 		app.place.place, app.place.placed = {p.rect[0], p.rect[1]}, true
 	}
@@ -274,7 +309,8 @@ app_requests :: proc(app: ^App) {
 			prefs_open(&app.prefs, nil)
 			settings_free(&app.settings)
 			app.settings = prefs_read(&app.prefs)
-		case .Toggle: if app.visible && !app.hide_due { app_hide(app) } else { app_show(app) }
+			app_shortcut(app)
+		case .Toggle: app_toggle(app)
 		case .Show:   app_show(app)
 		case .Hide:   app_hide(app)
 		}
@@ -287,7 +323,7 @@ app_tray :: proc(app: ^App) {
 	if app.tray == nil { return }
 	for e in platform.tray_poll(app.tray) {
 		#partial switch e.kind {
-		case .Click: if app.visible && !app.hide_due { app_hide(app) } else { app_show(app) }
+		case .Click: app_toggle(app)
 		case .Menu_Item:
 			switch Tray_Item(e.item) {
 			case .Show:  app_show(app)

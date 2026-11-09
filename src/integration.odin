@@ -8,7 +8,6 @@ package papier
 //   papier uninstall
 //   papier status
 
-import "core:fmt"
 import desktop "gt:desktop"
 import "gt:process"
 import "core:os"
@@ -54,21 +53,27 @@ integration_options :: proc(args: []string) -> desktop.Options {
 cmd_install :: proc(args: []string) -> int {
 	o := integration_options(args)
 	if r := desktop.install(&o); r.error != .None {
-		fmt.eprintfln("papier: %s %s", desktop.error_text(r.error), r.detail)
+		errf("papier: %s %s", desktop.error_text(r.error), r.detail)
 		return 1
 	}
-	fmt.printfln("papier: installed for %s (%s)", o.exe, desktop.targets(false))
-	if o.autostart { fmt.println("papier: it starts with the session, in the notification area; bind `papier toggle` to a key to show it") }
+	outf("papier: installed for %s (%s)", o.exe, desktop.targets(false))
+	if o.autostart {
+		when ODIN_OS == .Windows {
+			outln("papier: it starts with the session, in the notification area; its shortcut shows it (picker.shortcut, Win+Shift+V)")
+		} else {
+			outln("papier: it starts with the session, in the notification area; bind `papier toggle` to a key to show it")
+		}
+	}
 	return 0
 }
 
 cmd_uninstall :: proc(args: []string) -> int {
 	o := integration_options(args)
 	if r := desktop.remove(&o); r.error != .None {
-		fmt.eprintfln("papier: %s %s", desktop.error_text(r.error), r.detail)
+		errf("papier: %s %s", desktop.error_text(r.error), r.detail)
 		return 1
 	}
-	fmt.println("papier: the launcher, the icons, the link and the start with the session are gone (the history stays)")
+	outln("papier: the launcher, the icons, the link and the start with the session are gone (the history stays)")
 	return 0
 }
 
@@ -76,13 +81,13 @@ cmd_status :: proc(args: []string) -> int {
 	o := integration_options(args)
 	s := desktop.status(&o)
 	defer desktop.status_destroy(&s)
-	fmt.printfln("%s", desktop.describe(&s))
+	outf("%s", desktop.describe(&s))
 	for part in s.wanted {
 		ps := s.parts[part]
 		state := ps.present ? (ps.stale ? "points to another program" : ps.partial ? "incomplete" : "present") : "absent"
-		fmt.printfln("  %v: %s", part, state)
+		outf("  %v: %s", part, state)
 	}
-	fmt.printfln("  running: %v", daemon_running())
+	outf("  running: %v", daemon_running())
 	return s.state == .Installed ? 0 : 1
 }
 

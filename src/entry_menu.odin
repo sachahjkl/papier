@@ -79,7 +79,7 @@ entry_menu_build :: proc(app: ^App, em: f32) {
 		}
 		if ui.menu_item("Save as…", "Ctrl+S", enabled = e.kind != .Files).clicked { entry_save_as(app, e) }
 		ui.menu_separator()
-		if ui.menu_item(e.pinned ? "Unpin" : "Pin", "Ctrl+P").clicked { toggle_pin(app, e) }
+		if PINS && ui.menu_item(e.pinned ? "Unpin" : "Pin", "Ctrl+P").clicked { toggle_pin(app, e) }
 		if ui.menu_item("Remove", "Shift+Del").clicked { remove_entry(app, e.id) }
 	}
 }

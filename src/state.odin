@@ -5,7 +5,6 @@ package papier
 // and when papier quits.
 
 import "core:fmt"
-import "core:os"
 import "core:strconv"
 import "core:strings"
 import "gt:fsx"
@@ -17,12 +16,6 @@ Window_State :: struct {
 	split:  f32,       // the list's width, logical pixels (0: a share of the window)
 }
 
-state_path :: proc(allocator := context.temp_allocator) -> string {
-	if s := os.get_env("XDG_STATE_HOME", context.temp_allocator); s != "" {
-		return strings.concatenate({s, "/", APP_NAME, "/window"}, allocator)
-	}
-	return strings.concatenate({os.get_env("HOME", context.temp_allocator), "/.local/state/", APP_NAME, "/window"}, allocator)
-}
 
 // The state in `text` ("size w h", "place x y", "split w": one per line, any order, unknown lines skipped).
 state_parse :: proc(text: string) -> (s: Window_State) {

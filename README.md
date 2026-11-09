@@ -2,7 +2,7 @@
 
 <h1 align="center">papier</h1>
 
-<p align="center"><b>The clipboard's history for Linux.</b></p>
+<p align="center"><b>The clipboard's history for Linux and Windows.</b></p>
 
 <p align="center">
 <a href="https://github.com/sachahjkl/papier/actions/workflows/ci.yml"><img src="https://github.com/sachahjkl/papier/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -21,8 +21,9 @@ lives in the notification area, sleeps at 0 % CPU, and its window comes up in a 
 
 - **Every kind of copy**: text, the HTML that comes with it, images (PNG, JPEG, WebP, GIF, BMP, SVG), files copied in a
   file manager. Put back, an entry offers every type it had: a rich paste stays rich.
-- **Fast to reach**: one process per session; `papier toggle` on a key shows the window, the newest entry selected, the
-  keyboard in the search.
+- **Fast to reach**: one process per session; `papier toggle` on a key (Linux) or Win+Shift+V (Windows) shows the window,
+  the newest entry selected, the keyboard in the search.
+- **Windows**: papier shows the system's clipboard history (the one Win+V shows) with its search, filters and menus.
 - **Search as you type**, filters (All, Text, Images, Files, Pinned), Enter to copy, Alt+1…9 for the first nine.
 - **Pinned entries** stay whatever the limits.
 - **An entry's menu** (right click, Menu key): copy, copy as plain text, edit, open, open with any application your

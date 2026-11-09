@@ -1,3 +1,4 @@
+#+build linux
 package papiertool
 
 // shots: the pictures of the README, the documentation and the site, the program's own frames (over the DevTools protocol,

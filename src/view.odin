@@ -135,7 +135,7 @@ remove_entry :: proc(app: ^App, id: u64) {
 	watcher_send(&app.watcher, {verb = .Delete, id = id})
 	at := history.find(&app.store, id)
 	if at < 0 { return }
-	history.remove(&app.store, id)
+	history.forget(&app.store, id)
 	delete(app.lowered[at])
 	ordered_remove(&app.lowered, at)
 	refilter(app)
@@ -153,14 +153,14 @@ view_keys :: proc(app: ^App) {
 	if ui.key_press(.Page_Up) { select_row(app, app.vl.sel - PAGE_ROWS) }
 	if ui.key_press(.Home, {.Ctrl}) { select_row(app, 0) }
 	if ui.key_press(.End, {.Ctrl}) { select_row(app, len(app.shown) - 1) }
-	if ui.key_press(.Tab) { set_filter(app, Filter((int(app.filter) + 1) % len(Filter))) }
-	if ui.key_press(.Tab, {.Shift}) { set_filter(app, Filter((int(app.filter) + len(Filter) - 1) % len(Filter))) }
+	if ui.key_press(.Tab) { set_filter(app, Filter((int(app.filter) + 1) % FILTER_COUNT)) }
+	if ui.key_press(.Tab, {.Shift}) { set_filter(app, Filter((int(app.filter) + FILTER_COUNT - 1) % FILTER_COUNT)) }
 	if ui.key_press(.Return) { if e := selected(app); e != nil { entry_copy(app, e.id) } }
 	digits := [9]platform.Key{.N1, .N2, .N3, .N4, .N5, .N6, .N7, .N8, .N9}
 	for k, i in digits {
 		if ui.key_press(k, {.Alt}) && i < len(app.shown) { entry_copy(app, app.store.entries[app.shown[i]].id) }
 	}
-	if ui.key_press(.P, {.Ctrl}) { if e := selected(app); e != nil { toggle_pin(app, e) } }
+	if PINS && ui.key_press(.P, {.Ctrl}) { if e := selected(app); e != nil { toggle_pin(app, e) } }
 	if ui.key_press(.Delete, {.Shift}) { if e := selected(app); e != nil { remove_entry(app, e.id) } }
 	if ui.key_press(.E, {.Ctrl}) { if e := selected(app); e != nil { edit_begin(app, e) } }
 	if ui.key_press(.O, {.Ctrl}) { if e := selected(app); e != nil { entry_open(app, e) } }
@@ -266,7 +266,7 @@ build_title :: proc(app: ^App, em: f32) {
 		ui.custom("###grip", grip_draw, d)
 		ui.next({width = ui.px(em * FILTER_EM), height = ui.px(ui.dense(em * 1.95))})
 		sel := int(app.filter)
-		if ui.segmented("###filter", filter_labels[:], &sel) { set_filter(app, Filter(sel)) }
+		if ui.segmented("###filter", filter_labels[:FILTER_COUNT], &sel) { set_filter(app, Filter(sel)) }
 		ui.spacer(ui.px(em * 0.3))
 		if icon_action(app, "settings", ICO_SETTINGS, "Settings (Ctrl+,)", em) { settings_toggle(app) }
 		if icon_action(app, "close", ICO_CLOSE, "Hide (Escape)", em) { app_hide(app) }
@@ -359,9 +359,12 @@ build_status :: proc(app: ^App, em: f32) {
 				ui.next({width = ui.fill()})
 				msg := app.status
 				if msg == "" || ui.now_ms() > app.status_until {
-					pinned := 0
-					for e in app.store.entries { if e.pinned { pinned += 1 } }
-					msg = fmt.tprintf("%d of %d entries · %d pinned", len(app.shown), len(app.store.entries), pinned)
+					msg = fmt.tprintf("%d of %d entries", len(app.shown), len(app.store.entries))
+					if PINS {
+						pinned := 0
+						for e in app.store.entries { if e.pinned { pinned += 1 } }
+						msg = fmt.tprintf("%s · %d pinned", msg, pinned)
+					}
 				}
 				ui.label(fmt.tprintf("%s###status", msg))
 				hints := app.edit.active ? EDIT_HINTS[:] : LIST_HINTS[:]
@@ -481,7 +484,7 @@ build_view_body :: proc(app: ^App, em: f32) {
 		if e.kind == .Text || e.kind == .Html {
 			if icon_action(app, "edit", ICO_EDIT, "Edit (Ctrl+E)", em) { edit_begin(app, e) }
 		}
-		if icon_action(app, "pin", e.pinned ? ICO_PIN_OFF : ICO_PIN, e.pinned ? "Unpin (Ctrl+P)" : "Pin (Ctrl+P)", em) { toggle_pin(app, e) }
+		if PINS && icon_action(app, "pin", e.pinned ? ICO_PIN_OFF : ICO_PIN, e.pinned ? "Unpin (Ctrl+P)" : "Pin (Ctrl+P)", em) { toggle_pin(app, e) }
 		if icon_action(app, "delete", ICO_TRASH, "Remove (Shift+Delete)", em) { remove_entry(app, e.id); return }
 		ui.spacer(ui.px(em * 0.4))
 	}
@@ -535,6 +538,10 @@ shown_text :: proc(text: string, allocator := context.temp_allocator) -> string 
 	return out
 }
 
-@(private = "file", rodata) LIST_HINTS := [?][2]string{{"Enter", "copy"}, {"Ctrl+E", "edit"}, {"Menu", "more"}, {"Ctrl+P", "pin"}, {"Tab", "filter"}, {"Esc", "hide"}}
+when PINS {
+	@(private = "file", rodata) LIST_HINTS := [?][2]string{{"Enter", "copy"}, {"Ctrl+E", "edit"}, {"Menu", "more"}, {"Ctrl+P", "pin"}, {"Tab", "filter"}, {"Esc", "hide"}}
+} else {
+	@(private = "file", rodata) LIST_HINTS := [?][2]string{{"Enter", "copy"}, {"Ctrl+E", "edit"}, {"Menu", "more"}, {"Tab", "filter"}, {"Esc", "hide"}}
+}
 @(private = "file", rodata) EDIT_HINTS := [?][2]string{{"Ctrl+Enter", "copy"}, {"Ctrl+S", "save"}, {"Esc", "cancel"}}
 @(private = "file", rodata) filter_labels := [len(Filter)]string{"All", "Text", "Images", "Files", "Pinned"}

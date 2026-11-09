@@ -13,7 +13,11 @@ LINUX_DEFINES :: "-define:FONT_BACKEND=native"
 LINUX_LINK    :: "-extra-linker-flags:-Wl,--allow-multiple-definition"
 // The packages that have tests, and this tool.
 TEST_PACKAGES :: [?]string{"src", "src/history", "tools/papiertool"}
-PROGRAM       :: "build/papier"
+when ODIN_OS == .Windows {
+	PROGRAM :: "build/papier.exe"
+} else {
+	PROGRAM :: "build/papier"
+}
 
 toolkit :: proc() -> string {
 	if v := os.get_env("GT", context.temp_allocator); v != "" { return v }
@@ -86,6 +90,8 @@ run_build :: proc(args: []string) -> int {
 	extra := make([dynamic]string, context.temp_allocator)
 	append(&extra, fmt.tprintf("-out:%s", PROGRAM))
 	append(&extra, ..mode)
+	// (Windows: no console of its own, none flashes at a start with the session; its text goes to the parent's: output.odin)
+	when ODIN_OS == .Windows { if release { append(&extra, "-subsystem:windows") } }
 	if !toolbox.run(odin_cmd("build", "src", extra[:]), {echo = true}) { return 1 }
 	fmt.printfln("built %s", PROGRAM)
 	return 0
@@ -96,7 +102,7 @@ run_test :: proc(args: []string) -> int {
 	_ = os.make_directory("build")
 	for pkg in TEST_PACKAGES {
 		name, _ := strings.replace_all(pkg, "/", "_", context.temp_allocator)
-		out := fmt.tprintf("-out:build/test_%s", name)
+		out := fmt.tprintf("-out:build/test_%s%s", name, ODIN_OS == .Windows ? ".exe" : "")
 		cmd := pkg == "tools/papiertool" ? []string{"odin", "test", pkg, collection(), "-vet", out} : odin_cmd("test", pkg, {out})
 		if !toolbox.run(cmd, {echo = true}) { return 1 }
 	}

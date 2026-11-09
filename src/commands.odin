@@ -8,18 +8,19 @@ import "core:strconv"
 import "core:strings"
 import instance "gt:instance"
 
-Verb :: enum u8 { Ping, Show, Hide, Toggle, Quit, Copy, Pin, Unpin, Delete, Clear, Reload, Copy_Plain, Add_Text, Replace_Text }
+Verb :: enum u8 { Ping, Show, Hide, Toggle, Quit, Copy, Pin, Unpin, Delete, Clear, Reload, Copy_Plain, Add_Text, Replace_Text, Refresh }
 
 COMMAND_NAMES := [Verb]string{
 	.Ping = "ping", .Show = "show", .Hide = "hide", .Toggle = "toggle", .Quit = "quit",
 	.Copy = "copy", .Pin = "pin", .Unpin = "unpin", .Delete = "delete", .Clear = "clear", .Reload = "reload",
-	.Copy_Plain = "copy-plain", .Add_Text = "add-text", .Replace_Text = "replace-text",
+	.Copy_Plain = "copy-plain", .Add_Text = "add-text", .Replace_Text = "replace-text", .Refresh = "refresh",
 }
 
 // The verbs that name an entry.
 VERBS_WITH_ID :: bit_set[Verb]{.Copy, .Pin, .Unpin, .Delete, .Copy_Plain, .Replace_Text}
-// The verbs only the window sends (they carry a text, which a line of the socket does not).
-WINDOW_VERBS :: bit_set[Verb]{.Add_Text, .Replace_Text}
+// The verbs only the window sends (a text, which a line of the socket does not carry; the window shown: Windows reads
+// the system's history again).
+WINDOW_VERBS :: bit_set[Verb]{.Add_Text, .Replace_Text, .Refresh}
 
 Command :: struct {
 	verb: Verb,

@@ -1,4 +1,4 @@
-// papier: a clipboard manager for Linux (Wayland), on gui_toolkit.
+// papier: a clipboard manager for Linux (Wayland) and Windows, on gui_toolkit.
 //
 // One process for the session keeps the history and lives in the notification area; its window comes up in a few
 // milliseconds (app.odin). A start of `papier` when it runs hands it a command and ends.
@@ -14,7 +14,7 @@ import "history"
 
 APP_VERSION :: "0.5.2"
 
-USAGE :: `papier: a clipboard manager for Linux
+USAGE :: `papier: the clipboard's history
 
   papier                      show the history (start papier when it does not run)
   papier --hidden             start papier in the notification area (for the session's start)
@@ -43,7 +43,7 @@ run :: proc(all_args: []string) -> int {
 	prefs: config.Prefs
 	args, problems := prefs_open(&prefs, all_args)
 	defer config.prefs_destroy(&prefs)
-	for p in problems { fmt.eprintfln("papier: %s", p) }
+	for p in problems { errf("papier: %s", p) }
 	verb := len(args) > 0 ? args[0] : ""
 	rest := len(args) > 1 ? args[1:] : nil
 	switch verb {
@@ -51,8 +51,8 @@ run :: proc(all_args: []string) -> int {
 		return start(&prefs, verb)
 	case "show", "hide", "quit", "copy", "pin", "unpin", "delete", "clear", "reload":
 		c, ok := command_parse(strings.join(args[:], " ", context.temp_allocator))
-		if !ok { fmt.eprint(USAGE); return 2 }
-		if !command_send(c) { fmt.eprintln("papier: papier does not run (start it with: papier --hidden)"); return 1 }
+		if !ok { errs(USAGE); return 2 }
+		if !command_send(c) { errln("papier: papier does not run (start it with: papier --hidden)"); return 1 }
 		return 0
 	case "list":    return cmd_list(&prefs, rest)
 	case "get":     return cmd_get(&prefs, rest)
@@ -62,13 +62,13 @@ run :: proc(all_args: []string) -> int {
 	case "prefs":   return cmd_prefs(&prefs)
 	case "set":     return cmd_set(&prefs, rest)
 	case "version", "--version":
-		fmt.printfln("papier %s", APP_VERSION)
+		outf("papier %s", APP_VERSION)
 		return 0
 	case "help", "-h", "--help":
-		fmt.print(USAGE)
+		outs(USAGE)
 		return 0
 	}
-	fmt.eprint(USAGE)
+	errs(USAGE)
 	return 2
 }
 
@@ -83,7 +83,7 @@ start :: proc(prefs: ^config.Prefs, verb: string) -> int {
 	case .Forwarded:      return 0
 	case .Other_Instance: return 0
 	case .Unresponsive:
-		fmt.eprintln("papier: a papier runs and does not answer")
+		errln("papier: a papier runs and does not answer")
 		return 1
 	}
 	return 1
@@ -91,8 +91,16 @@ start :: proc(prefs: ^config.Prefs, verb: string) -> int {
 
 @(private = "file")
 open_store :: proc(prefs: ^config.Prefs, s: ^history.Store) -> bool {
-	ok, why := history.open(s, history_dir(config.bool_of(prefs, "history.persist")))
-	if !ok { fmt.eprintfln("papier: the history cannot be opened: %s", why) }
+	when ODIN_OS == .Windows {
+		// (no watcher in this process: the system's history read here, once)
+		if err := history.system_read_once(classify); err != .None {
+			errf("papier: %s", history.SYSTEM_ERROR_TEXT[err])
+			return false
+		}
+	}
+	settings := prefs_read(prefs, context.temp_allocator)
+	ok, why := history.open(s, history_dir(settings.persist))
+	if !ok { errf("papier: the history cannot be opened: %s", why) }
 	return ok
 }
 
@@ -105,21 +113,21 @@ cmd_list :: proc(prefs: ^config.Prefs, args: []string) -> int {
 	defer history.close(&s)
 	now := now_ms()
 	for e in s.entries[:min(count, len(s.entries))] {
-		fmt.printfln("%d\t%s%s\t%s\t%s", e.id, history.KIND_NAMES[e.kind], e.pinned ? "*" : "", age_text(now - e.time_ms), one_line(e.preview, 100))
+		outf("%d\t%s%s\t%s\t%s", e.id, history.KIND_NAMES[e.kind], e.pinned ? "*" : "", age_text(now - e.time_ms), one_line(e.preview, 100))
 	}
 	return 0
 }
 
 @(private = "file")
 cmd_get :: proc(prefs: ^config.Prefs, args: []string) -> int {
-	if len(args) == 0 { fmt.eprint(USAGE); return 2 }
+	if len(args) == 0 { errs(USAGE); return 2 }
 	id, ok := strconv.parse_u64(args[0])
-	if !ok { fmt.eprint(USAGE); return 2 }
+	if !ok { errs(USAGE); return 2 }
 	s: history.Store
 	if !open_store(prefs, &s) { return 1 }
 	defer history.close(&s)
 	at := history.find(&s, id)
-	if at < 0 { fmt.eprintfln("papier: no entry %d", id); return 1 }
+	if at < 0 { errf("papier: no entry %d", id); return 1 }
 	e := s.entries[at]
 	rep := -1
 	if len(args) > 1 {
@@ -127,10 +135,10 @@ cmd_get :: proc(prefs: ^config.Prefs, args: []string) -> int {
 	} else {
 		for r, i in e.reps { if r.hash == e.key { rep = i; break } }
 	}
-	if rep < 0 { fmt.eprintfln("papier: entry %d has no such type", id); return 1 }
+	if rep < 0 { errf("papier: entry %d has no such type", id); return 1 }
 	data := history.blob_read(&s, e.reps[rep].hash, context.temp_allocator)
-	if data == nil { fmt.eprintln("papier: the entry's data is gone"); return 1 }
-	os.write(os.stdout, data)
+	if data == nil { errln("papier: the entry's data is gone"); return 1 }
+	outs(string(data))
 	return 0
 }
 
@@ -139,20 +147,20 @@ cmd_prefs :: proc(prefs: ^config.Prefs) -> int {
 	for name in config.sorted_names(prefs) {
 		r := config.ref_of(prefs, name)
 		e := config.entry(prefs, r)
-		fmt.printfln("%s = %s%s\n    %s", name, config.value_string(prefs, r), config.is_default(prefs, r) ? "" : "   (changed)", e.def.description)
+		outf("%s = %s%s\n    %s", name, config.value_string(prefs, r), config.is_default(prefs, r) ? "" : "   (changed)", e.def.description)
 	}
 	return 0
 }
 
 @(private = "file")
 cmd_set :: proc(prefs: ^config.Prefs, args: []string) -> int {
-	if len(args) != 2 { fmt.eprint(USAGE); return 2 }
+	if len(args) != 2 { errs(USAGE); return 2 }
 	if err := config.set_from_string(prefs, args[0], args[1], .User); err != .None {
-		fmt.eprintfln("papier: %s: %s", args[0], config.set_error_text(err))
+		errf("papier: %s: %s", args[0], config.set_error_text(err))
 		return 1
 	}
 	path := prefs_file()
-	if !config.save_user(prefs, path) { fmt.eprintfln("papier: %s cannot be written", path); return 1 }
+	if !config.save_user(prefs, path) { errf("papier: %s cannot be written", path); return 1 }
 	command_send({verb = .Reload})
 	return 0
 }

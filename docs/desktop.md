@@ -1,6 +1,25 @@
 # Papier on the desktop
 
-## Requirements
+## Windows
+
+Windows 10 (1809) or later, with the clipboard history on (Settings > System > Clipboard > Clipboard history): papier
+shows the system's history, the one Win+V shows. The system keeps it (its last 25 copies, and the ones you pin with
+Win+V); papier reads it, puts an entry back, removes one, clears it.
+
+```powershell
+Expand-Archive papier-0.6.0-windows-x64.zip
+.\papier-0.6.0-windows-x64\papier.exe install   # --no-autostart, --no-path: leave a part out
+```
+
+`papier install` puts a launcher in the Start menu, `papier` on your PATH, and its start with the session (the `Run`
+key of your user: `papier --hidden`, in the notification area). Win+Shift+V shows the window from any program
+(`papier set picker.shortcut <keys>` for others). The system reads its history only for the program in the foreground:
+papier reads it again each time its window shows.
+
+What Windows does not let a program do: pin an entry (pin it in Win+V), or change an entry in place (an edit is a new
+copy, and the old entry goes).
+
+## Linux: requirements
 
 - A Wayland compositor with a data-control protocol: `ext-data-control-v1` or `zwlr-data-control-unstable-v1`. Hyprland,
   Sway, KDE Plasma (6.2 and later), river, niri, labwc, Wayfire and the other wlroots compositors have one.
@@ -9,7 +28,7 @@
 - For the icon in the notification area: a StatusNotifierItem host (Waybar's `tray`, KDE's panel, …). Without one,
   papier works the same with no icon.
 
-## Install
+## Linux: install
 
 `papier install` integrates the program where it is (a downloaded release, a build, a Nix profile):
 

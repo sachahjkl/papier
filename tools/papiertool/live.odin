@@ -1,3 +1,4 @@
+#+build linux
 package papiertool
 
 // live: the real program against a real compositor that nobody sees (session.odin), and what a person does through

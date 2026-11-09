@@ -1,3 +1,4 @@
+#+build linux
 package papiertool
 
 // A session nobody sees, for `live` and `shots`: a sway with no screen (headless, pixman) in a runtime directory of its

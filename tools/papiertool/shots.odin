@@ -37,7 +37,7 @@ run_shots :: proc(args: []string) -> int {
 	if run_build({"release"}) != 0 { return 1 }
 	s: Session
 	defer session_stop(&s)
-	if why := session_start(&s, SHOTS_DIR, SHOTS_PORT); why != "" { fmt.eprintfln("papiertool shots: %s", why); return 1 }
+	if why := session_start(&s, SHOTS_DIR, SHOTS_PORT, {"picker.mode\tdark"}); why != "" { fmt.eprintfln("papiertool shots: %s", why); return 1 }
 	samples := SAMPLES
 	for x in samples {
 		if !copy_and_wait(&s, x.text, x.mime, x.file, x.seen) { fmt.eprintfln("papiertool shots: %q did not reach the history", x.seen); return 1 }
@@ -85,7 +85,7 @@ run_shots :: proc(args: []string) -> int {
 	cdp.key(&c, "Escape")
 	cdp.close(&c)
 
-	_, _ = run_in(&s, PROGRAM, "set", "picker.theme", "papier light")
+	_, _ = run_in(&s, PROGRAM, "set", "picker.mode", "light")
 	_, _ = run_in(&s, PROGRAM, "hide")
 	_, _ = run_in(&s, PROGRAM, "show")
 	if lc, lok := window_connect(&s); lok {

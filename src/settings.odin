@@ -7,6 +7,7 @@ import "core:os"
 import "core:strings"
 import config "gt:config"
 import "gt:platform"
+import "gt:ui"
 
 APP_NAME :: "papier"
 
@@ -25,7 +26,10 @@ PREF_DEFS := [?]config.Def{
 	{name = "capture.ignore_mimes", description = "MIME types, separated by commas: a copy that offers one of them is not recorded.", kind = .String, default = {s = ""}},
 	{name = "clipboard.keep", description = "When the program that owned the clipboard quits and empties it, put the last entry back.", kind = .Bool, default = {b = true}},
 	{name = "picker.close_on_copy", description = "Close the picker when an entry is copied.", kind = .Bool, default = {b = true}},
-	{name = "picker.theme", description = "The window's colours: papier, papier light, or a palette of the toolkit by its name (Midnight, Daylight, Nord, Gruvbox, Tokyo Night, Catppuccin...).", kind = .String, default = {s = "papier"}},
+	{name = "picker.theme", description = "The window's colours: Papier, or a theme of the toolkit by its name (Midnight, Nord, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine...).", kind = .String, default = {s = "Papier"}},
+	{name = "picker.mode", description = "The theme's version: the system's (light or dark, followed as it changes), dark, or light.", kind = .String, default = {s = "system"}, choices = {"system", "dark", "light"}},
+	{name = "picker.finish", description = "How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines (flat in a light version). Flat: plain surfaces and thin lines.", kind = .String, default = {s = "machined"}, choices = {"machined", "flat", "gradient", "glass"}},
+	{name = "picker.glow", description = "The halos of the machined finish: a focused field's ring of light.", kind = .Bool, default = {b = true}},
 	{name = "picker.width", description = "The picker's width, in logical pixels.", kind = .Int, default = {i = 900}, min = 320, max = 4000, bounded = true},
 	{name = "picker.height", description = "The picker's height, in logical pixels.", kind = .Int, default = {i = 560}, min = 240, max = 4000, bounded = true},
 	{name = "picker.font_size", description = "The picker's text size, in logical pixels.", kind = .Float, default = {f = 14}, min = 8, max = 40, bounded = true},
@@ -42,6 +46,9 @@ Settings :: struct {
 	keep:           bool,
 	close_on_copy:  bool,
 	theme:          string,
+	mode:           ui.Theme_Mode,
+	finish:         ui.Finish,
+	glow:           bool,
 	size:           [2]int,
 	font_size:      f32,
 }
@@ -79,6 +86,9 @@ prefs_read :: proc(p: ^config.Prefs, allocator := context.allocator) -> (s: Sett
 	s.keep = config.bool_of(p, "clipboard.keep")
 	s.close_on_copy = config.bool_of(p, "picker.close_on_copy")
 	s.theme = strings.clone(config.string_of(p, "picker.theme"), allocator)
+	s.mode = ui.theme_mode_of(config.string_of(p, "picker.mode"))
+	s.finish = ui.finish_of(config.string_of(p, "picker.finish"))
+	s.glow = config.bool_of(p, "picker.glow")
 	s.size = {int(config.int_of(p, "picker.width")), int(config.int_of(p, "picker.height"))}
 	s.font_size = f32(config.float_of(p, "picker.font_size"))
 	return

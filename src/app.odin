@@ -8,7 +8,6 @@ package papier
 // frame (a hidden window's frame would wait for a screen it is not on).
 
 import "core:fmt"
-import "core:strings"
 import config "gt:config"
 import "gt:devtools"
 import "gt:font"
@@ -39,7 +38,7 @@ App :: struct {
 	decoder:    Decoder,            // the pictures of the preview (decoder.odin)
 	tray:       ^platform.Tray,
 	devtools:   ^devtools.Server,   // TOOLKIT_DEVTOOLS=<port>: driven and captured over the Chrome DevTools Protocol
-	palette_applied: string,        // the theme the palette was last made from (owned)
+	theme_shown: ui.Theme_Shown,    // the theme, mode and finish shown (ui.theme_show)
 	visible:    bool,
 	hide_due:   bool,               // app_hide was asked: the window goes after this frame
 	quit:       bool,
@@ -148,7 +147,6 @@ app_free :: proc(app: ^App) {
 	delete(app.ids)
 	delete(app.query)
 	delete(app.status)
-	delete(app.palette_applied)
 	ui.field_destroy(&app.search)
 	ui.vlist_destroy(&app.vl)
 	entry_menu_free(&app.menu)
@@ -162,12 +160,9 @@ app_free :: proc(app: ^App) {
 @(private = "file")
 app_params :: proc(h: ^host.Host, bp: ^ui.Build_Params) {
 	app := (^App)(h.user)
-	// (only when it changes: a palette applied starts a cross-fade, which asks for frames)
-	if app.settings.theme != app.palette_applied {
-		ui.apply_palette(&app.shared.theme, palette_of(app.settings.theme))
-		delete(app.palette_applied)
-		app.palette_applied = strings.clone(app.settings.theme)
-	}
+	// (applied only when it changes, or the system goes light or dark: a palette applied starts a cross-fade)
+	choice := ui.Theme_Choice{name = app.settings.theme, mode = app.settings.mode, finish = app.settings.finish, glow = app.settings.glow ? 1 : 0}
+	if ui.theme_show(&app.shared.theme, themes(), choice, &app.theme_shown) { platform.set_dark_title(h.win, !app.theme_shown.light) }
 	bp.base = ui.Style{pref = {.X = ui.text_size(), .Y = ui.px(28)}, font = app.shared.font, font_size = app.settings.font_size, text_pad = 6, cursor = .Arrow}
 }
 
@@ -306,23 +301,20 @@ say :: proc(app: ^App, format: string, args: ..any) {
 
 STATUS_SHOWN_MS :: 3000
 
-// The palette of the preference picker.theme: papier's own, or one of the toolkit's by its name.
-palette_of :: proc(name: string) -> ui.Palette {
-	switch strings.to_lower(name, context.temp_allocator) {
-	case "", "papier":     return PALETTE_PAPIER
-	case "papier light":   return PALETTE_PAPIER_LIGHT
+// papier's own theme, first of the list: ink and paper, a soft sand accent (the colours of the logo).
+THEME_PAPIER :: ui.Theme_Def{"Papier",
+	{{0x0e0e10ff, 0x131315ff, 0x1a1a1dff, 0x1a1a1dff, 0x232327ff, 0x2a2a30ff}, {0x5c5954ff, 0x8e8a84ff, 0xece8e1ff, 0xfffaf2ff},
+		{0xcbbca3ff, 0x8fa9c9ff, 0xa99bc4ff, 0x46a758ff, 0xf5a524ff, 0xe5484dff, 0x95c3c8ff, 0xc9a0b4ff}},
+	{{0xebe7dfff, 0xf6f3edff, 0xffffffff, 0xffffffff, 0xeeeae2ff, 0xe0dbd1ff}, {0xa39e95ff, 0x6f6a63ff, 0x1b1b1fff, 0x000000ff},
+		{0x8a7a62ff, 0x3d6a9eff, 0x6b56a3ff, 0x2f8f46ff, 0xc98a10ff, 0xd93d42ff, 0x2f7c86ff, 0xa64a72ff}},
+	.Both, nil, false, 0}
+
+// The themes the window can show: papier's, then the toolkit's (gui_toolkit docs/themes.md).
+themes :: proc() -> []ui.Theme_Def {
+	@(static) list: [len(ui.THEMES) + 1]ui.Theme_Def
+	if list[0].name == "" {
+		list[0] = THEME_PAPIER
+		copy(list[1:], ui.THEMES[:])
 	}
-	if p, ok := ui.palette_named(name); ok { return p }
-	return PALETTE_PAPIER
-}
-
-// Ink and paper, a soft sand accent: the colours of the logo.
-PALETTE_PAPIER :: ui.Palette{
-	bg = 0x131315ff, panel = 0x1a1a1dff, panel2 = 0x232327ff, text = 0xece8e1ff, weak = 0x8e8a84ff, border = 0x2a2a30ff,
-	accent = 0xcbbca3ff, accent_text = 0x1a1712ff, good = 0x46a758ff, warn = 0xf5a524ff, bad = 0xe5484dff, dark = true,
-}
-
-PALETTE_PAPIER_LIGHT :: ui.Palette{
-	bg = 0xf6f3edff, panel = 0xffffffff, panel2 = 0xeeeae2ff, text = 0x1b1b1fff, weak = 0x6f6a63ff, border = 0xe0dbd1ff,
-	accent = 0x8a7a62ff, accent_text = 0xffffffff, good = 0x2f8f46ff, warn = 0xc98a10ff, bad = 0xd93d42ff, dark = false,
+	return list[:]
 }

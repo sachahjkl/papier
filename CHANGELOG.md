@@ -5,6 +5,16 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **The machined finish**, the default (`picker.finish`): bevelled buttons, the search as a sunken well with a ring of
+  light when focused, the filters on a carved track. `flat`, `gradient` and `glass` are the others.
+- **Themes with a dark and a light version** (gui_toolkit 0.117.0): `picker.theme` names Papier or one of the toolkit's
+  25 themes; `picker.mode` shows the system's version and follows it when it changes, or the dark one, or the light one.
+  `picker.glow` turns the halos off.
+
+### Changed
+- `picker.theme` no longer takes "papier light": the light version is `picker.mode light`.
+
 ## [0.2.0] - 2026-11-09
 
 ### Added

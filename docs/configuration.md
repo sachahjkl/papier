@@ -10,7 +10,7 @@ Change one. Papier saves it in `$XDG_CONFIG_HOME/papier/prefs`, and the running 
 
 ```sh
 papier set history.max_entries 5000
-papier set picker.theme "papier light"
+papier set picker.mode light
 ```
 
 Set one for a single run: `papier --pref picker.font_size=16`.
@@ -32,7 +32,10 @@ Set one for a single run: `papier --pref picker.font_size=16`.
 | `capture.ignore_mimes` | text | empty | MIME types, separated by commas: a copy that offers one of them is not recorded. |
 | `clipboard.keep` | boolean | true | When the program that owned the clipboard quits and empties it, put the last entry back. |
 | `picker.close_on_copy` | boolean | true | Hide the window when an entry is copied. |
-| `picker.theme` | text | papier | The colours: `papier`, `papier light`, or a palette of gui_toolkit by its name (Midnight, Graphite, Daylight, Nord, Dracula, Gruvbox, Tokyo Night, Catppuccin, One Dark, Everforest, Solarized…). |
+| `picker.theme` | text | Papier | The colours: `Papier`, or a theme of gui_toolkit by its name (Midnight, Graphite, Nord, Dracula, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine, Kanagawa, One Dark, Solarized…). |
+| `picker.mode` | system, dark, light | system | The theme's version. `system` follows the system's light or dark as it changes. |
+| `picker.finish` | machined, flat, gradient, glass | machined | How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines; a light version is flat. |
+| `picker.glow` | on/off | on | The halos of the machined finish: the ring of light around a focused field. |
 | `picker.width` | integer, 320 to 4000 | 900 | The width of the window at its first start, in logical pixels. |
 | `picker.height` | integer, 240 to 4000 | 560 | The height of the window at its first start, in logical pixels. |
 | `picker.font_size` | number, 8 to 40 | 14 | The size of the text, in logical pixels. |

@@ -123,7 +123,8 @@
         for size in 16 32 64 128 256; do
           install -Dm644 assets/logo_$size.png "$out/share/icons/hicolor/''${size}x''${size}/apps/papier.png"
         done
-        install -Dm644 -t $out/share/doc/papier LICENSE README.md CHANGELOG.md assets/fonts/LUCIDE-LICENSE.txt
+        install -Dm644 -t $out/share/doc/papier LICENSE README.md CHANGELOG.md
+        install -Dm644 ext/gui_toolkit/src/lucide/LICENSE.txt $out/share/doc/papier/LUCIDE-LICENSE.txt
         runHook postInstall
       '';
 

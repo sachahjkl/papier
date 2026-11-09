@@ -14,6 +14,7 @@ import "core:strings"
 import "core:unicode/utf8"
 import "gt:ui"
 import "history"
+import lucide "gt:lucide"
 
 Edit :: struct {
 	active: bool,
@@ -64,7 +65,7 @@ edit_build :: proc(app: ^App, e: ^history.Entry, em: f32) {
 	ui.next({width = ui.fill(), height = ui.px(ui.dense(em * 2.5))})
 	if ui.row(.Center) {
 		ui.spacer(ui.px(em * 0.6))
-		glyph(app, ICO_EDIT, em * 1.6, ui.color("accent"))
+		glyph(app, lucide.EDIT, em * 1.6, ui.color("accent"))
 		ui.next({width = ui.text_size(em * 0.3), height = ui.pct(1)})
 		ui.label("Editing###editing")
 		if ui.tags("weak") {
@@ -75,9 +76,9 @@ edit_build :: proc(app: ^App, e: ^history.Entry, em: f32) {
 					e.kind == .Html ? " · saved as text" : ""))
 			}
 		}
-		if icon_action(app, "editcopy", ICO_COPY, "Copy (Ctrl+Enter)", em) { edit_copy(app); return }
-		if icon_action(app, "editsave", ICO_SAVE, "Save in place (Ctrl+S)", em) { edit_save(app); return }
-		if icon_action(app, "editcancel", ICO_CLOSE, "Cancel (Escape)", em) { edit_end(app); return }
+		if icon_action(app, "editcopy", lucide.COPY, "Copy (Ctrl+Enter)", em) { edit_copy(app); return }
+		if icon_action(app, "editsave", lucide.SAVE, "Save in place (Ctrl+S)", em) { edit_save(app); return }
+		if icon_action(app, "editcancel", lucide.X, "Cancel (Escape)", em) { edit_end(app); return }
 		ui.spacer(ui.px(em * 0.4))
 	}
 	ui.hline(ui.fill())

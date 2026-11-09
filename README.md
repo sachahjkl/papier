@@ -109,4 +109,4 @@ headless sway), `shots`, `logo`, `package`, `ship`, `site`. See [docs/developmen
 ## Licence
 
 MIT, see [LICENSE](LICENSE). Icons: [Lucide](https://lucide.dev), ISC, see
-[assets/fonts/LUCIDE-LICENSE.txt](assets/fonts/LUCIDE-LICENSE.txt).
+[gui_toolkit's src/lucide/LICENSE.txt](https://github.com/sachahjkl/gui_toolkit/blob/master/src/lucide/LICENSE.txt).

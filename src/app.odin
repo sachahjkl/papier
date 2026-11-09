@@ -19,6 +19,7 @@ import "gt:render"
 import setup "gt:setup"
 import "gt:ui"
 import "history"
+import lucide "gt:lucide"
 
 Filter :: enum u8 { All, Text, Images, Files, Pinned }   // (Pinned last: a system with no pins shows the others)
 
@@ -96,7 +97,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	}
 	h := &app.main
 	win := h.win
-	app.icons, _ = font.load_embedded(&app.shared.fonts, LUCIDE_TTF)
+	app.icons, _ = font.load_embedded(&app.shared.fonts, lucide.DATA)
 	app.mono, _ = font.load_embedded(&app.shared.fonts, font.FALLBACK_MONO_DATA)
 	h.state.icon_font, _ = font.load_embedded(&app.shared.fonts, ui.ICON_FONT_DATA)
 	h.after_input = FRAMES_AFTER_INPUT

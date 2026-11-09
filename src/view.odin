@@ -24,6 +24,7 @@ import "gt:platform"
 import "gt:render"
 import "gt:ui"
 import "history"
+import lucide "gt:lucide"
 
 // What the preview reads of a text, at most.
 VIEW_TEXT_MAX_BYTES :: 16 * 1024
@@ -47,7 +48,7 @@ GRIP_HEIGHT :: 0.3
 GRIP_GAP_PX :: 3
 GRIP_ALPHA  :: 0.45
 
-KIND_ICONS := [history.Kind]string{.Text = ICO_TEXT, .Html = ICO_RICH, .Image = ICO_IMAGE, .Files = ICO_FILES, .Other = ICO_DATA}
+KIND_ICONS := [history.Kind]string{.Text = lucide.ALIGN_LEFT, .Html = lucide.CODE, .Image = lucide.IMAGE, .Files = lucide.FILES, .Other = lucide.FILE}
 KIND_LABELS := [history.Kind]string{.Text = "Text", .Html = "Rich text", .Image = "Image", .Files = "Files", .Other = "Data"}
 
 // The selected entry, read in full for the preview.
@@ -230,15 +231,15 @@ build_title :: proc(app: ^App, em: f32) {
 	ui.next({width = ui.fill(), height = ui.px(ui.dense(em * TITLE_EM))})
 	if ui.title_bar("###titlebar") {
 		ui.spacer(ui.px(em * 0.5))
-		glyph(app, ICO_CLIPBOARD, em * 1.8, ui.color("accent"))
+		glyph(app, lucide.CLIPBOARD, em * 1.8, ui.color("accent"))
 		ui.spacer(ui.px(em * 0.3))
 		if app.settings_open {
 			// the page has its own search: the title says where one is, its empty part moves the window
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			ui.label("Papier###apptitle")
-			if icon_action(app, "back", ICO_BACK, "Back to the history (Escape)", em) { app.settings_open = false }
+			if icon_action(app, "back", lucide.ARROW_LEFT, "Back to the history (Escape)", em) { app.settings_open = false }
 			ui.spacer(ui.px(em * 0.3))
-			if icon_action(app, "close", ICO_CLOSE, "Hide (Escape)", em) { app_hide(app) }
+			if icon_action(app, "close", lucide.X, "Hide (Escape)", em) { app_hide(app) }
 			ui.spacer(ui.px(em * 0.4))
 			return
 		}
@@ -246,7 +247,7 @@ build_title :: proc(app: ^App, em: f32) {
 		ui.next({width = ui.fill(), height = ui.px(ui.dense(em * 1.95)), radius = em * 0.45})
 		// one surface: the icon and the field, one focus ring around both (the field is bare: no box of its own)
 		if ui.field_frame("###searchbox") {
-			if ui.tags("weak") { glyph(app, ICO_SEARCH, em * 1.9) }
+			if ui.tags("weak") { glyph(app, lucide.SEARCH, em * 1.9) }
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			if ui.tags("bare") {
 				res := ui.line_edit("###search", &app.search, "Search the history")
@@ -270,8 +271,8 @@ build_title :: proc(app: ^App, em: f32) {
 		sel := int(app.filter)
 		if ui.segmented("###filter", filter_labels[:FILTER_COUNT], &sel) { set_filter(app, Filter(sel)) }
 		ui.spacer(ui.px(em * 0.3))
-		if icon_action(app, "settings", ICO_SETTINGS, "Settings (Ctrl+,)", em) { settings_toggle(app) }
-		if icon_action(app, "close", ICO_CLOSE, "Hide (Escape)", em) { app_hide(app) }
+		if icon_action(app, "settings", lucide.SETTINGS, "Settings (Ctrl+,)", em) { settings_toggle(app) }
+		if icon_action(app, "close", lucide.X, "Hide (Escape)", em) { app_hide(app) }
 		ui.spacer(ui.px(em * 0.4))
 	}
 }
@@ -322,7 +323,7 @@ build_list :: proc(app: ^App, em: f32) {
 			if ui.tags("weak") { glyph(app, KIND_ICONS[e.kind], em * 1.9) }
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			ui.label(fmt.tprintf("%s###t", shown_text(one_line(e.preview, 200))))
-			if e.pinned { glyph(app, ICO_PIN, em * 1.6, ui.color("accent")) }
+			if e.pinned { glyph(app, lucide.PIN, em * 1.6, ui.color("accent")) }
 			if i < 9 && len(app.query) == 0 {
 				if ui.tags("weak") {
 					ui.next({width = ui.text_size(em * 0.3), height = ui.pct(1)})
@@ -482,12 +483,12 @@ build_view_body :: proc(app: ^App, em: f32) {
 				ui.label(fmt.tprintf("%s · %d type%s · %s ago###meta", size_text(history.entry_size(e^)), len(e.reps), len(e.reps) == 1 ? "" : "s", age_text(now_ms() - e.time_ms)))
 			}
 		}
-		if icon_action(app, "copy", ICO_COPY, "Copy (Enter)", em) { entry_copy(app, e.id) }
+		if icon_action(app, "copy", lucide.COPY, "Copy (Enter)", em) { entry_copy(app, e.id) }
 		if e.kind == .Text || e.kind == .Html {
-			if icon_action(app, "edit", ICO_EDIT, "Edit (Ctrl+E)", em) { edit_begin(app, e) }
+			if icon_action(app, "edit", lucide.EDIT, "Edit (Ctrl+E)", em) { edit_begin(app, e) }
 		}
-		if PINS && icon_action(app, "pin", e.pinned ? ICO_PIN_OFF : ICO_PIN, e.pinned ? "Unpin (Ctrl+P)" : "Pin (Ctrl+P)", em) { toggle_pin(app, e) }
-		if icon_action(app, "delete", ICO_TRASH, "Remove (Shift+Delete)", em) { remove_entry(app, e.id); return }
+		if PINS && icon_action(app, "pin", e.pinned ? lucide.PIN_OFF : lucide.PIN, e.pinned ? "Unpin (Ctrl+P)" : "Pin (Ctrl+P)", em) { toggle_pin(app, e) }
+		if icon_action(app, "delete", lucide.TRASH_2, "Remove (Shift+Delete)", em) { remove_entry(app, e.id); return }
 		ui.spacer(ui.px(em * 0.4))
 	}
 	ui.hline(ui.fill())

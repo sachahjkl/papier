@@ -7,6 +7,7 @@ package papier
 import config "gt:config"
 import prefs_page "gt:prefs_page"
 import "gt:ui"
+import lucide "gt:lucide"
 
 settings_toggle :: proc(app: ^App) {
 	app.settings_open = !app.settings_open
@@ -23,10 +24,10 @@ settings_keys :: proc(app: ^App) {
 // The pages: the categories of the preferences (settings.odin), their order and their icons.
 @(private = "file", rodata)
 SETTINGS_PAGES := [?]prefs_page.Page_Info{
-	{category = "appearance", title = "Appearance", icon = ICO_PALETTE},
-	{category = "window",     title = "Window",     icon = ICO_WINDOW},
-	{category = "history",    title = "History",    icon = ICO_HISTORY},
-	{category = "capture",    title = "Capture",    icon = ICO_CLIPBOARD},
+	{category = "appearance", title = "Appearance", icon = lucide.PALETTE},
+	{category = "window",     title = "Window",     icon = lucide.APP_WINDOW},
+	{category = "history",    title = "History",    icon = lucide.HISTORY},
+	{category = "capture",    title = "Capture",    icon = lucide.CLIPBOARD},
 }
 
 @(private = "file", rodata)
@@ -38,7 +39,7 @@ settings_build :: proc(app: ^App) {
 	prefs_page.build(&app.settings_page, &app.prefs, {
 		user = app, changed = settings_changed, choices = settings_choices,
 		custom_names = CUSTOM[:], custom = settings_custom,
-		pages = SETTINGS_PAGES[:], icon_font = app.icons, search_icon = ICO_SEARCH, reset_icon = ICO_RESET,
+		pages = SETTINGS_PAGES[:], icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.REFRESH_CW,
 		foot = "prefs: ~/.config/papier/prefs",
 	})
 }

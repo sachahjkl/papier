@@ -23,8 +23,8 @@ VERSION_FILE :: "src/main.odin"
 VERSION_LINE :: "APP_VERSION :: "
 REPOSITORY   :: "https://github.com/sachahjkl/papier"
 DIST_DIR     :: "build/dist"
-// What goes beside the program in the archive.
-DIST_FILES   :: [?]string{"README.md", "LICENSE", "CHANGELOG.md", "assets/fonts/LUCIDE-LICENSE.txt"}
+// What goes beside the program in the archive: the file, and its name there (the icons' licence is the toolkit's).
+DIST_FILES   :: [?][2]string{{"README.md", "README.md"}, {"LICENSE", "LICENSE"}, {"CHANGELOG.md", "CHANGELOG.md"}, {"ext/gui_toolkit/src/lucide/LICENSE.txt", "LUCIDE-LICENSE.txt"}}
 
 // The version of the sources: APP_VERSION's value ("" when the line is not there).
 version_of :: proc(source: string) -> string {
@@ -141,8 +141,7 @@ run_package :: proc(args: []string) -> int {
 	files := DIST_FILES
 	if !copy_file(PROGRAM, fmt.tprintf("%s/%s", stage, exe)) { return 1 }
 	for f in files {
-		base := f[strings.last_index_byte(f, '/') + 1:]
-		if !copy_file(f, fmt.tprintf("%s/%s", stage, base)) { return 1 }
+		if !copy_file(f[0], fmt.tprintf("%s/%s", stage, f[1])) { return 1 }
 	}
 	when ODIN_OS == .Windows {
 		// (tar.exe of Windows 10 and later: -a picks the zip format by the name)

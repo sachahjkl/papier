@@ -1,0 +1,158 @@
+// papier: a clipboard manager for Linux (Wayland), on gui_toolkit.
+//
+//   papier                      the picker: search the history, Enter puts an entry back on the clipboard
+//   papier daemon               watches the clipboard and keeps the history (start it with the session)
+//   papier list [count]         the newest entries: id, kind, age, a line of text
+//   papier get <id> [mime]      the bytes of an entry on the standard output
+//   papier copy <id>            puts an entry back on the clipboard
+//   papier pin|unpin|delete <id>, papier clear, papier quit
+//   papier prefs                every preference, its value and what it does
+//   papier set <name> <value>   changes a preference (saved; the daemon reads it again)
+//   --pref name=value           a preference for this run only
+package papier
+
+import "core:fmt"
+import "core:os"
+import "core:strconv"
+import "core:strings"
+import config "gt:config"
+import "history"
+
+USAGE :: `papier: a clipboard manager
+
+  papier                      open the picker
+  papier daemon               watch the clipboard and keep the history
+  papier list [count]         list the newest entries
+  papier get <id> [mime]      write the bytes of an entry to the standard output
+  papier copy <id>            put an entry back on the clipboard
+  papier pin|unpin|delete <id>
+  papier clear                remove every entry that is not pinned
+  papier quit                 stop the daemon
+  papier prefs                list the preferences
+  papier set <name> <value>   change a preference
+  --pref name=value           a preference for this run only
+`
+
+main :: proc() {
+	os.exit(run(os.args[1:]))
+}
+
+run :: proc(all_args: []string) -> int {
+	prefs: config.Prefs
+	args, problems := prefs_open(&prefs, all_args)
+	defer config.prefs_destroy(&prefs)
+	for p in problems { fmt.eprintfln("papier: %s", p) }
+	if len(args) == 0 { return picker_run(&prefs) }
+	verb, rest := args[0], args[1:]
+	switch verb {
+	case "daemon":           return daemon_run(all_args)
+	case "list":             return cmd_list(&prefs, rest)
+	case "get":              return cmd_get(&prefs, rest)
+	case "copy", "pin", "unpin", "delete", "clear", "quit", "reload":
+		c, ok := command_parse(strings.join(args[:], " ", context.temp_allocator))
+		if !ok { fmt.eprint(USAGE); return 2 }
+		if !command_send(c, start = c.verb == .Copy) { fmt.eprintln("papier: the daemon does not run (papier daemon)"); return 1 }
+		return 0
+	case "prefs":            return cmd_prefs(&prefs)
+	case "set":              return cmd_set(&prefs, rest)
+	case "help", "-h", "--help":
+		fmt.print(USAGE)
+		return 0
+	}
+	fmt.eprint(USAGE)
+	return 2
+}
+
+@(private = "file")
+open_store :: proc(prefs: ^config.Prefs, s: ^history.Store) {
+	history.open(s, history_dir(config.bool_of(prefs, "history.persist")))
+}
+
+@(private = "file")
+cmd_list :: proc(prefs: ^config.Prefs, args: []string) -> int {
+	count := 20
+	if len(args) > 0 { count = strconv.parse_int(args[0]) or_else count }
+	s: history.Store
+	open_store(prefs, &s)
+	defer history.close(&s)
+	now := now_ms()
+	for e in s.entries[:min(count, len(s.entries))] {
+		fmt.printfln("%d\t%s%s\t%s\t%s", e.id, history.KIND_NAMES[e.kind], e.pinned ? "*" : "", age_text(now - e.time_ms), one_line(e.preview, 100))
+	}
+	return 0
+}
+
+@(private = "file")
+cmd_get :: proc(prefs: ^config.Prefs, args: []string) -> int {
+	if len(args) == 0 { fmt.eprint(USAGE); return 2 }
+	id, ok := strconv.parse_u64(args[0])
+	if !ok { fmt.eprint(USAGE); return 2 }
+	s: history.Store
+	open_store(prefs, &s)
+	defer history.close(&s)
+	at := history.find(&s, id)
+	if at < 0 { fmt.eprintfln("papier: no entry %d", id); return 1 }
+	e := s.entries[at]
+	rep := -1
+	if len(args) > 1 {
+		rep = history.rep_find(e, args[1])
+	} else {
+		for r, i in e.reps { if r.hash == e.key { rep = i; break } }
+	}
+	if rep < 0 { fmt.eprintfln("papier: entry %d has no such type", id); return 1 }
+	data := history.blob_read(&s, e.reps[rep].hash, context.temp_allocator)
+	if data == nil { fmt.eprintln("papier: the entry's data is gone"); return 1 }
+	os.write(os.stdout, data)
+	return 0
+}
+
+@(private = "file")
+cmd_prefs :: proc(prefs: ^config.Prefs) -> int {
+	for name in config.sorted_names(prefs) {
+		r := config.ref_of(prefs, name)
+		e := config.entry(prefs, r)
+		fmt.printfln("%s = %s%s\n    %s", name, config.value_string(prefs, r), config.is_default(prefs, r) ? "" : "   (changed)", e.def.description)
+	}
+	return 0
+}
+
+@(private = "file")
+cmd_set :: proc(prefs: ^config.Prefs, args: []string) -> int {
+	if len(args) != 2 { fmt.eprint(USAGE); return 2 }
+	if err := config.set_from_string(prefs, args[0], args[1], .User); err != .None {
+		fmt.eprintfln("papier: %s: %s", args[0], config.set_error_text(err))
+		return 1
+	}
+	path := prefs_file()
+	_ = os.make_directory_all(path[:strings.last_index_byte(path, '/')])
+	if !config.save_user(prefs, path) { fmt.eprintfln("papier: %s cannot be written", path); return 1 }
+	command_send({verb = .Reload})
+	return 0
+}
+
+// "12 s", "5 min", "3 h", "2 d".
+age_text :: proc(ms: i64, allocator := context.temp_allocator) -> string {
+	s := max(ms, 0) / 1000
+	switch {
+	case s < 60:        return fmt.aprintf("%d s", s, allocator = allocator)
+	case s < 3600:      return fmt.aprintf("%d min", s / 60, allocator = allocator)
+	case s < 86400:     return fmt.aprintf("%d h", s / 3600, allocator = allocator)
+	}
+	return fmt.aprintf("%d d", s / 86400, allocator = allocator)
+}
+
+// The text on one line: blanks run together, cut after `max_runes` characters with an ellipsis.
+one_line :: proc(text: string, max_runes: int, allocator := context.temp_allocator) -> string {
+	b := strings.builder_make(allocator)
+	n := 0
+	blank := false
+	for c in text {
+		if c == '\n' || c == '\r' || c == '\t' || c == ' ' { blank = true; continue }
+		if blank && strings.builder_len(b) > 0 { strings.write_byte(&b, ' '); n += 1 }
+		blank = false
+		if n >= max_runes { strings.write_string(&b, "…"); break }
+		strings.write_rune(&b, c)
+		n += 1
+	}
+	return strings.to_string(b)
+}

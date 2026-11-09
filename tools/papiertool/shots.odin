@@ -85,7 +85,8 @@ run_shots :: proc(args: []string) -> int {
 	cdp.key(&c, "Escape")
 	// the settings
 	cdp.key(&c, "ctrl+,")
-	cdp.wait_for(&c, "Modified only", SESSION_WAIT)
+	cdp.wait_for(&c, "Max entries", SESSION_WAIT, gone = true)   // (the first page: Appearance)
+	cdp.wait_for(&c, "Theme", SESSION_WAIT)
 	shot(&c, out, "settings", &failed)
 	cdp.key(&c, "ctrl+,")
 	cdp.close(&c)

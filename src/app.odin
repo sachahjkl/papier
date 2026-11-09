@@ -15,6 +15,7 @@ import "gt:host"
 import instance "gt:instance"
 import "gt:platform"
 import prefs_page "gt:prefs_page"
+import "gt:render"
 import "gt:ui"
 import "history"
 
@@ -169,7 +170,7 @@ app_params :: proc(h: ^host.Host, bp: ^ui.Build_Params) {
 	app := (^App)(h.user)
 	// (applied only when it changes, or the system goes light or dark: a palette applied starts a cross-fade)
 	choice := ui.Theme_Choice{name = app.settings.theme, mode = app.settings.mode, finish = app.settings.finish, glow = app.settings.glow ? 1 : 0}
-	if ui.theme_show(&app.shared.theme, themes(), choice, &app.theme_shown) { platform.set_dark_title(h.win, !app.theme_shown.light) }
+	if ui.theme_show(&app.shared.theme, themes(), choice, &app.theme_shown, render.blend_space(&app.shared.r)) { platform.set_dark_title(h.win, !app.theme_shown.light) }
 	bp.base = ui.Style{pref = {.X = ui.text_size(), .Y = ui.px(28)}, font = app.shared.font, font_size = app.settings.font_size, text_pad = 6, cursor = .Arrow}
 }
 

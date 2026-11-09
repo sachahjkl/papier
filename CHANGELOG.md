@@ -5,6 +5,10 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Settings: a number with a unit (Max age, in days) no longer makes its line as tall as the page. It is gui_toolkit
+  0.122.0.
+
 ## [0.5.0] - 2026-11-09
 
 ### Changed

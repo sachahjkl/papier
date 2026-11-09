@@ -7,7 +7,7 @@ topics:
   - "wayland"
   - "linux"
   - "immediate-mode-ui"
-homepage: "https://paper.sacha.house/"
+homepage: "https://papier.sacha.house/"
 source:
   provider: github
   namespace: "sachahjkl"

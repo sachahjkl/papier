@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-11-09
+
 ### Fixed
 - **The search field is one box**: the field drew its own square focus ring inside the rounded search box. The box is now
   the toolkit's `field_frame`: one surface and one rounded focus ring around the icon and the field.
@@ -60,3 +62,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.1.1]: https://github.com/sachahjkl/papier/releases/tag/v0.1.1
 [0.1.2]: https://github.com/sachahjkl/papier/releases/tag/v0.1.2
 [0.1.3]: https://github.com/sachahjkl/papier/releases/tag/v0.1.3
+[0.1.4]: https://github.com/sachahjkl/papier/releases/tag/v0.1.4

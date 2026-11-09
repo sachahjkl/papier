@@ -3,14 +3,17 @@
 Papier is one program in [Odin](https://odin-lang.org) on [gui_toolkit](https://github.com/sachahjkl/gui_toolkit) (the
 `ext/gui_toolkit` submodule, the collection `gt`). This page says how its parts fit, and why.
 
-## One process, two threads
+## One process, three threads
 
 ```
 papier --hidden ─┬─ the window's thread (app.odin, view.odin)
                  │     the window, hidden or shown; the tray icon; the history as it reads it
                  │
-                 └─ the watcher thread (watcher.odin)
-                       the clipboard (wlclip), the history it writes (history), the instance socket
+                 ├─ the watcher thread (watcher.odin)
+                 │     the clipboard (wlclip), the history it writes (history), the instance socket
+                 │
+                 └─ the decoder thread (decoder.odin)
+                       the picture of the selected image, decoded for the preview
 ```
 
 - **The watcher** sleeps in one `poll` on three descriptors: the Wayland connection of the data-control protocol, the
@@ -66,7 +69,8 @@ tested.
 
 The interface is built again at each frame (immediate mode), and only when something changed. The list is the toolkit's
 virtual list: it builds the rows in view, whatever the length of the history. The search reads lower-case copies of the
-previews, made once per reading of the index. An image is decoded when its entry is selected, into one texture.
+previews, made once per reading of the index. An image is decoded on a thread of its own (src/decoder.odin) when its
+entry is selected: the newest selection wins, and the window makes one texture of the picture when the decoder wakes it.
 
 ## Tests
 

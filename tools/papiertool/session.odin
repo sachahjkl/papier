@@ -50,7 +50,8 @@ session_start :: proc(s: ^Session, dir: string, port: int, prefs: []string = nil
 		fmt.tprintf("XDG_RUNTIME_DIR=%s", run), "WLR_BACKENDS=headless", "WLR_RENDERER=pixman", "WLR_LIBINPUT_NO_DEVICES=1")
 	log, lerr := os.open(fmt.tprintf("%s/sway.log", s.dir), {.Write, .Create, .Trunc})
 	if lerr != nil { return "the log cannot be written" }
-	sway, serr := os.process_start({command = {"sway", "--unsupported-gpu", "-c", conf}, env = sway_env, stdout = log, stderr = log})
+	// (a group of its own: NixOS's sway is a wrapper, and its real sway and swaybg must end with it)
+	sway, serr := toolbox.start_group({"sway", "--unsupported-gpu", "-c", conf}, sway_env, log)
 	os.close(log)
 	if serr != nil { return "sway does not start (is it on the PATH? nix develop has it)" }
 	s.sway, s.up = sway, true
@@ -97,8 +98,7 @@ session_stop :: proc(s: ^Session) -> (exit_code: int) {
 		s.papier = {}
 	}
 	if s.up {
-		_ = os.process_kill(s.sway)
-		_, _ = os.process_wait(s.sway, SESSION_WAIT)
+		toolbox.stop_group(s.sway)
 		s.up = false
 	}
 	for e in s.env { delete(e) }

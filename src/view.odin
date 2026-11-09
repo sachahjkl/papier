@@ -49,6 +49,8 @@ View :: struct {
 	tex:     render.Texture,
 	size:    [2]int,
 	has_tex: bool,
+	loading: bool,              // its picture is being decoded (decoder.odin)
+	image:   int,               // the representation of the picture, in the entry's reps
 }
 
 ////////////////////////////////
@@ -336,12 +338,8 @@ view_load :: proc(app: ^App, e: ^history.Entry) {
 		at := -1
 		for r, i in e.reps { if strings.has_prefix(r.mime, "image/") { at = i; break } }
 		if at < 0 { break }
-		data := history.blob_read(&app.store, e.reps[at].hash, context.temp_allocator)
-		img, ok := platform.clipboard_image_decode(e.reps[at].mime, data, context.temp_allocator)
-		if !ok { app.view.text = fmt.aprintf("%s, %s: no preview for this format", e.reps[at].mime, size_text(e.reps[at].size)); break }
-		app.view.tex = render.create_texture_rgba(&app.shared.r, img.size.x, img.size.y)
-		render.update_texture_rgba(&app.shared.r, app.view.tex, 0, 0, img.size.x, img.size.y, img.rgba)
-		app.view.size, app.view.has_tex = img.size, true
+		app.view.image, app.view.loading = at, true
+		decoder_ask(&app.decoder, e.id, history.blob_path(&app.store, e.reps[at].hash), e.reps[at].mime)
 	case .Files:
 		app.view.text = strings.clone(e.preview)
 	case .Text, .Html, .Other:
@@ -354,6 +352,27 @@ view_load :: proc(app: ^App, e: ^history.Entry) {
 		for len(text) > 0 && !utf8.valid_string(text) { text = text[:len(text) - 1] }   // (cut inside a character)
 		app.view.text = strings.clone(text)
 	}
+}
+
+// A picture the decoder made: the texture of the entry shown, or nothing when the selection moved on.
+view_decoded :: proc(app: ^App) -> bool {
+	p, ok := decoder_take(&app.decoder)
+	if !ok { return false }
+	defer decoded_free(&p)
+	if !app.view.loading || p.id != app.view.id { return false }
+	app.view.loading = false
+	e := selected(app)
+	if !p.ok {
+		if e != nil && e.id == p.id && app.view.image < len(e.reps) {
+			r := e.reps[app.view.image]
+			app.view.text = fmt.aprintf("%s, %s: no preview for this format", r.mime, size_text(r.size))
+		}
+		return true
+	}
+	app.view.tex = render.create_texture_rgba(&app.shared.r, p.size.x, p.size.y)
+	render.update_texture_rgba(&app.shared.r, app.view.tex, 0, 0, p.size.x, p.size.y, p.rgba)
+	app.view.size, app.view.has_tex = p.size, true
+	return true
 }
 
 @(private = "file")
@@ -411,6 +430,13 @@ build_view_body :: proc(app: ^App, em: f32) {
 			ui.next({width = ui.fill(), height = ui.fill()})
 			ui.custom("image", image_draw, d)
 			ui.spacer(ui.px(em * 0.8))
+		}
+		return
+	}
+	if app.view.loading {
+		if ui.tags("weak") {
+			ui.next({width = ui.fill(), height = ui.px(em * 5)})
+			if ui.style({text_align = .Center}) { ui.label("Loading the image…###loading") }
 		}
 		return
 	}

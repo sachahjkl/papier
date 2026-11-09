@@ -5,6 +5,13 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **The window takes the keyboard when it shows**: papier asks the compositor for the focus (`xdg-activation`). ShojiWM's
+  Windows 7 configuration did not focus it, so the arrows and the search did nothing until a click.
+- **The tray icon shows**: panels that read the icon in one call (Quickshell, Waybar) showed the "missing icon" pattern.
+- **The selection moves at once over images**: a picture is decoded on a thread of its own, and the newest selection
+  wins. A 4K screenshot took about 180 ms to decode, and the window waited for it at each step.
+
 ## [0.1.0] - 2026-11-09
 
 ### Added

@@ -36,6 +36,7 @@ App :: struct {
 	prefs:      config.Prefs,
 	settings:   Settings,
 	watcher:    Watcher,
+	decoder:    Decoder,            // the pictures of the preview (decoder.odin)
 	tray:       ^platform.Tray,
 	devtools:   ^devtools.Server,   // TOOLKIT_DEVTOOLS=<port>: driven and captured over the Chrome DevTools Protocol
 	palette_applied: string,        // the theme the palette was last made from (owned)
@@ -99,6 +100,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner) -> in
 		fmt.eprintln("papier: the clipboard watcher cannot start")
 		return 1
 	}
+	decoder_start(&app.decoder, win)
 	app.tray = platform.tray_create(win, LOGO_PNG, "Papier")
 	if app.tray != nil {
 		platform.tray_set_menu(app.tray, {
@@ -120,12 +122,14 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner) -> in
 		}
 		app_requests(app)
 		app_tray(app)
+		if view_decoded(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if app.visible && !app.hide_due && !app.quit && !platform.is_closed(win) { host.host_frame(h) }
 		if app.hide_due { app_hide_now(app) }
 	}
 
 	app_remember(app)
 	watcher_stop(&app.watcher)
+	decoder_stop(&app.decoder)
 	devtools.stop(app.devtools)
 	view_clear(app)
 	host.host_close(h)
@@ -196,6 +200,8 @@ app_show :: proc(app: ^App) {
 		return
 	}
 	host.host_show(&app.main)
+	// the keyboard: a compositor may not focus a new window by itself (ShojiWM's Windows 7 configuration)
+	platform.raise_window(app.main.win)
 	app.visible = true
 	app.main.settle = max(app.main.settle, FRAMES_AT_SHOW)
 }

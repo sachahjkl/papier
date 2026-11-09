@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-09
+
 ### Fixed
 - **The window takes the keyboard when it shows**: papier asks the compositor for the focus (`xdg-activation`). ShojiWM's
   Windows 7 configuration did not focus it, so the arrows and the search did nothing until a click.
@@ -39,3 +41,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
 [0.1.0]: https://github.com/sachahjkl/papier/releases/tag/v0.1.0
+[0.1.1]: https://github.com/sachahjkl/papier/releases/tag/v0.1.1

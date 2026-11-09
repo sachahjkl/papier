@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-09
+
 ### Fixed
 - **The grip is grey**: its lines asked the theme for a colour name it lacks, and got the violet that marks a missing
   name. They take the weak text's colour, finer and shorter.
@@ -53,3 +55,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.1.0]: https://github.com/sachahjkl/papier/releases/tag/v0.1.0
 [0.1.1]: https://github.com/sachahjkl/papier/releases/tag/v0.1.1
 [0.1.2]: https://github.com/sachahjkl/papier/releases/tag/v0.1.2
+[0.1.3]: https://github.com/sachahjkl/papier/releases/tag/v0.1.3

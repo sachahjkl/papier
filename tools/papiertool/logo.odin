@@ -7,6 +7,7 @@ package papiertool
 // assets/logo.png (1024 px) and the sizes the program and the site embed.
 
 import "core:fmt"
+import "core:os"
 import paint "gt:paint"
 
 LOGO_DIR    :: "assets"
@@ -150,5 +151,14 @@ run_logo :: proc(args: []string) -> int {
 		if !paint.write_png(c, p) { fmt.eprintfln("papiertool: %s cannot be written", p); return 1 }
 		fmt.printfln("wrote %s", p)
 	}
+	// the project's picture (.project/image.png, 512 px): what the repository and opencode's sessions of it show
+	project := logo_render(PROJECT_IMAGE_SIZE)
+	defer paint.canvas_destroy(&project)
+	_ = os.make_directory_all(".project")
+	if !paint.write_png(project, PROJECT_IMAGE) { fmt.eprintfln("papiertool: %s cannot be written", PROJECT_IMAGE); return 1 }
+	fmt.printfln("wrote %s", PROJECT_IMAGE)
 	return 0
 }
+
+PROJECT_IMAGE      :: ".project/image.png"
+PROJECT_IMAGE_SIZE :: 512

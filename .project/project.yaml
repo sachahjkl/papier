@@ -1,0 +1,14 @@
+name: "papier"
+description: "The clipboard's history for Linux (Wayland): text, rich text, images and files, searched and put back in a keystroke."
+topics:
+  - "odin"
+  - "clipboard"
+  - "clipboard-manager"
+  - "wayland"
+  - "linux"
+  - "immediate-mode-ui"
+homepage: "https://sachahjkl.github.io/papier/"
+source:
+  provider: github
+  namespace: "sachahjkl"
+  path: "sachahjkl/papier"

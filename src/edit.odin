@@ -41,9 +41,10 @@ edit_end :: proc(app: ^App) {
 edit_copy :: proc(app: ^App) {
 	text := ui.area_string(&app.edit.area)
 	if strings.trim_space(text) == "" { say(app, "Nothing to copy"); return }
-	watcher_send(&app.watcher, {verb = .Add_Text, text = text})
+	paste := app.settings.paste_on_select
+	watcher_send(&app.watcher, {verb = .Add_Text, text = text, paste = paste})
 	edit_end(app)
-	if app.settings.close_on_copy { app_hide(app) } else { say(app, "Copied") }
+	if app.settings.close_on_copy || paste { app_hide(app) } else { say(app, "Copied") }
 }
 
 edit_save :: proc(app: ^App) {

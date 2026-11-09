@@ -13,6 +13,8 @@ APP_NAME :: "papier"
 
 // The preferences of every system; each system adds its own (settings_linux.odin, settings_windows.odin).
 PREF_DEFS := [?]config.Def{
+	{name = "paste.on_select", category = "paste", description = "An entry chosen (Enter, a double click, Alt+1…9) is pasted into the program papier was called from: the window hides and papier presses the paste keys there.", kind = .Bool, default = {b = true}},
+	{name = "paste.keys", category = "paste", description = "The keys papier presses to paste: Ctrl+V in most programs, Ctrl+Shift+V in a terminal, Shift+Insert in both on many systems.", kind = .String, default = {s = "Ctrl+V"}},
 	{name = "picker.close_on_copy", category = "window", description = "Close the picker when an entry is copied.", kind = .Bool, default = {b = true}},
 	{name = "picker.theme", category = "appearance", description = "The window's colours: Papier, or a theme of the toolkit by its name (Midnight, Nord, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine...).", kind = .String, default = {s = "Papier"}},
 	{name = "picker.mode", category = "appearance", description = "The theme's version: the system's (light or dark, followed as it changes), dark, or light.", kind = .String, default = {s = "system"}, choices = {"system", "dark", "light"}},
@@ -33,6 +35,8 @@ Settings :: struct {
 	max_bytes:      int,
 	keep:           bool,
 	close_on_copy:  bool,
+	paste_on_select: bool,
+	paste_keys:     string,   // as platform.hotkey_parse reads it
 	theme:          string,
 	mode:           ui.Theme_Mode,
 	finish:         ui.Finish,
@@ -59,6 +63,8 @@ prefs_open :: proc(p: ^config.Prefs, args: []string) -> (rest: [dynamic]string, 
 
 prefs_read :: proc(p: ^config.Prefs, allocator := context.allocator) -> (s: Settings) {
 	s.close_on_copy = config.bool_of(p, "picker.close_on_copy")
+	s.paste_on_select = config.bool_of(p, "paste.on_select")
+	s.paste_keys = strings.clone(config.string_of(p, "paste.keys"), allocator)
 	s.theme = strings.clone(config.string_of(p, "picker.theme"), allocator)
 	s.mode = ui.theme_mode_of(config.string_of(p, "picker.mode"))
 	s.finish = ui.finish_of(config.string_of(p, "picker.finish"))
@@ -74,5 +80,6 @@ settings_free :: proc(s: ^Settings) {
 	delete(s.capture.ignore_mimes)
 	delete(s.theme)
 	delete(s.shortcut)
+	delete(s.paste_keys)
 	s^ = {}
 }

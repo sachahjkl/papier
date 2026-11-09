@@ -18,8 +18,19 @@ import "core:strings"
 setup_config :: proc() -> setup.Config {
 	return setup.Config{
 		identity = papier_identity(), version = APP_VERSION, install_folder = APP_NAME, icons = ICON_PNGS[:],
-		prepare = proc(o: ^desktop.Options, user: rawptr) { papier_parts(o) },
+		choices = SETUP_CHOICES[:],
+		prepare = proc(o: ^desktop.Options, choices: []bool, user: rawptr) {
+			papier_parts(o)
+			if len(choices) == len(SETUP_CHOICES) { o.autostart, o.add_to_path = choices[0], choices[1] }
+		},
 	}
+}
+
+// The boxes of the dialog, in the order prepare reads them.
+@(private = "file", rodata)
+SETUP_CHOICES := [?]setup.Choice{
+	{label = "Start with the session, in the notification area", on = true},
+	{label = "papier in the terminal (on the PATH)", on = true},
 }
 
 // At a start with the window: the dialog when there is something to do (Windows), unless the user answered for this

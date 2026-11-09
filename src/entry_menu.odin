@@ -89,8 +89,10 @@ entry_menu_build :: proc(app: ^App, em: f32) {
 
 // Puts the entry back on the clipboard (the watcher serves it) and hides the window. `plain`: its text only.
 entry_copy :: proc(app: ^App, id: u64, plain := false) {
-	watcher_send(&app.watcher, {verb = plain ? .Copy_Plain : .Copy, id = id})
-	if app.settings.close_on_copy { app_hide(app) } else { say(app, "Copied") }
+	paste := app.settings.paste_on_select
+	watcher_send(&app.watcher, {verb = plain ? .Copy_Plain : .Copy, id = id, paste = paste})
+	// (a paste goes to the program papier was called from: the window goes first)
+	if app.settings.close_on_copy || paste { app_hide(app) } else { say(app, "Copied") }
 }
 
 // An address in the browser, a copied file with its program, anything else as a file of its type with the system's

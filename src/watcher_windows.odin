@@ -110,11 +110,12 @@ watcher_apply :: proc(wt: ^Watcher, c: Command) {
 	case .Setup:  watcher_request(wt, .Setup)
 	case .Refresh: watcher_refresh(wt)
 	case .Copy:
-		if !history.system_copy(c.id) { errf("papier: entry %d cannot be put on the clipboard", c.id) }
+		if !history.system_copy(c.id) { errf("papier: entry %d cannot be put on the clipboard", c.id); break }
+		if c.paste { watcher_request(wt, .Paste) }
 	case .Copy_Plain:
-		if text, ok := entry_text(c.id); ok { put_text(wt, text) }
+		if text, ok := entry_text(c.id); ok && put_text(wt, text) && c.paste { watcher_request(wt, .Paste) }
 	case .Add_Text:
-		put_text(wt, c.text)
+		if put_text(wt, c.text) && c.paste { watcher_request(wt, .Paste) }
 	case .Replace_Text:
 		// (the system's entries cannot change: the new text is a copy, and the old entry goes)
 		if put_text(wt, c.text) { history.system_delete(c.id) }

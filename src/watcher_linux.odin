@@ -125,13 +125,15 @@ watcher_apply :: proc(wt: ^Watcher, c: Command) {
 	case .Toggle: watcher_request(wt, .Toggle)
 	case .Quit:   watcher_request(wt, .Quit)
 	case .Setup:  watcher_request(wt, .Setup)
-	case .Copy:   changed = watcher_serve(wt, c.id, true)
-	case .Copy_Plain: changed = watcher_serve(wt, c.id, true, plain = true)
+	case .Copy, .Copy_Plain:
+		served, moved := watcher_serve(wt, c.id, true, plain = c.verb == .Copy_Plain)
+		changed = moved
+		if served && c.paste { watcher_request(wt, .Paste) }
 	case .Add_Text:
 		// an edited text, copied: a new entry at the top, on the clipboard
 		id, ok := history.add(&wt.store, text_reps(c.text), 0, .Text, c.text, now_ms())
 		if !ok { errln("papier: the history cannot be written"); break }
-		watcher_serve(wt, id, false)
+		if served, _ := watcher_serve(wt, id, false); served && c.paste { watcher_request(wt, .Paste) }
 		changed = true
 	case .Replace_Text:
 		changed = history.replace(&wt.store, c.id, text_reps(c.text), 0, .Text, c.text)
@@ -169,7 +171,7 @@ watcher_selection :: proc(wt: ^Watcher, w: wlclip.Which) {
 	offer, mimes, own, changed := wlclip.take(&wt.client, w)
 	if !changed || own { return }
 	if offer == nil {
-		if w == .Clipboard && wt.settings.keep && len(wt.store.entries) > 0 { watcher_serve(wt, wt.store.entries[0].id, false) }
+		if w == .Clipboard && wt.settings.keep && len(wt.store.entries) > 0 { _, _ = watcher_serve(wt, wt.store.entries[0].id, false) }
 		return
 	}
 	plan := plan_capture(mimes, wt.settings.capture)
@@ -208,21 +210,21 @@ text_reps :: proc(text: string) -> []history.Rep_Data {
 }
 
 // Puts the entry `id` on the clipboard (`to_top`: and first in the history; `plain`: its text only, without its rich
-// text). False when it is gone or nothing changed.
+// text). served: it is on the clipboard; moved: it went to the top.
 @(private = "file")
-watcher_serve :: proc(wt: ^Watcher, id: u64, to_top: bool, plain := false) -> bool {
+watcher_serve :: proc(wt: ^Watcher, id: u64, to_top: bool, plain := false) -> (served, moved: bool) {
 	at := history.find(&wt.store, id)
-	if at < 0 { return false }
+	if at < 0 { return false, false }
 	e := wt.store.entries[at]
-	served := make([dynamic]wlclip.Served, context.temp_allocator)
+	reps := make([dynamic]wlclip.Served, context.temp_allocator)
 	for r in e.reps {
 		if plain && r.mime != TEXT_MIME { continue }
 		data := history.blob_read(&wt.store, r.hash, context.temp_allocator)
 		if data == nil { continue }
-		append(&served, wlclip.Served{r.mime, data})
-		for alias in served_mimes(r.mime) { if alias != r.mime { append(&served, wlclip.Served{alias, data}) } }
+		append(&reps, wlclip.Served{r.mime, data})
+		for alias in served_mimes(r.mime) { if alias != r.mime { append(&reps, wlclip.Served{alias, data}) } }
 	}
-	if !wlclip.set_selection(&wt.client, served[:]) { return false }
-	return to_top && history.touch(&wt.store, id, now_ms())
+	if !wlclip.set_selection(&wt.client, reps[:]) { return false, false }
+	return true, to_top && history.touch(&wt.store, id, now_ms())
 }
 

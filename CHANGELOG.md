@@ -5,6 +5,14 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **The entry chosen is pasted where you were** (`paste.on_select`, on): Enter, a double click or Alt+1…9 puts it on the
+  clipboard, hides the window and presses Ctrl+V for the program that has the keyboard again (`paste.keys` for other
+  keys: Ctrl+Shift+V in a terminal). On Wayland it needs a compositor that lets a program type for another
+  (`zwp_virtual_keyboard_v1`: wlroots compositors, ShojiWM); on Windows it is SendInput. It is gui_toolkit 0.135.0's
+  `send_hotkey`.
+- Setup (Windows): the start with the session and papier on the PATH are boxes of the dialog.
+
 ## [0.7.2] - 2026-11-09
 
 ### Changed

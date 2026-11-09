@@ -16,6 +16,11 @@ A second `papier` never starts a second copy: it sends its command to the runnin
 
 ![The window](screenshots/main.png)
 
+An entry you choose is pasted where you were: papier hides and presses Ctrl+V for the program that has the keyboard again
+(`paste.on_select`; `paste.keys` for other keys: a terminal pastes with Ctrl+Shift+V). On Wayland the compositor must
+let a program type for another (`zwp_virtual_keyboard_v1`: sway, Hyprland, river, niri, ShojiWM and the other wlroots
+compositors; KDE and GNOME do not): without it, the entry is on the clipboard and you paste it yourself.
+
 The title bar holds the search and the filters. The list holds the history, newest first. The selected entry is shown in
 full beside the list.
 
@@ -26,8 +31,8 @@ full beside the list.
 | Page Up, Page Down | ten entries up, down |
 | Ctrl+Home, Ctrl+End | the first, the last entry |
 | Tab, Shift+Tab | the next, the previous filter: All, Text, Images, Files, Pinned |
-| Enter, a double click | puts the entry back on the clipboard and hides the window |
-| Alt+1 … Alt+9 | puts one of the first nine entries back |
+| Enter, a double click | puts the entry back on the clipboard, hides the window and pastes it into the program you called papier from |
+| Alt+1 … Alt+9 | the same with one of the first nine entries |
 | Ctrl+P | pins or unpins the entry |
 | Shift+Delete | removes the entry |
 | Ctrl+E | edits the entry (text and rich text) |

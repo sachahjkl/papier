@@ -34,6 +34,8 @@ On Windows, the system keeps the history (Settings > System > Clipboard): the `h
 | `capture.ignore_secrets` | boolean | true | Do not record what a password manager marks as secret (`x-kde-passwordManagerHint`). |
 | `capture.ignore_mimes` | text | empty | MIME types, separated by commas: a copy that offers one of them is not recorded. |
 | `clipboard.keep` | boolean | true | When the program that owned the clipboard quits and empties it, put the last entry back. |
+| `paste.on_select` | boolean | true | An entry chosen (Enter, a double click, Alt+1…9) is pasted into the program papier was called from: the window hides and papier presses `paste.keys` there. |
+| `paste.keys` | text | Ctrl+V | The keys papier presses to paste: Ctrl+V in most programs, Ctrl+Shift+V in a terminal, Shift+Insert in both on many systems. Ctrl, Shift, Alt, Win and a key, joined by `+`. |
 | `picker.close_on_copy` | boolean | true | Hide the window when an entry is copied. |
 | `picker.theme` | text | Papier | The colours: `Papier`, or a theme of gui_toolkit by its name (Midnight, Graphite, Nord, Dracula, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine, Kanagawa, One Dark, Solarized…). |
 | `picker.mode` | system, dark, light | system | The theme's version. `system` follows the system's light or dark as it changes. |

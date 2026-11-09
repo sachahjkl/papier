@@ -244,6 +244,19 @@ app_show :: proc(app: ^App) {
 	app.main.settle = max(app.main.settle, FRAMES_AT_SHOW)
 }
 
+// The entry is on the clipboard: the window goes (if it has not), and papier presses the paste keys for the program that
+// has the keyboard again, the one papier was called from. The hide goes to the compositor before the keys, on the same
+// connection: the keys reach that program, not papier.
+@(private = "file")
+app_paste :: proc(app: ^App) {
+	if app.visible { app_hide_now(app) }
+	hk, ok := platform.hotkey_parse(app.settings.paste_keys)
+	if !ok { errf("papier: paste.keys: %q is not a key combination (Ctrl+V, Ctrl+Shift+V, Shift+Insert...)", app.settings.paste_keys); return }
+	if !platform.send_hotkey(app.main.win, hk) {
+		errln("papier: the entry is on the clipboard, but this desktop lets no program press keys for another (Wayland: zwp_virtual_keyboard_v1): paste it yourself")
+	}
+}
+
 app_toggle :: proc(app: ^App) {
 	if app.visible && !app.hide_due { app_hide(app) } else { app_show(app) }
 }
@@ -332,6 +345,7 @@ app_requests :: proc(app: ^App) {
 		case .Show:   app_show(app)
 		case .Hide:   app_hide(app)
 		case .Setup:  app_show(app); setup_open(app)
+		case .Paste:  app_paste(app)
 		}
 	}
 	app_reload(app)

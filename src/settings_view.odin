@@ -26,6 +26,7 @@ settings_keys :: proc(app: ^App) {
 SETTINGS_PAGES := [?]prefs_page.Page_Info{
 	{category = "appearance", title = "Appearance", icon = lucide.PALETTE},
 	{category = "window",     title = "Window",     icon = lucide.APP_WINDOW},
+	{category = "paste",      title = "Paste",      icon = lucide.CLIPBOARD},
 	{category = "history",    title = "History",    icon = lucide.HISTORY},
 	{category = "capture",    title = "Capture",    icon = lucide.CLIPBOARD},
 }

@@ -188,6 +188,26 @@ live_window :: proc(l: ^Live) {
 	check(l, strings.contains(prefs, "picker.theme = Graphite"), "papier prefs: picker.theme is Graphite after the reload")
 	check(l, cdp.key(&c, "ctrl+,"), "Ctrl+, again")
 	check(l, cdp.wait_for(&c, EDITED, SESSION_WAIT), "the history is back")
+
+	// Enter on the entry (paste.on_select): it goes on the clipboard, the window hides, and papier presses the paste keys
+	// for what has the keyboard (sway has a virtual keyboard; the toolkit's desktop tests see the keys arrive)
+	check(l, cdp.key(&c, "Escape"), "Escape clears the search (\"bold\", typed above)")
+	check(l, cdp.type_text(&c, "edited"), "search the edited entry")
+	check(l, cdp.wait_for(&c, "hello from papier live", SESSION_WAIT, gone = true), "it alone is listed")
+	check(l, cdp.wait_for(&c, EDITED, SESSION_WAIT), "it is listed")
+	_ = cdp.key(&c, "Enter")   // (its release finds the window gone: what follows says whether Enter did its work)
+	pasted := false
+	got: string
+	for _ in 0 ..< 50 {
+		out, pcode := run_in(l, "wl-paste", "-n")
+		got = out
+		if pcode == 0 && out == EDITED { pasted = true; break }
+		time.sleep(100 * time.Millisecond)
+	}
+	check(l, pasted, "it is on the clipboard (%q)", got[:min(len(got), 60)])
+	time.sleep(300 * time.Millisecond)
+	plog, _ := os.read_entire_file(fmt.tprintf("%s/papier.log", l.dir), context.temp_allocator)
+	check(l, !strings.contains(string(plog), "press keys"), "papier pressed the paste keys (%s/papier.log)", l.dir)
 	cdp.close(&c)
 
 	for round in 1 ..= 3 {

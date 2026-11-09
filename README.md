@@ -24,7 +24,8 @@ lives in the notification area, sleeps at 0 % CPU, and its window comes up in a 
 - **Fast to reach**: one process per session; `papier toggle` on a key (Linux) or Win+Shift+V (Windows) shows the window,
   the newest entry selected, the keyboard in the search.
 - **Windows**: papier shows the system's clipboard history (the one Win+V shows) with its search, filters and menus.
-- **Search as you type**, filters (All, Text, Images, Files, Pinned), Enter to copy, Alt+1…9 for the first nine.
+- **Search as you type**, filters (All, Text, Images, Files, Pinned), Enter to paste into the program you were in
+  (Ctrl+V pressed for it; or only copy), Alt+1…9 for the first nine.
 - **Pinned entries** stay whatever the limits.
 - **An entry's menu** (right click, Menu key): copy, copy as plain text, edit, open, open with any application your
   system knows for its type, show in folder, save as.

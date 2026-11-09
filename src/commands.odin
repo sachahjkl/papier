@@ -26,6 +26,7 @@ Command :: struct {
 	verb: Verb,
 	id:   u64,
 	text: string,   // Add_Text, Replace_Text: the text (the queue owns its copy: watcher_send)
+	paste: bool,    // Copy, Copy_Plain, Add_Text: once on the clipboard, the window pastes it (Request.Paste)
 }
 
 command_format :: proc(c: Command, allocator := context.temp_allocator) -> string {

@@ -30,11 +30,50 @@ full beside the list.
 | Alt+1 … Alt+9 | puts one of the first nine entries back |
 | Ctrl+P | pins or unpins the entry |
 | Shift+Delete | removes the entry |
+| Ctrl+E | edits the entry (text and rich text) |
+| Ctrl+O | opens the entry |
+| Ctrl+S | saves the entry into a file |
+| a right click, Menu, Shift+F10 | the entry's menu |
 | Escape | clears the search; when it is empty, hides the window |
 
 The buttons beside the entry copy, pin and remove it. The splitter between the list and the entry sets the width of the
 list. Papier remembers the size of the window, its place (X11 only: on Wayland the compositor places windows) and the
 width of the list.
+
+## The menu of an entry
+
+![The menu of an entry](screenshots/menu.png)
+
+| Item | What it does |
+|---|---|
+| Copy | puts the entry back on the clipboard |
+| Copy as plain text | rich text only: puts back its text, without the markup |
+| Edit… | opens the edit view |
+| Open | opens an address in the browser, a copied file with its program, anything else as a file of its type |
+| Open with | the applications that your system knows for the type of the entry; the default is marked |
+| Show in folder | a copied file: opens its folder |
+| Save as… | writes the bytes of the entry into a file that you name |
+| Pin, Unpin | pins or unpins the entry |
+| Remove | removes the entry |
+
+To open an entry that is not a file, papier writes it to `$XDG_RUNTIME_DIR/papier/open/papier-<id>.<extension>`: a
+program needs a file. The session's runtime folder is yours alone and empty at the next session.
+
+## The edit view
+
+![The edit view](screenshots/edit.png)
+
+Ctrl+E, or the pencil beside the entry, puts the text of the entry in an editor, in place of the entry.
+
+| Key | What it does |
+|---|---|
+| Ctrl+Enter | copies the text: a new entry at the top, on the clipboard |
+| Ctrl+S | saves the text in place of the entry: the entry keeps its place and its pin |
+| Escape | leaves the edit view; nothing is kept |
+
+Rich text is edited as its text, and saved as text. Selecting another entry leaves the edit view.
+
+## Types
 
 Papier copies an entry back with every type that it had. A copy from a browser that you put back still pastes as rich text
 in an editor, and as plain text in a terminal.

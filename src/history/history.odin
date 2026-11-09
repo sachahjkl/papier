@@ -155,6 +155,36 @@ touch :: proc(s: ^Store, id: u64, now_ms: i64) -> bool {
 	return true
 }
 
+// Gives the entry `id` new representations (an edit): it keeps its id, its place and its pin. Another entry with the
+// same main bytes goes, as a copy of them would merge with it. False when the entry is gone or a blob cannot be written.
+replace :: proc(s: ^Store, id: u64, reps: []Rep_Data, main: int, kind: Kind, preview: string) -> bool {
+	if len(reps) == 0 || main < 0 || main >= len(reps) || find(s, id) < 0 { return false }
+	out := make([]Rep, len(reps))
+	for r, i in reps {
+		h := hash_bytes(r.data)
+		path := blob_path(s, h)
+		if _, _, there := fsx.stat(path); !there {
+			if !fsx.write_atomic(path, r.data) {
+				for o in out[:i] { delete(o.mime) }
+				delete(out)
+				return false
+			}
+		}
+		out[i] = {strings.clone(r.mime), h, len(r.data)}
+	}
+	key := out[main].hash
+	if other := find_key(s, key); other >= 0 && s.entries[other].id != id {
+		entry_free(&s.entries[other])
+		ordered_remove(&s.entries, other)
+	}
+	e := &s.entries[find(s, id)]
+	for r in e.reps { delete(r.mime) }
+	delete(e.reps)
+	delete(e.preview)
+	e.reps, e.kind, e.key, e.preview = out, kind, key, strings.clone(clip_preview(preview))
+	return true
+}
+
 remove :: proc(s: ^Store, id: u64) -> bool {
 	at := find(s, id)
 	if at < 0 { return false }

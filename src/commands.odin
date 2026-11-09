@@ -8,19 +8,23 @@ import "core:strconv"
 import "core:strings"
 import instance "gt:instance"
 
-Verb :: enum u8 { Ping, Show, Hide, Toggle, Quit, Copy, Pin, Unpin, Delete, Clear, Reload }
+Verb :: enum u8 { Ping, Show, Hide, Toggle, Quit, Copy, Pin, Unpin, Delete, Clear, Reload, Copy_Plain, Add_Text, Replace_Text }
 
 COMMAND_NAMES := [Verb]string{
 	.Ping = "ping", .Show = "show", .Hide = "hide", .Toggle = "toggle", .Quit = "quit",
 	.Copy = "copy", .Pin = "pin", .Unpin = "unpin", .Delete = "delete", .Clear = "clear", .Reload = "reload",
+	.Copy_Plain = "copy-plain", .Add_Text = "add-text", .Replace_Text = "replace-text",
 }
 
 // The verbs that name an entry.
-VERBS_WITH_ID :: bit_set[Verb]{.Copy, .Pin, .Unpin, .Delete}
+VERBS_WITH_ID :: bit_set[Verb]{.Copy, .Pin, .Unpin, .Delete, .Copy_Plain, .Replace_Text}
+// The verbs only the window sends (they carry a text, which a line of the socket does not).
+WINDOW_VERBS :: bit_set[Verb]{.Add_Text, .Replace_Text}
 
 Command :: struct {
 	verb: Verb,
 	id:   u64,
+	text: string,   // Add_Text, Replace_Text: the text (the queue owns its copy: watcher_send)
 }
 
 command_format :: proc(c: Command, allocator := context.temp_allocator) -> string {
@@ -32,7 +36,7 @@ command_parse :: proc(text: string) -> (c: Command, ok: bool) {
 	f := strings.fields(text, context.temp_allocator)
 	if len(f) == 0 { return }
 	for name, v in COMMAND_NAMES {
-		if name != f[0] { continue }
+		if name != f[0] || v in WINDOW_VERBS { continue }
 		c.verb = v
 		if v in VERBS_WITH_ID {
 			if len(f) != 2 { return }

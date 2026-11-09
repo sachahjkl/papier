@@ -87,7 +87,7 @@ markup_offered_as_text_is_html :: proc(t: ^testing.T) {
 
 @(test)
 commands_read_back :: proc(t: ^testing.T) {
-	for c in ([]Command{{.Copy, 42}, {.Clear, 0}, {.Pin, 7}}) {
+	for c in ([]Command{{verb = .Copy, id = 42}, {verb = .Clear}, {verb = .Pin, id = 7}, {verb = .Copy_Plain, id = 3}}) {
 		back, ok := command_parse(command_format(c))
 		testing.expect(t, ok)
 		testing.expect_value(t, back, c)
@@ -96,4 +96,6 @@ commands_read_back :: proc(t: ^testing.T) {
 	testing.expect(t, !ok, "copy needs an id")
 	_, ok = command_parse("clear 3")
 	testing.expect(t, !ok, "clear takes none")
+	_, ok = command_parse("replace-text 3")
+	testing.expect(t, !ok, "the window's own verbs do not come over the socket")
 }

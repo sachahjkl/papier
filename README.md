@@ -25,6 +25,9 @@ lives in the notification area, sleeps at 0 % CPU, and its window comes up in a 
   keyboard in the search.
 - **Search as you type**, filters (All, Text, Images, Files, Pinned), Enter to copy, Alt+1…9 for the first nine.
 - **Pinned entries** stay whatever the limits.
+- **An entry's menu** (right click, Menu key): copy, copy as plain text, edit, open, open with any application your
+  system knows for its type, show in folder, save as.
+- **Edit an entry**: its text in an editor; copy what you edited, or save it in place of the entry.
 - **Secrets stay secret**: what a password manager marks (`x-kde-passwordManagerHint`) is never recorded.
 - **The clipboard kept**: when the program you copied from quits, the last entry goes back.
 - **Light**: 0 % CPU at rest, a list that builds only the rows in view, the same bytes stored once.

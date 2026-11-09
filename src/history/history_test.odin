@@ -88,3 +88,26 @@ a_preview_is_cut_between_characters :: proc(t: ^testing.T) {
 	p := clip_preview(string(long[:]))
 	testing.expect_value(t, len(p), PREVIEW_MAX_BYTES - 1)
 }
+
+// An edit keeps the entry's id, place and pin; an entry that already held the new text goes, as a copy would merge them.
+@(test)
+an_edit_keeps_the_entry :: proc(t: ^testing.T) {
+	s, dir := temp_store(t, "replace")
+	defer { close(&s); fsx.remove_tree(dir); delete(dir) }
+	a, _ := add(&s, text("alpha"), 0, .Text, "alpha", 1)
+	b, _ := add(&s, text("beta"), 0, .Text, "beta", 2)
+	c, _ := add(&s, text("gamma"), 0, .Text, "gamma", 3)
+	set_pinned(&s, b, true)
+	testing.expect(t, replace(&s, b, text("beta, edited"), 0, .Text, "beta, edited"))
+	testing.expect_value(t, len(s.entries), 3)
+	testing.expect_value(t, s.entries[1].id, b)
+	testing.expect(t, s.entries[1].pinned)
+	testing.expect_value(t, s.entries[1].preview, "beta, edited")
+	testing.expect_value(t, string(blob_read(&s, s.entries[1].reps[0].hash, context.temp_allocator)), "beta, edited")
+	// the text of another entry: that one goes
+	testing.expect(t, replace(&s, b, text("alpha"), 0, .Text, "alpha"))
+	testing.expect_value(t, len(s.entries), 2)
+	testing.expect(t, find(&s, a) < 0, "the other entry with the same text went")
+	testing.expect_value(t, s.entries[0].id, c)
+	testing.expect(t, !replace(&s, 999, text("x"), 0, .Text, "x"), "an entry that is not there")
+}

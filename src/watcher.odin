@@ -8,6 +8,7 @@ package papier
 // What the window must do (show, hide, quit) goes back to it through `asked`, in order, and a wake of its window.
 
 import "core:fmt"
+import "core:strings"
 import "core:sync"
 import "core:sys/linux"
 import "core:sys/posix"
@@ -63,6 +64,7 @@ watcher_stop :: proc(wt: ^Watcher) {
 		wt.thread = nil
 	}
 	posix.close(wt.wake_fd)
+	for c in wt.queue { delete(c.text) }
 	delete(wt.queue)
 	delete(wt.asked)
 	settings_free(&wt.settings)
@@ -72,7 +74,9 @@ watcher_stop :: proc(wt: ^Watcher) {
 // A command of the window, run by the watcher's thread.
 watcher_send :: proc(wt: ^Watcher, c: Command) {
 	sync.guard(&wt.mutex)
-	append(&wt.queue, c)
+	q := c
+	q.text = strings.clone(c.text)   // (the watcher's thread frees it once applied)
+	append(&wt.queue, q)
 	watcher_poke(wt)
 }
 
@@ -147,7 +151,10 @@ watcher_drain :: proc(wt: ^Watcher) {
 	copy(cmds, wt.queue[:])
 	clear(&wt.queue)
 	sync.mutex_unlock(&wt.mutex)
-	for c in cmds { watcher_apply(wt, c) }
+	for c in cmds {
+		watcher_apply(wt, c)
+		delete(c.text)
+	}
 }
 
 // A command from another process (the instance socket), on this thread.
@@ -167,6 +174,16 @@ watcher_apply :: proc(wt: ^Watcher, c: Command) {
 	case .Toggle: watcher_request(wt, .Toggle)
 	case .Quit:   watcher_request(wt, .Quit)
 	case .Copy:   changed = watcher_serve(wt, c.id, true)
+	case .Copy_Plain: changed = watcher_serve(wt, c.id, true, plain = true)
+	case .Add_Text:
+		// an edited text, copied: a new entry at the top, on the clipboard
+		id, ok := history.add(&wt.store, text_reps(c.text), 0, .Text, c.text, now_ms())
+		if !ok { fmt.eprintln("papier: the history cannot be written"); break }
+		watcher_serve(wt, id, false)
+		changed = true
+	case .Replace_Text:
+		changed = history.replace(&wt.store, c.id, text_reps(c.text), 0, .Text, c.text)
+		if changed { history.collect(&wt.store) }
 	case .Pin:    changed = history.set_pinned(&wt.store, c.id, true)
 	case .Unpin:  changed = history.set_pinned(&wt.store, c.id, false)
 	case .Delete:
@@ -230,14 +247,24 @@ watcher_trim :: proc(wt: ^Watcher) -> bool {
 	return true
 }
 
-// Puts the entry `id` on the clipboard (`to_top`: and first in the history). False when it is gone or nothing changed.
+// One text, as the history stores it.
 @(private = "file")
-watcher_serve :: proc(wt: ^Watcher, id: u64, to_top: bool) -> bool {
+text_reps :: proc(text: string) -> []history.Rep_Data {
+	r := make([]history.Rep_Data, 1, context.temp_allocator)
+	r[0] = {TEXT_MIME, transmute([]u8)text}
+	return r
+}
+
+// Puts the entry `id` on the clipboard (`to_top`: and first in the history; `plain`: its text only, without its rich
+// text). False when it is gone or nothing changed.
+@(private = "file")
+watcher_serve :: proc(wt: ^Watcher, id: u64, to_top: bool, plain := false) -> bool {
 	at := history.find(&wt.store, id)
 	if at < 0 { return false }
 	e := wt.store.entries[at]
 	served := make([dynamic]wlclip.Served, context.temp_allocator)
 	for r in e.reps {
+		if plain && r.mime != TEXT_MIME { continue }
 		data := history.blob_read(&wt.store, r.hash, context.temp_allocator)
 		if data == nil { continue }
 		append(&served, wlclip.Served{r.mime, data})

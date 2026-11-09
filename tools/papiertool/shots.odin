@@ -71,6 +71,18 @@ run_shots :: proc(args: []string) -> int {
 	cdp.type_text(&c, "release")
 	cdp.wait_for(&c, "proc fibonacci", SESSION_WAIT, gone = true)
 	shot(&c, out, "search", &failed)
+	// the entry's menu, then the edit view, on the first entry
+	cdp.key(&c, "Escape")   // (the search, cleared)
+	cdp.wait_for(&c, "proc fibonacci", SESSION_WAIT)
+	cdp.key(&c, "ContextMenu")
+	cdp.wait_for(&c, "Open with", SESSION_WAIT)
+	shot(&c, out, "menu", &failed)
+	cdp.key(&c, "Escape")
+	cdp.wait_for(&c, "Open with", SESSION_WAIT, gone = true)
+	cdp.key(&c, "ctrl+e")
+	cdp.wait_for(&c, "Editing", SESSION_WAIT)
+	shot(&c, out, "edit", &failed)
+	cdp.key(&c, "Escape")
 	cdp.close(&c)
 
 	_, _ = run_in(&s, PROGRAM, "set", "picker.theme", "papier light")
@@ -87,7 +99,7 @@ run_shots :: proc(args: []string) -> int {
 
 	// the site shows the same pictures
 	_ = os.make_directory_all(SHOTS_SITE)
-	for name in ([]string{"main", "images", "search", "light"}) {
+	for name in ([]string{"main", "images", "search", "menu", "edit", "light"}) {
 		data, err := os.read_entire_file(fmt.tprintf("%s/%s.png", out, name), context.temp_allocator)
 		if err == nil { _ = os.write_entire_file(fmt.tprintf("%s/%s.png", SHOTS_SITE, name), data) }
 	}

@@ -154,6 +154,21 @@ live_window :: proc(l: ^Live) {
 	check(l, cdp.type_text(&c, "bold"), "type in the search")
 	check(l, cdp.wait_for(&c, "hello from papier live", SESSION_WAIT, gone = true), "the search leaves the other entries out")
 	check(l, cdp.wait_for(&c, "rich bold live", SESSION_WAIT), "and keeps the match")
+	// the entry's menu, from the keyboard
+	check(l, cdp.key(&c, "ContextMenu"), "the Menu key")
+	check(l, cdp.wait_for(&c, "Open with", SESSION_WAIT), "the entry's menu opens")
+	check(l, cdp.key(&c, "Escape"), "Escape")
+	check(l, cdp.wait_for(&c, "Open with", SESSION_WAIT, gone = true), "and closes")
+	// the edit view: the rich text edited as text, saved in place of its entry
+	EDITED :: "rich bold live, edited"
+	check(l, cdp.key(&c, "ctrl+e"), "Ctrl+E")
+	check(l, cdp.wait_for(&c, "Editing", SESSION_WAIT), "the edit view opens")
+	check(l, cdp.type_text(&c, ", edited"), "type in the editor")
+	check(l, cdp.key(&c, "ctrl+s"), "Ctrl+S")
+	check(l, cdp.wait_for(&c, EDITED, SESSION_WAIT), "the entry is saved, edited")
+	list, _ := run_in(l, PROGRAM, "list", "100")
+	f, found := entry_of(list, EDITED)
+	check(l, found && f[1] == "text", "the history has it, as text")
 	cdp.close(&c)
 
 	for round in 1 ..= 3 {

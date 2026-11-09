@@ -5,6 +5,17 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **The menu of an entry**: a right click on a row, the Menu key or Shift+F10. Copy, Copy as plain text (rich text),
+  Edit…, Open (an address in the browser, a file with its program, the rest as a file of its type), Open with (the
+  applications the system knows for the type: gui_toolkit's `desktop.handlers_for_file`), Show in folder (files),
+  Save as…, Pin, Remove. Ctrl+O opens, Ctrl+S saves as.
+- **The edit view**: Ctrl+E or the pencil puts the text of an entry in an editor. Ctrl+Enter copies it as a new entry;
+  Ctrl+S saves it in place of the entry (its place and its pin kept); Escape leaves.
+
+### Fixed
+- **The preview follows an edit**: it was kept by the entry's id, which an edit does not change.
+
 ## [0.1.6] - 2026-11-09
 
 ### Fixed

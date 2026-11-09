@@ -59,6 +59,9 @@ App :: struct {
 	shown:      [dynamic]int,       // the entries the search and the filter keep: indices in store.entries
 	ids:        [dynamic]u64,       // their ids (the list's row identities)
 	view:       View,
+	menu:       Entry_Menu,         // the entry's menu (entry_menu.odin)
+	edit:       Edit,               // the edit view (edit.odin)
+	sel_rect:   ui.Rect,            // the selected row, as last built (where the Menu key opens the menu)
 	room:       f32,                // the window's width at this build, logical pixels
 	status:     string,             // a message for the status bar (owned), until status_until (ui clock, ms)
 	status_until: f64,
@@ -148,6 +151,8 @@ app_free :: proc(app: ^App) {
 	delete(app.palette_applied)
 	ui.field_destroy(&app.search)
 	ui.vlist_destroy(&app.vl)
+	entry_menu_free(&app.menu)
+	ui.area_destroy(&app.edit.area)
 	history.close(&app.store)
 	settings_free(&app.settings)
 	config.prefs_destroy(&app.prefs)
@@ -187,6 +192,8 @@ app_show :: proc(app: ^App) {
 	app_reload(app)
 	// a new look, unless the window is shown and stays so (a hide asked in this step, then a show: a new look, in place)
 	if !app.visible || app.hide_due {
+		edit_end(app)
+		app.menu.close_due = true   // (closed at the next build: the interface is only touched from inside one)
 		ui.field_clear(&app.search)
 		app.filter = .All
 		refilter(app)

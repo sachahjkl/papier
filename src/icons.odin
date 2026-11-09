@@ -18,3 +18,5 @@ ICO_CLOSE     :: ""
 ICO_TRASH     :: ""
 ICO_COPY      :: ""
 ICO_HISTORY   :: ""
+ICO_EDIT      :: ""   // square-pen
+ICO_SAVE      :: ""

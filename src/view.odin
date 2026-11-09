@@ -10,6 +10,9 @@ package papier
 //   Alt+1 .. Alt+9          the same for the first nine entries shown
 //   Ctrl+P                  pin or unpin (pinned entries stay whatever the limits)
 //   Shift+Delete            remove the entry
+//   Ctrl+E                  edit the entry (edit.odin)
+//   Ctrl+O, Ctrl+S          open it, save it as a file (entry_menu.odin)
+//   a right click, Menu, Shift+F10    the entry's menu (entry_menu.odin)
 //   Escape                  clear the search, else hide
 
 import "core:fmt"
@@ -50,6 +53,7 @@ KIND_LABELS := [history.Kind]string{.Text = "Text", .Html = "Rich text", .Image 
 // The selected entry, read in full for the preview.
 View :: struct {
 	id:      u64,
+	key:     u64,               // the entry's content when it was read (an edit keeps the id, not the key)
 	loaded:  bool,
 	text:    string,            // owned
 	tex:     render.Texture,
@@ -119,20 +123,11 @@ set_filter :: proc(app: ^App, f: Filter) {
 	ui.vlist_scroll_to(&app.vl, 0)
 }
 
-// Puts the entry back on the clipboard (the watcher serves it) and hides the window.
-@(private = "file")
-copy_entry :: proc(app: ^App, id: u64) {
-	watcher_send(&app.watcher, {verb = .Copy, id = id})
-	if app.settings.close_on_copy { app_hide(app) } else { say(app, "Copied") }
-}
-
-@(private = "file")
 toggle_pin :: proc(app: ^App, e: ^history.Entry) {
 	watcher_send(&app.watcher, {verb = e.pinned ? .Unpin : .Pin, id = e.id})
 	e.pinned = !e.pinned   // (shown at once; the watcher's index says the same at the next reload)
 }
 
-@(private = "file")
 remove_entry :: proc(app: ^App, id: u64) {
 	watcher_send(&app.watcher, {verb = .Delete, id = id})
 	at := history.find(&app.store, id)
@@ -146,6 +141,7 @@ remove_entry :: proc(app: ^App, id: u64) {
 // The keys of the window, taken before the search field sees them.
 @(private = "file")
 view_keys :: proc(app: ^App) {
+	if app.edit.active { edit_keys(app); return }
 	if ui.key_press(.Down) || ui.key_press(.N, {.Ctrl}) { select_row(app, app.vl.sel + 1) }
 	if ui.key_press(.Up) || ui.key_press(.P, {.Alt}) { select_row(app, app.vl.sel - 1) }
 	if ui.key_press(.Page_Down) { select_row(app, app.vl.sel + PAGE_ROWS) }
@@ -154,13 +150,19 @@ view_keys :: proc(app: ^App) {
 	if ui.key_press(.End, {.Ctrl}) { select_row(app, len(app.shown) - 1) }
 	if ui.key_press(.Tab) { set_filter(app, Filter((int(app.filter) + 1) % len(Filter))) }
 	if ui.key_press(.Tab, {.Shift}) { set_filter(app, Filter((int(app.filter) + len(Filter) - 1) % len(Filter))) }
-	if ui.key_press(.Return) { if e := selected(app); e != nil { copy_entry(app, e.id) } }
+	if ui.key_press(.Return) { if e := selected(app); e != nil { entry_copy(app, e.id) } }
 	digits := [9]platform.Key{.N1, .N2, .N3, .N4, .N5, .N6, .N7, .N8, .N9}
 	for k, i in digits {
-		if ui.key_press(k, {.Alt}) && i < len(app.shown) { copy_entry(app, app.store.entries[app.shown[i]].id) }
+		if ui.key_press(k, {.Alt}) && i < len(app.shown) { entry_copy(app, app.store.entries[app.shown[i]].id) }
 	}
 	if ui.key_press(.P, {.Ctrl}) { if e := selected(app); e != nil { toggle_pin(app, e) } }
 	if ui.key_press(.Delete, {.Shift}) { if e := selected(app); e != nil { remove_entry(app, e.id) } }
+	if ui.key_press(.E, {.Ctrl}) { if e := selected(app); e != nil { edit_begin(app, e) } }
+	if ui.key_press(.O, {.Ctrl}) { if e := selected(app); e != nil { entry_open(app, e) } }
+	if ui.key_press(.S, {.Ctrl}) { if e := selected(app); e != nil && e.kind != .Files { entry_save_as(app, e) } }
+	if ui.key_press(.Menu) || ui.key_press(.F10, {.Shift}) {
+		if e := selected(app); e != nil { entry_menu_open(app, e, {app.sel_rect.min.x + 24, app.sel_rect.max.y}, from_keyboard = true) }
+	}
 	if ui.key_press(.Escape) {
 		if len(app.search.buf) > 0 { ui.field_clear(&app.search) } else { app_hide(app) }
 	}
@@ -173,11 +175,13 @@ view_build :: proc(h: ^host.Host, size: host.Vec2) {
 	app := (^App)(h.user)
 	em := ui.font_size()
 	app.room = size.x / max(ui.scale(), 0.01)
-	if app.search_key != 0 && ui.focus_key() != app.search_key { ui.set_focus(app.search_key) }
+	// the keyboard is the search's, unless the edit view has it
+	if !app.edit.active && app.search_key != 0 && ui.focus_key() != app.search_key { ui.set_focus(app.search_key) }
 	view_keys(app)
 	ui.next({width = ui.fill(), height = ui.fill(), axis = .Y})
 	page := ui.build_box({.Draw_Background}, "###page")
 	if ui.parent(page) { build_page(app, em) }
+	entry_menu_build(app, em)
 }
 
 @(private = "file")
@@ -191,14 +195,12 @@ build_page :: proc(app: ^App, em: f32) {
 }
 
 // An icon of Lucide, `size` ems wide.
-@(private = "file")
 glyph :: proc(app: ^App, g: string, width: f32, fg: Maybe(ui.Color) = nil) {
 	ui.next({width = ui.px(width), height = ui.pct(1), font = app.icons, text_align = .Center, fg = fg})
 	ui.build_box({.Draw_Text, .No_Text_Trunc}, fmt.tprintf("%s###g%d", g, ui.parent_box().child_count))
 }
 
 // A small button with a Lucide icon; its tooltip says what it does.
-@(private = "file")
 icon_action :: proc(app: ^App, id, g, tip: string, em: f32) -> bool {
 	ui.next({width = ui.px(em * 2.1), height = ui.px(em * 2.1), font = app.icons, radius = em * 0.4})
 	sig: ui.Signal
@@ -310,7 +312,12 @@ build_list :: proc(app: ^App, em: f32) {
 				if ui.style({font_size = em * 0.85}) { ui.label(fmt.tprintf("%s###a", age_text(now - e.time_ms))) }
 			}
 		}
-		if row.double_clicked { copy_entry(app, e.id) }
+		if i == app.vl.sel { app.sel_rect = row.box.rect }
+		if row.double_clicked { entry_copy(app, e.id) }
+		if row.right_clicked {
+			select_row(app, i)
+			entry_menu_open(app, e, ui.mouse_pos())
+		}
 	}
 	if len(app.shown) == 0 {
 		if ui.tags("weak") {
@@ -337,7 +344,8 @@ build_status :: proc(app: ^App, em: f32) {
 					msg = fmt.tprintf("%d of %d entries · %d pinned", len(app.shown), len(app.store.entries), pinned)
 				}
 				ui.label(fmt.tprintf("%s###status", msg))
-				for hint in ([?][2]string{{"Enter", "copy"}, {"Ctrl+P", "pin"}, {"Shift+Del", "remove"}, {"Tab", "filter"}, {"Esc", "hide"}}) {
+				hints := app.edit.active ? EDIT_HINTS[:] : LIST_HINTS[:]
+			for hint in hints {
 					ui.kbd(hint[0])
 					ui.next({width = ui.text_size(em * 0.3)})
 					ui.label(fmt.tprintf("%s###h%s", hint[1], hint[0]))
@@ -361,9 +369,9 @@ view_clear :: proc(app: ^App) {
 // Reads the selected entry for the preview, once per selection.
 @(private = "file")
 view_load :: proc(app: ^App, e: ^history.Entry) {
-	if app.view.loaded && app.view.id == e.id { return }
+	if app.view.loaded && app.view.id == e.id && app.view.key == e.key { return }
 	view_clear(app)
-	app.view.id, app.view.loaded = e.id, true
+	app.view.id, app.view.key, app.view.loaded = e.id, e.key, true
 	switch e.kind {
 	case .Image:
 		at := -1
@@ -432,6 +440,9 @@ build_view :: proc(app: ^App, em: f32) {
 build_view_body :: proc(app: ^App, em: f32) {
 	e := selected(app)
 	if e == nil { return }
+	// the edit view is its entry's: another selection leaves it
+	if app.edit.active && app.edit.id != e.id { edit_end(app) }
+	if app.edit.active { edit_build(app, e, em); return }
 	view_load(app, e)
 	// the header: what it is, its size, its types, and what can be done with it
 	ui.next({width = ui.fill(), height = ui.px(ui.dense(em * 2.5))})
@@ -446,7 +457,10 @@ build_view_body :: proc(app: ^App, em: f32) {
 				ui.label(fmt.tprintf("%s · %d type%s · %s ago###meta", size_text(history.entry_size(e^)), len(e.reps), len(e.reps) == 1 ? "" : "s", age_text(now_ms() - e.time_ms)))
 			}
 		}
-		if icon_action(app, "copy", ICO_COPY, "Copy (Enter)", em) { copy_entry(app, e.id) }
+		if icon_action(app, "copy", ICO_COPY, "Copy (Enter)", em) { entry_copy(app, e.id) }
+		if e.kind == .Text || e.kind == .Html {
+			if icon_action(app, "edit", ICO_EDIT, "Edit (Ctrl+E)", em) { edit_begin(app, e) }
+		}
 		if icon_action(app, "pin", e.pinned ? ICO_PIN_OFF : ICO_PIN, e.pinned ? "Unpin (Ctrl+P)" : "Pin (Ctrl+P)", em) { toggle_pin(app, e) }
 		if icon_action(app, "delete", ICO_TRASH, "Remove (Shift+Delete)", em) { remove_entry(app, e.id); return }
 		ui.spacer(ui.px(em * 0.4))
@@ -501,4 +515,6 @@ shown_text :: proc(text: string, allocator := context.temp_allocator) -> string 
 	return out
 }
 
+@(private = "file", rodata) LIST_HINTS := [?][2]string{{"Enter", "copy"}, {"Ctrl+E", "edit"}, {"Menu", "more"}, {"Ctrl+P", "pin"}, {"Tab", "filter"}, {"Esc", "hide"}}
+@(private = "file", rodata) EDIT_HINTS := [?][2]string{{"Ctrl+Enter", "copy"}, {"Ctrl+S", "save"}, {"Esc", "cancel"}}
 @(private = "file", rodata) filter_labels := [len(Filter)]string{"All", "Text", "Images", "Files", "Pinned"}

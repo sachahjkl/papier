@@ -5,6 +5,14 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Settings** (Ctrl+, or the gear of the title bar): every preference on four pages (Appearance, Window, History,
+  Capture), the search, a switch, a choice, a slider or a field for each, the themes as cards in their own colours.
+  A change is saved and applied at once. It is gui_toolkit's `prefs_page` (0.120.0).
+
+### Changed
+- `capture.max_bytes` is `capture.size_limit`.
+
 ## [0.3.0] - 2026-11-09
 
 ### Added

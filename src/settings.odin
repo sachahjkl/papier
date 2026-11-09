@@ -13,26 +13,26 @@ APP_NAME :: "papier"
 
 
 PREF_DEFS := [?]config.Def{
-	{name = "history.max_entries", description = "How many entries the history keeps, pinned ones aside. 0: no limit.", kind = .Int, default = {i = 1000}, min = 0, max = 1_000_000, bounded = true},
-	{name = "history.max_age_days", description = "Entries older than this many days go, pinned ones aside. 0: no limit.", kind = .Int, default = {i = 0}, min = 0, max = 36500, bounded = true, unit = "days"},
-	{name = "history.persist", description = "Keep the history on the disk across sessions. Off: it lives in $XDG_RUNTIME_DIR and goes at logout.", kind = .Bool, default = {b = true}, restart = true},
-	{name = "capture.text", description = "Record text.", kind = .Bool, default = {b = true}},
-	{name = "capture.html", description = "Record the HTML that comes with a copy from a browser or an editor.", kind = .Bool, default = {b = true}},
-	{name = "capture.image", description = "Record images.", kind = .Bool, default = {b = true}},
-	{name = "capture.files", description = "Record files copied in a file manager.", kind = .Bool, default = {b = true}},
-	{name = "capture.primary", description = "Also record the primary selection (the text selected with the mouse).", kind = .Bool, default = {b = false}},
-	{name = "capture.max_bytes", description = "A representation larger than this is not recorded.", kind = .Int, default = {i = 64 << 20}, min = 1024, max = 2 << 30, bounded = true, bytes = true, unit = "bytes"},
-	{name = "capture.ignore_secrets", description = "Do not record what a password manager marks as secret (x-kde-passwordManagerHint).", kind = .Bool, default = {b = true}},
-	{name = "capture.ignore_mimes", description = "MIME types, separated by commas: a copy that offers one of them is not recorded.", kind = .String, default = {s = ""}},
-	{name = "clipboard.keep", description = "When the program that owned the clipboard quits and empties it, put the last entry back.", kind = .Bool, default = {b = true}},
-	{name = "picker.close_on_copy", description = "Close the picker when an entry is copied.", kind = .Bool, default = {b = true}},
-	{name = "picker.theme", description = "The window's colours: Papier, or a theme of the toolkit by its name (Midnight, Nord, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine...).", kind = .String, default = {s = "Papier"}},
-	{name = "picker.mode", description = "The theme's version: the system's (light or dark, followed as it changes), dark, or light.", kind = .String, default = {s = "system"}, choices = {"system", "dark", "light"}},
-	{name = "picker.finish", description = "How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines (flat in a light version). Flat: plain surfaces and thin lines.", kind = .String, default = {s = "machined"}, choices = {"machined", "flat", "gradient", "glass"}},
-	{name = "picker.glow", description = "The halos of the machined finish: a focused field's ring of light.", kind = .Bool, default = {b = true}},
-	{name = "picker.width", description = "The picker's width, in logical pixels.", kind = .Int, default = {i = 900}, min = 320, max = 4000, bounded = true},
-	{name = "picker.height", description = "The picker's height, in logical pixels.", kind = .Int, default = {i = 560}, min = 240, max = 4000, bounded = true},
-	{name = "picker.font_size", description = "The picker's text size, in logical pixels.", kind = .Float, default = {f = 14}, min = 8, max = 40, bounded = true},
+	{name = "history.max_entries", category = "history", description = "How many entries the history keeps, pinned ones aside. 0: no limit.", kind = .Int, default = {i = 1000}, min = 0, max = 1_000_000, bounded = true},
+	{name = "history.max_age_days", category = "history", description = "Entries older than this many days go, pinned ones aside. 0: no limit.", kind = .Int, default = {i = 0}, min = 0, max = 36500, bounded = true, unit = "days"},
+	{name = "history.persist", category = "history", description = "Keep the history on the disk across sessions. Off: it lives in $XDG_RUNTIME_DIR and goes at logout.", kind = .Bool, default = {b = true}, restart = true},
+	{name = "capture.text", category = "capture", description = "Record text.", kind = .Bool, default = {b = true}},
+	{name = "capture.html", category = "capture", description = "Record the HTML that comes with a copy from a browser or an editor.", kind = .Bool, default = {b = true}},
+	{name = "capture.image", category = "capture", description = "Record images.", kind = .Bool, default = {b = true}},
+	{name = "capture.files", category = "capture", description = "Record files copied in a file manager.", kind = .Bool, default = {b = true}},
+	{name = "capture.primary", category = "capture", description = "Also record the primary selection (the text selected with the mouse).", kind = .Bool, default = {b = false}},
+	{name = "capture.size_limit", category = "capture", description = "A representation larger than this is not recorded.", kind = .Int, default = {i = 64 << 20}, min = 1024, max = 2 << 30, bounded = true, bytes = true, unit = "bytes"},
+	{name = "capture.ignore_secrets", category = "capture", description = "Do not record what a password manager marks as secret (x-kde-passwordManagerHint).", kind = .Bool, default = {b = true}},
+	{name = "capture.ignore_mimes", category = "capture", description = "MIME types, separated by commas: a copy that offers one of them is not recorded.", kind = .String, default = {s = ""}},
+	{name = "clipboard.keep", category = "capture", description = "When the program that owned the clipboard quits and empties it, put the last entry back.", kind = .Bool, default = {b = true}},
+	{name = "picker.close_on_copy", category = "window", description = "Close the picker when an entry is copied.", kind = .Bool, default = {b = true}},
+	{name = "picker.theme", category = "appearance", description = "The window's colours: Papier, or a theme of the toolkit by its name (Midnight, Nord, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine...).", kind = .String, default = {s = "Papier"}},
+	{name = "picker.mode", category = "appearance", description = "The theme's version: the system's (light or dark, followed as it changes), dark, or light.", kind = .String, default = {s = "system"}, choices = {"system", "dark", "light"}},
+	{name = "picker.finish", category = "appearance", description = "How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines (flat in a light version). Flat: plain surfaces and thin lines.", kind = .String, default = {s = "machined"}, choices = {"machined", "flat", "gradient", "glass"}},
+	{name = "picker.glow", category = "appearance", description = "The halos of the machined finish: a focused field's ring of light.", kind = .Bool, default = {b = true}},
+	{name = "picker.width", category = "window", description = "The picker's width, in logical pixels.", kind = .Int, default = {i = 900}, min = 320, max = 4000, bounded = true},
+	{name = "picker.height", category = "window", description = "The picker's height, in logical pixels.", kind = .Int, default = {i = 560}, min = 240, max = 4000, bounded = true},
+	{name = "picker.font_size", category = "appearance", description = "The picker's text size, in logical pixels.", kind = .Float, default = {f = 14}, min = 8, max = 40, bounded = true},
 }
 
 // The values the program reads, copied out of the registry (prefs_read).
@@ -82,7 +82,7 @@ prefs_read :: proc(p: ^config.Prefs, allocator := context.allocator) -> (s: Sett
 	}
 	s.capture.ignore_mimes = ignore[:]
 	s.primary = config.bool_of(p, "capture.primary")
-	s.max_bytes = int(config.int_of(p, "capture.max_bytes"))
+	s.max_bytes = int(config.int_of(p, "capture.size_limit"))
 	s.keep = config.bool_of(p, "clipboard.keep")
 	s.close_on_copy = config.bool_of(p, "picker.close_on_copy")
 	s.theme = strings.clone(config.string_of(p, "picker.theme"), allocator)

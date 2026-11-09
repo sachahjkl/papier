@@ -141,7 +141,9 @@ remove_entry :: proc(app: ^App, id: u64) {
 // The keys of the window, taken before the search field sees them.
 @(private = "file")
 view_keys :: proc(app: ^App) {
+	if app.settings_open { settings_keys(app); return }
 	if app.edit.active { edit_keys(app); return }
+	if ui.key_press(.Comma, {.Ctrl}) { settings_toggle(app); return }
 	if ui.key_press(.Down) || ui.key_press(.N, {.Ctrl}) { select_row(app, app.vl.sel + 1) }
 	if ui.key_press(.Up) || ui.key_press(.P, {.Alt}) { select_row(app, app.vl.sel - 1) }
 	if ui.key_press(.Page_Down) { select_row(app, app.vl.sel + PAGE_ROWS) }
@@ -175,8 +177,8 @@ view_build :: proc(h: ^host.Host, size: host.Vec2) {
 	app := (^App)(h.user)
 	em := ui.font_size()
 	app.room = size.x / max(ui.scale(), 0.01)
-	// the keyboard is the search's, unless the edit view has it
-	if !app.edit.active && app.search_key != 0 && ui.focus_key() != app.search_key { ui.set_focus(app.search_key) }
+	// the keyboard is the search's, unless the edit view or the settings have it
+	if !app.edit.active && !app.settings_open && app.search_key != 0 && ui.focus_key() != app.search_key { ui.set_focus(app.search_key) }
 	view_keys(app)
 	ui.next({width = ui.fill(), height = ui.fill(), axis = .Y})
 	page := ui.build_box({.Draw_Background}, "###page")
@@ -189,6 +191,10 @@ build_page :: proc(app: ^App, em: f32) {
 	build_title(app, em)
 	ui.hline(ui.fill())
 	ui.next({width = ui.fill(), height = ui.fill()})
+	if app.settings_open {
+		settings_build(app)
+		return
+	}
 	if ui.row() { build_body(app, em) }
 	ui.hline(ui.fill())
 	build_status(app, em)
@@ -221,6 +227,16 @@ build_title :: proc(app: ^App, em: f32) {
 		ui.spacer(ui.px(em * 0.5))
 		glyph(app, ICO_CLIPBOARD, em * 1.8, ui.color("accent"))
 		ui.spacer(ui.px(em * 0.3))
+		if app.settings_open {
+			// the page has its own search: the title says where one is, its empty part moves the window
+			ui.next({width = ui.fill(), height = ui.pct(1)})
+			ui.label("Papier###apptitle")
+			if icon_action(app, "back", ICO_BACK, "Back to the history (Escape)", em) { app.settings_open = false }
+			ui.spacer(ui.px(em * 0.3))
+			if icon_action(app, "close", ICO_CLOSE, "Hide (Escape)", em) { app_hide(app) }
+			ui.spacer(ui.px(em * 0.4))
+			return
+		}
 		// the search: a field with its icon, as wide as the title leaves
 		ui.next({width = ui.fill(), height = ui.px(ui.dense(em * 1.95)), radius = em * 0.45})
 		// one surface: the icon and the field, one focus ring around both (the field is bare: no box of its own)
@@ -249,6 +265,7 @@ build_title :: proc(app: ^App, em: f32) {
 		sel := int(app.filter)
 		if ui.segmented("###filter", filter_labels[:], &sel) { set_filter(app, Filter(sel)) }
 		ui.spacer(ui.px(em * 0.3))
+		if icon_action(app, "settings", ICO_SETTINGS, "Settings (Ctrl+,)", em) { settings_toggle(app) }
 		if icon_action(app, "close", ICO_CLOSE, "Hide (Escape)", em) { app_hide(app) }
 		ui.spacer(ui.px(em * 0.4))
 	}

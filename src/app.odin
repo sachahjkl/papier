@@ -14,6 +14,7 @@ import "gt:font"
 import "gt:host"
 import instance "gt:instance"
 import "gt:platform"
+import prefs_page "gt:prefs_page"
 import "gt:ui"
 import "history"
 
@@ -60,6 +61,8 @@ App :: struct {
 	view:       View,
 	menu:       Entry_Menu,         // the entry's menu (entry_menu.odin)
 	edit:       Edit,               // the edit view (edit.odin)
+	settings_open: bool,            // the settings in place of the history (settings_view.odin)
+	settings_page: prefs_page.Page,
 	sel_rect:   ui.Rect,            // the selected row, as last built (where the Menu key opens the menu)
 	room:       f32,                // the window's width at this build, logical pixels
 	status:     string,             // a message for the status bar (owned), until status_until (ui clock, ms)
@@ -151,6 +154,7 @@ app_free :: proc(app: ^App) {
 	ui.vlist_destroy(&app.vl)
 	entry_menu_free(&app.menu)
 	ui.area_destroy(&app.edit.area)
+	prefs_page.destroy(&app.settings_page)
 	history.close(&app.store)
 	settings_free(&app.settings)
 	config.prefs_destroy(&app.prefs)

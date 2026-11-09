@@ -27,7 +27,7 @@ Set one for a single run: `papier --pref picker.font_size=16`.
 | `capture.image` | boolean | true | Record images. |
 | `capture.files` | boolean | true | Record files copied in a file manager. |
 | `capture.primary` | boolean | false | Also record the primary selection (the text selected with the mouse). |
-| `capture.max_bytes` | bytes, 1K to 2G | 64M | A representation larger than this is not recorded. Accepts `K`, `M`, `G`. |
+| `capture.size_limit` | bytes, 1K to 2G | 64M | A representation larger than this is not recorded. Accepts `K`, `M`, `G`. |
 | `capture.ignore_secrets` | boolean | true | Do not record what a password manager marks as secret (`x-kde-passwordManagerHint`). |
 | `capture.ignore_mimes` | text | empty | MIME types, separated by commas: a copy that offers one of them is not recorded. |
 | `clipboard.keep` | boolean | true | When the program that owned the clipboard quits and empties it, put the last entry back. |

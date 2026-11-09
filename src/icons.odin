@@ -20,3 +20,8 @@ ICO_COPY      :: ""
 ICO_HISTORY   :: ""
 ICO_EDIT      :: ""   // square-pen
 ICO_SAVE      :: ""
+ICO_SETTINGS  :: "\ue154"
+ICO_BACK      :: "\ue048"   // arrow-left
+ICO_PALETTE   :: "\ue1dd"
+ICO_WINDOW    :: "\ue426"   // app-window
+ICO_RESET     :: "\ue145"   // refresh-cw

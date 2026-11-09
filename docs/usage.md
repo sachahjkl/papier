@@ -91,7 +91,7 @@ Papier does not record:
 
 - what a password manager marks as a secret (`x-kde-passwordManagerHint`, KeePassXC and others);
 - a copy that offers one of the types of the preference `capture.ignore_mimes`;
-- a representation larger than `capture.max_bytes`;
+- a representation larger than `capture.size_limit`;
 - a text that holds only blanks.
 
 The same copy twice is one entry: the entry moves to the top. When the program that owned the clipboard quits and empties

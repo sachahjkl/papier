@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-09
+
 ### Changed
 - The history is a SQLite database, `history.db`, with SQLite linked into papier. Each change is written at once, in
   one transaction. The history of papier 0.4 (`index` and `blobs/`) is imported at the first start, with its ids,
@@ -122,3 +124,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.2.0]: https://github.com/sachahjkl/papier/releases/tag/v0.2.0
 [0.3.0]: https://github.com/sachahjkl/papier/releases/tag/v0.3.0
 [0.4.0]: https://github.com/sachahjkl/papier/releases/tag/v0.4.0
+[0.5.0]: https://github.com/sachahjkl/papier/releases/tag/v0.5.0

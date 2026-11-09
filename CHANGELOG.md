@@ -5,6 +5,10 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Windows: the Setup's dialog can be resized from its edges and its corner; what it says scrolls when it is small, its
+  buttons stay under it. It is gui_toolkit 0.127.0.
+
 ## [0.7.0] - 2026-11-09
 
 ### Added

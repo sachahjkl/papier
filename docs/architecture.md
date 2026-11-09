@@ -68,6 +68,8 @@ One SQLite database, `history.db`, in WAL mode. SQLite is linked into papier: it
 - **Transactions**: each change (a copy, an edit, a removal, a trim) is one transaction: another connection sees the old
   list or the new one. The image decoder reads the bytes through a connection of its own.
 - **Keys**: a copy whose key is already there moves that entry to the top.
+- **Import**: at open, the history of papier 0.4 (a text index and a directory of blobs) goes into the database in one
+  transaction, then its files are deleted (src/history/import.odin).
 - **Limits**: `trim` drops the entries past the count or the age, pinned ones aside; `collect` deletes the bytes that no
   entry names.
 

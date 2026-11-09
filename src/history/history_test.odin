@@ -154,3 +154,55 @@ another_connection_sees_the_changes :: proc(t: ^testing.T) {
 	reload(&r)
 	testing.expect(t, r.entries[0].pinned)
 }
+
+// The history of papier 0.4 (its index and its blobs) is imported at open, ids, times, pins and types kept, the whole
+// text searchable; a representation whose blob is gone is left out; the old files go.
+@(test)
+the_old_history_is_imported :: proc(t: ^testing.T) {
+	dir := fmt.aprintf("%s/papier_test_import_%d", fsx.temp_dir(context.temp_allocator), os.get_pid())
+	defer { fsx.remove_tree(dir); delete(dir) }
+	fsx.remove_tree(dir)
+	fsx.make_dirs(fmt.tprintf("%s/blobs", dir))
+	long := make([]u8, PREVIEW_MAX_BYTES + 100, context.temp_allocator)
+	for &c in long { c = 'y' }
+	body := fmt.tprintf("%s\tfar word", string(long))
+	html, plain := "<b>x</b>", "x"
+	blob :: proc(dir, data: string) -> u64 {
+		h := hash_bytes(transmute([]u8)data)
+		fsx.write_atomic(fmt.tprintf("%s/blobs/%016x", dir, h), transmute([]u8)data)
+		return h
+	}
+	hb, hh, hp := blob(dir, body), blob(dir, html), blob(dir, plain)
+	index := fmt.tprintf(
+		"papier-index 1\nE\t9\t300\t1\thtml\t%016x\tx\nR\t%016x\t8\ttext/html\nR\t%016x\t1\ttext/plain;charset=utf-8\n" +
+		"E\t4\t200\t0\ttext\t%016x\t%s\\tfar\nR\t%016x\t%d\ttext/plain;charset=utf-8\n" +
+		"E\t2\t100\t0\timage\t00000000000000aa\timage/png 1 × 1\nR\t00000000000000aa\t5\timage/png\n",
+		hp, hh, hp, hb, string(long[:PREVIEW_MAX_BYTES]), hb, len(body))
+	fsx.write_atomic(fmt.tprintf("%s/index", dir), transmute([]u8)index)
+
+	s, _ := temp_store_at(t, dir)
+	defer close(&s)
+	testing.expect_value(t, len(s.entries), 2)   // (the image's blob is gone)
+	testing.expect_value(t, s.entries[0].id, u64(9))
+	testing.expect(t, s.entries[0].pinned)
+	testing.expect_value(t, s.entries[0].kind, Kind.Html)
+	testing.expect_value(t, len(s.entries[0].reps), 2)
+	testing.expect_value(t, string(blob_read(&s, s.entries[0].reps[0].hash, context.temp_allocator)), html)
+	testing.expect_value(t, s.entries[1].id, u64(4))
+	testing.expect_value(t, s.entries[1].time_ms, i64(200))
+	ids, _ := search(&s, {"word"})
+	testing.expect(t, u64(4) in ids, "the whole text is searchable")
+	_, _, index_there := fsx.stat(fmt.tprintf("%s/index", dir))
+	testing.expect(t, !index_there, "the old index went")
+	testing.expect_value(t, len(fsx.list_files(fmt.tprintf("%s/blobs", dir))), 0)
+	next, _ := add(&s, text("new"), 0, .Text, "new", 400)
+	testing.expect(t, next > 9, "a new entry takes an id that was never given")
+}
+
+@(private = "file")
+temp_store_at :: proc(t: ^testing.T, dir: string) -> (s: Store, ok: bool) {
+	why: string
+	ok, why = open(&s, dir)
+	testing.expectf(t, ok, "the store opens: %s", why)
+	return
+}

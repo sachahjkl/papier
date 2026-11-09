@@ -7,7 +7,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ### Changed
 - The history is a SQLite database, `history.db`, with SQLite linked into papier. Each change is written at once, in
-  one transaction. The history of an earlier version (`index` and `blobs/`) is not read: it starts empty.
+  one transaction. The history of papier 0.4 (`index` and `blobs/`) is imported at the first start, with its ids,
+  times and pins, then deleted.
 - The search finds a word anywhere in the text of a copy, not only in its first kilobyte. A word of one or two letters
   is still looked for in the preview.
 

@@ -12,9 +12,12 @@
 //
 // An entry has a key: the hash of its main representation (the text of a text copy, the bytes of an image). A copy whose
 // key is already there moves that entry to the top instead of adding a second one.
+//
+// The history of papier 0.4 and before (a text index and a directory of blobs) is imported at open (import.odin).
 package history
 
 import "base:runtime"
+import "core:fmt"
 import "core:hash/xxhash"
 import "core:strings"
 import "gt:fsx"
@@ -88,6 +91,11 @@ open :: proc(s: ^Store, dir: string) -> (ok: bool, why: string) {
 		delete(s.dir)
 		s^ = {}
 		return false, err
+	}
+	if n, imported := import_old(s, dir); !imported {
+		fmt.eprintfln("papier: the history of papier 0.4 cannot be imported: it stays in %s", dir)
+	} else if n > 0 {
+		fmt.eprintfln("papier: %d entries imported from the history of papier 0.4", n)
 	}
 	reload(s)
 	return true, ""

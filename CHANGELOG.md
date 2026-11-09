@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-09
+
 ### Added
 - **The entry chosen is pasted where you were** (`paste.on_select`, on): Enter, a double click or Alt+1…9 puts it on the
   clipboard, hides the window and presses Ctrl+V for the program that has the keyboard again (`paste.keys` for other
@@ -187,3 +189,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.7.0]: https://github.com/sachahjkl/papier/releases/tag/v0.7.0
 [0.7.1]: https://github.com/sachahjkl/papier/releases/tag/v0.7.1
 [0.7.2]: https://github.com/sachahjkl/papier/releases/tag/v0.7.2
+[0.8.0]: https://github.com/sachahjkl/papier/releases/tag/v0.8.0

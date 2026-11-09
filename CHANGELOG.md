@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-09
+
 ### Added
 - **A grip in the title bar**: three faint lines between the search and the filters mark a place reserved to move the
   window.
@@ -46,3 +48,4 @@ and the versions follow [semantic versioning](https://semver.org/).
   `notes`, `ship`, `site`.
 [0.1.0]: https://github.com/sachahjkl/papier/releases/tag/v0.1.0
 [0.1.1]: https://github.com/sachahjkl/papier/releases/tag/v0.1.1
+[0.1.2]: https://github.com/sachahjkl/papier/releases/tag/v0.1.2

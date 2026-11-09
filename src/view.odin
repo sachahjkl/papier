@@ -221,7 +221,8 @@ build_title :: proc(app: ^App, em: f32) {
 		ui.spacer(ui.px(em * 0.3))
 		// the search: a field with its icon, as wide as the title leaves
 		ui.next({width = ui.fill(), height = ui.px(ui.dense(em * 1.95)), radius = em * 0.45})
-		if ui.row(.Center, {.Draw_Background, .Draw_Border}, "###searchbox") {
+		// one surface: the icon and the field, one focus ring around both (the field is bare: no box of its own)
+		if ui.field_frame("###searchbox") {
 			if ui.tags("weak") { glyph(app, ICO_SEARCH, em * 1.9) }
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			if ui.tags("bare") {

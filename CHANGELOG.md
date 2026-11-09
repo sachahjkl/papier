@@ -5,6 +5,10 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **The search field is one box**: the field drew its own square focus ring inside the rounded search box. The box is now
+  the toolkit's `field_frame`: one surface and one rounded focus ring around the icon and the field.
+
 ## [0.1.3] - 2026-11-09
 
 ### Fixed

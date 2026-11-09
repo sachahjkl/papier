@@ -37,6 +37,7 @@ odin_cmd :: proc(verb, pkg: string, extra: []string) -> []string {
 // The toolkit's text library, built by its own tool (it skips what is up to date).
 build_text :: proc() -> bool {
 	when ODIN_OS == .Linux {
+		_ = os.make_directory_all(fmt.tprintf("%s/build", toolkit()))   // (a fresh checkout has none: the linker writes tk there)
 		return toolbox.run({"odin", "run", "tools/tk", "-out:build/tk", "--", "build_text"}, {dir = toolkit(), echo = true})
 	} else {
 		return true
@@ -47,8 +48,7 @@ run_build :: proc(args: []string) -> int {
 	release := len(args) > 0 && args[0] == "release"
 	if !build_text() { return 1 }
 	_ = os.make_directory("build")
-	// release: optimized, with the symbols kept for a crash's stack (they cost no speed)
-	mode := release ? []string{"-o:speed", "-debug"} : []string{"-debug"}
+	mode := release ? []string{"-o:speed"} : []string{"-debug"}
 	extra := make([dynamic]string, context.temp_allocator)
 	append(&extra, fmt.tprintf("-out:%s", PROGRAM))
 	append(&extra, ..mode)

@@ -1,0 +1,58 @@
+name: CI
+
+# Every push to master and every pull request: papiertool check (odin check -vet of the program and the tool, the unit tests,
+# a release build), then papiertool live (the real program in a headless sway: the clipboard through wl-clipboard, the window
+# over the DevTools protocol, rendered by Mesa's lavapipe). The program is kept as an artifact.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: Linux x64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/setup-odin-linux
+
+      # (the toolkit's text library: cargo's target directory, keyed by its sources)
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ext/gui_toolkit/build/text
+            ~/.cargo/registry
+          key: text-linux-${{ hashFiles('ext/gui_toolkit/native/text/**') }}
+
+      - name: papiertool check
+        run: |
+          odin build tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papiertool -vet
+          build/papiertool check
+
+      - name: sway, wl-clipboard, lavapipe
+        run: sudo apt-get install -y -qq sway wl-clipboard mesa-vulkan-drivers libvulkan1 libxkbcommon0
+
+      - name: papiertool live
+        run: build/papiertool live --keep
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: papier-linux-x64-${{ github.sha }}
+          path: |
+            build/papier
+            build/live/*.log
+            build/live/*.png
+          if-no-files-found: warn

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Papier: the clipboard's history for Linux</title>
+<meta name="description" content="Papier keeps the clipboard's history on Linux (Wayland): text, rich text, images and files, searched and put back in a keystroke. One small native program, in the notification area, 0 % CPU at rest.">
+<link rel="icon" href="img/logo.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="#"><img src="img/logo.png" alt="" width="28" height="28"><span>papier</span></a>
+  <button class="burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav"><span></span></button>
+  <nav id="nav">
+    <a href="#features">Features</a>
+    <a href="#download">Download</a>
+    <a href="changelog.html">Changelog</a>
+    <a href="https://github.com/sachahjkl/papier">GitHub</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <img class="mark" src="img/logo.png" alt="Papier logo" width="112" height="112">
+    <h1>papier</h1>
+    <p class="lead">The clipboard's history for Linux. Everything you copy, text, rich text, images and files, kept and
+      searched as you type, then put back in a keystroke. One small native program that lives in the notification area and
+      comes up in a few milliseconds.</p>
+    <div class="actions">
+      <a class="btn accent get" href="https://github.com/sachahjkl/papier/releases/download/v{{version}}/papier-{{version}}-linux-x64.tar.gz"><span class="get-text"><span class="get-main">Download for Linux</span> <span class="get-sub">v{{version}} · x64 · .tar.gz · Wayland</span></span></a>
+      <a class="btn" href="https://github.com/sachahjkl/papier">Source on GitHub</a>
+    </div>
+    <p class="small">Or with Nix: <code>nix profile add github:sachahjkl/papier</code> &nbsp;·&nbsp; MIT</p>
+  </section>
+
+  <figure class="shot wide">
+    <a class="frame" href="img/main.png"><img src="img/main.png" alt="Papier's window: the history on the left, a snippet of code in full on the right" loading="lazy"></a>
+    <figcaption>The history on the left, the entry in full beside it; the search and the filters in the title bar.</figcaption>
+  </figure>
+
+  <section id="features" class="grid">
+    <article class="card">
+      <h3>Every kind of copy</h3>
+      <p>Text, the HTML a browser or an editor gives with it, images (PNG, JPEG, WebP, GIF, BMP, SVG) and files copied in a
+        file manager. Put back, an entry offers every type it had, so a rich paste stays rich.</p>
+    </article>
+    <article class="card">
+      <h3>Fast to reach</h3>
+      <p>One process for the session, in the notification area. Bind <code>papier toggle</code> to a key: the window comes
+        up in a few milliseconds, the newest entry selected, the keyboard in the search.</p>
+    </article>
+    <article class="card">
+      <h3>Search as you type</h3>
+      <p>Every word you type narrows the list, case ignored. Tab switches between All, Text, Images, Files and Pinned.
+        Enter puts the entry back; Alt+1 to Alt+9 the first nine.</p>
+    </article>
+    <article class="card">
+      <h3>Pinned entries</h3>
+      <p>Ctrl+P pins an entry: it stays whatever the limits of the history, and the Pinned filter lists them.</p>
+    </article>
+    <article class="card">
+      <h3>Secrets stay secret</h3>
+      <p>What a password manager marks as a secret (KeePassXC and others: <code>x-kde-passwordManagerHint</code>) is never
+        recorded. Types of your own can be left out too.</p>
+    </article>
+    <article class="card">
+      <h3>The clipboard kept</h3>
+      <p>When the program you copied from quits and the clipboard empties, papier puts the last entry back.</p>
+    </article>
+    <article class="card">
+      <h3>Light on the machine</h3>
+      <p>0 % CPU at rest, hidden or shown. The list builds only the rows in view, whatever the length of the history. The
+        same bytes copied twice are stored once.</p>
+    </article>
+    <article class="card">
+      <h3>Yours to set</h3>
+      <p>How many entries, for how long, what to record, the size limit, the primary selection, the colours (its own or one
+        of twenty palettes), the size of the window and of its text: <code>papier prefs</code>, <code>papier set</code>.</p>
+    </article>
+    <article class="card">
+      <h3>A command line too</h3>
+      <p><code>papier list</code>, <code>get</code>, <code>copy</code>, <code>pin</code>, <code>delete</code>,
+        <code>clear</code>: the history for your scripts, the bytes of an entry on the standard output.</p>
+    </article>
+  </section>
+
+  <!-- whats-new -->
+
+  <section class="gallery">
+    <figure class="shot"><a class="frame" href="img/images.png"><img src="img/images.png" alt="The Images filter, an image in full" loading="lazy"></a><figcaption>Images, in full</figcaption></figure>
+    <figure class="shot"><a class="frame" href="img/search.png"><img src="img/search.png" alt="The history searched for 'release'" loading="lazy"></a><figcaption>Search as you type</figcaption></figure>
+    <figure class="shot"><a class="frame" href="img/light.png"><img src="img/light.png" alt="Papier in its light palette" loading="lazy"></a><figcaption>Papier light</figcaption></figure>
+  </section>
+
+  <section id="download" class="download">
+    <h2>Download</h2>
+    <div class="cols">
+      <div class="well">
+        <h3>The archive</h3>
+        <p>One program for Linux x64. Unpack it and run <code>./papier install</code>: a launcher in the applications menu,
+          <code>~/.local/bin/papier</code>, and the start with the session. Needs a Wayland compositor with data-control
+          (Hyprland, Sway, KDE Plasma, river, niri…), Vulkan, fontconfig.</p>
+        <code><a href="https://github.com/sachahjkl/papier/releases/download/v{{version}}/papier-{{version}}-linux-x64.tar.gz">papier-{{version}}-linux-x64.tar.gz</a></code>
+      </div>
+      <div class="well">
+        <h3>Nix</h3>
+        <p>The flake builds papier from source with everything it needs: <code>nix run github:sachahjkl/papier</code>, or
+          add <code>packages.x86_64-linux.default</code> to your configuration.</p>
+        <code>nix profile add github:sachahjkl/papier</code>
+      </div>
+    </div>
+    <p class="small">Then bind a key, for Hyprland: <code>bind = SUPER, V, exec, papier toggle</code>. The <a href="https://github.com/sachahjkl/papier#readme">README</a> says the rest.</p>
+  </section>
+</main>
+
+<footer>
+  <p>Built in <a href="https://odin-lang.org">Odin</a> on <a href="https://sachahjkl.github.io/gui_toolkit/">gui_toolkit</a>.
+    MIT licence. Icons: <a href="https://lucide.dev">Lucide</a> (ISC).<br><a href="classic/">Classic version</a></p>
+</footer>
+<script>
+  // the bar's menu on narrow screens: the button opens it, a link or a click elsewhere closes it
+  const bar = document.querySelector('.bar'), burger = bar.querySelector('.burger');
+  const shut = () => { bar.classList.remove('open'); burger.setAttribute('aria-expanded', 'false'); };
+  burger.addEventListener('click', e => { e.stopPropagation(); burger.setAttribute('aria-expanded', String(bar.classList.toggle('open'))); });
+  bar.querySelectorAll('nav a').forEach(a => a.addEventListener('click', shut));
+  document.addEventListener('click', e => { if (!bar.contains(e.target)) shut(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') shut(); });
+</script>
+<script src="gallery.js" defer></script>
+</body>
+</html>

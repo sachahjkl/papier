@@ -33,7 +33,6 @@
       };
       nativeBuildInputs = [pkgs.makeWrapper pkgs.unzip];
       dontBuild = true;
-      dontStrip = true;
       dontPatchELF = true;
       installPhase = ''
         mkdir -p $out/lib/odin $out/bin
@@ -59,6 +58,84 @@
       dbus
     ];
 
+    # APP_VERSION of src/main.odin
+    version = let
+      line = lib.findFirst (lib.hasPrefix "APP_VERSION ::") "" (lib.splitString "\n" (builtins.readFile ./src/main.odin));
+    in
+      builtins.head (builtins.match ''APP_VERSION :: "([^"]+)".*'' line);
+
+    # papier, built from this tree as the release is: papiertool build release.
+    papier = pkgs.stdenv.mkDerivation {
+      pname = "papier";
+      inherit version;
+      src = lib.fileset.toSource {
+        root = ./.;
+        fileset = lib.fileset.difference ./. (lib.fileset.unions (map lib.fileset.maybeMissing [./site ./build]));
+      };
+      # the crates of the toolkit's text library, vendored: cargo makes no request
+      cargoDeps = pkgs.rustPlatform.importCargoLock {lockFile = ./ext/gui_toolkit/native/text/Cargo.lock;};
+
+      nativeBuildInputs = [odin pkgs.cargo pkgs.rustc pkgs.clang pkgs.lld pkgs.autoPatchelfHook pkgs.copyDesktopItems];
+      buildInputs = [pkgs.fontconfig pkgs.freetype pkgs.stdenv.cc.cc.lib];
+      # what it opens with dlopen goes in its RUNPATH; the Vulkan driver is the system's (/run/opengl-driver)
+      runtimeDependencies = runtime;
+      # Odin links a foreign library as -l:<absolute path> with -L/, which the purity check of the linker wrapper drops
+      NIX_ENFORCE_PURITY = 0;
+
+      configurePhase = ''
+        runHook preConfigure
+        export HOME="$TMPDIR"
+        mkdir -p "$HOME/.cargo"
+        cat > "$HOME/.cargo/config.toml" <<EOF
+        [source.crates-io]
+        replace-with = "vendored-sources"
+        [source.vendored-sources]
+        directory = "$cargoDeps"
+        EOF
+        export CARGO_NET_OFFLINE=true
+        runHook postConfigure
+      '';
+
+      buildPhase = ''
+        runHook preBuild
+        mkdir -p build
+        odin run tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papiertool -- build release
+        runHook postBuild
+      '';
+
+      desktopItems = [
+        (pkgs.makeDesktopItem {
+          name = "papier";
+          desktopName = "Papier";
+          genericName = "Clipboard Manager";
+          comment = "The clipboard's history: text, rich text, images and files, searched and put back in a keystroke.";
+          exec = "papier";
+          icon = "papier";
+          categories = ["Utility"];
+          keywords = ["clipboard" "history" "copy" "paste"];
+          startupWMClass = "papier";
+        })
+      ];
+
+      installPhase = ''
+        runHook preInstall
+        install -Dm755 build/papier $out/bin/papier
+        for size in 16 32 64 128 256; do
+          install -Dm644 assets/logo_$size.png "$out/share/icons/hicolor/''${size}x''${size}/apps/papier.png"
+        done
+        install -Dm644 -t $out/share/doc/papier LICENSE README.md CHANGELOG.md assets/fonts/LUCIDE-LICENSE.txt
+        runHook postInstall
+      '';
+
+      meta = {
+        description = "The clipboard's history for Linux (Wayland)";
+        homepage = "https://sachahjkl.github.io/papier/";
+        license = lib.licenses.mit;
+        platforms = [system];
+        mainProgram = "papier";
+      };
+    };
+
     preCommitCheck = git-hooks.lib.${system}.run {
       package = pkgs.prek;
       src = ./.;
@@ -69,7 +146,18 @@
       };
     };
   in {
-    checks.${system}.pre-commit = preCommitCheck;
+    packages.${system} = {
+      inherit papier odin;
+      default = papier;
+    };
+    apps.${system}.default = {
+      type = "app";
+      program = "${papier}/bin/papier";
+    };
+    checks.${system} = {
+      pre-commit = preCommitCheck;
+      inherit papier;
+    };
     formatter.${system} = pkgs.alejandra;
 
     devShells.${system}.default = pkgs.mkShell {

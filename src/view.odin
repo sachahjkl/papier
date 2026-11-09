@@ -348,6 +348,8 @@ view_load :: proc(app: ^App, e: ^history.Entry) {
 		main := 0
 		for r, i in e.reps { if r.hash == e.key { main = i } }
 		data := history.blob_read(&app.store, e.reps[main].hash, context.temp_allocator)
+		// rich text reads as its text: the program's own when it gave one, else the markup without its tags
+		if e.kind == .Html && e.reps[main].mime == HTML_MIME { data = transmute([]u8)strip_tags(string(data)) }
 		text := string(data[:min(len(data), VIEW_TEXT_MAX_BYTES)])
 		for len(text) > 0 && !utf8.valid_string(text) { text = text[:len(text) - 1] }   // (cut inside a character)
 		app.view.text = strings.clone(text)

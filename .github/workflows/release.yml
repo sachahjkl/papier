@@ -1,0 +1,40 @@
+name: Release
+
+# A version tag vX.Y.Z (papiertool ship makes it) builds papier and publishes it: the archive and SHA256SUMS.txt on a GitHub
+# release whose notes are the changelog's section of that version. The tag must be APP_VERSION's (papiertool package checks).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/setup-odin-linux
+
+      - name: Build and test
+        run: |
+          odin build tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papiertool -vet
+          build/papiertool check
+
+      - name: Package
+        run: build/papiertool package ${{ github.ref_name }}
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          build/papiertool notes ${{ github.ref_name }} > build/notes.md
+          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
+            gh release upload "${{ github.ref_name }}" build/dist/* --clobber
+          else
+            gh release create "${{ github.ref_name }}" build/dist/* --title "papier ${GITHUB_REF_NAME#v}" --notes-file build/notes.md
+          fi

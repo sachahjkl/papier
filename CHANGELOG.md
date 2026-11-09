@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-09
+
 ### Added
 - **The menu of an entry**: a right click on a row, the Menu key or Shift+F10. Copy, Copy as plain text (rich text),
   Edit…, Open (an address in the browser, a file with its program, the rest as a file of its type), Open with (the
@@ -88,3 +90,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.1.4]: https://github.com/sachahjkl/papier/releases/tag/v0.1.4
 [0.1.5]: https://github.com/sachahjkl/papier/releases/tag/v0.1.5
 [0.1.6]: https://github.com/sachahjkl/papier/releases/tag/v0.1.6
+[0.2.0]: https://github.com/sachahjkl/papier/releases/tag/v0.2.0

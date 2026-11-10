@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-10
+
 ### Changed
 - Windows: the shortcut is **Ctrl+Shift+ù** by default, as on Linux. Win+Shift+V was Windows's own (it cycles through
   the notifications): the shortcut did nothing.
@@ -209,3 +211,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.7.2]: https://github.com/sachahjkl/papier/releases/tag/v0.7.2
 [0.8.0]: https://github.com/sachahjkl/papier/releases/tag/v0.8.0
 [0.8.1]: https://github.com/sachahjkl/papier/releases/tag/v0.8.1
+[0.9.0]: https://github.com/sachahjkl/papier/releases/tag/v0.9.0

@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-10
+
 ### Fixed
 - Windows: the window shows on the screen you work on (the one of the window in front, else the one under the pointer),
   at the same place of that screen, not on the screen it was last shown on.
@@ -229,3 +231,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.8.1]: https://github.com/sachahjkl/papier/releases/tag/v0.8.1
 [0.9.0]: https://github.com/sachahjkl/papier/releases/tag/v0.9.0
 [0.10.0]: https://github.com/sachahjkl/papier/releases/tag/v0.10.0
+[0.10.1]: https://github.com/sachahjkl/papier/releases/tag/v0.10.1

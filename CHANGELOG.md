@@ -5,6 +5,14 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Papier updates itself (Windows, and a Linux copy installed with `papier install`): the installed copy checks the latest
+  release once a day, downloads the new program, checks it against its signed manifest and puts it in place, then gives
+  way to it when its window is hidden. Settings > Updates says the state, checks now and installs; `update.auto` turns
+  it off. A copy from Nix is left to Nix. (gui_toolkit 0.147.0: `update.Updater`, `gt:http`, `prefs_page`'s update line,
+  `setup.updated`)
+- A release publishes the programs alone and their update manifests, signed with papier's update key.
+
 ## [0.9.0] - 2026-11-10
 
 ### Changed

@@ -22,6 +22,7 @@ PREF_DEFS := [?]config.Def{
 	{name = "picker.glow", category = "appearance", description = "The halos of the machined finish: a focused field's ring of light.", kind = .Bool, default = {b = true}},
 	{name = "picker.width", category = "window", description = "The picker's width, in logical pixels.", kind = .Int, default = {i = 900}, min = 320, max = 4000, bounded = true},
 	{name = "picker.height", category = "window", description = "The picker's height, in logical pixels.", kind = .Int, default = {i = 560}, min = 240, max = 4000, bounded = true},
+	{name = "update.auto", category = "updates", description = "The installed papier checks for a newer one once a day and installs it, then gives way to it when its window is hidden. A copy installed by a package manager (Nix) is updated by it.", kind = .Bool, default = {b = true}},
 	{name = "picker.font_size", category = "appearance", description = "The picker's text size, in logical pixels.", kind = .Float, default = {f = 14}, min = 8, max = 40, bounded = true},
 }
 
@@ -44,6 +45,7 @@ Settings :: struct {
 	size:           [2]int,
 	font_size:      f32,
 	shortcut:       string,   // Windows: picker.shortcut
+	update_auto:    bool,
 }
 
 prefs_file :: proc(allocator := context.temp_allocator) -> string {
@@ -71,6 +73,7 @@ prefs_read :: proc(p: ^config.Prefs, allocator := context.allocator) -> (s: Sett
 	s.glow = config.bool_of(p, "picker.glow")
 	s.size = {int(config.int_of(p, "picker.width")), int(config.int_of(p, "picker.height"))}
 	s.font_size = f32(config.float_of(p, "picker.font_size"))
+	s.update_auto = config.bool_of(p, "update.auto")
 	prefs_read_system(p, &s, allocator)
 	return
 }

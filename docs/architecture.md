@@ -80,6 +80,14 @@ virtual list: it builds the rows in view, whatever the length of the history. Th
 the whole text (the full-text index), and for a shorter word in a lower-case copy of the preview. An image is decoded on a thread of its own (src/decoder.odin) when its
 entry is selected: the newest selection wins, and the window makes one texture of the picture when the decoder wakes it.
 
+## Updates (src/updates.odin)
+
+gui_toolkit's `update.Updater` runs on a thread of its own: the installed copy checks the manifest of the latest release
+20 seconds after its start and then once a day, downloads the program it names, checks its size and SHA-256 against the
+manifest, whose Ed25519 signature it checked first, and puts it in place of the running program. The thread wakes the
+loop; the loop reads the state at each turn. Once the new program is in place, papier ends as soon as its window is
+hidden, and the new one starts hidden (`--hidden`). Settings > Updates shows the state (`prefs_page`'s update line).
+
 ## Tests
 
 - Unit tests: `src` (capture, commands, window state), `src/history`, `tools/papiertool` (versions, the changelog).

@@ -29,6 +29,7 @@ SETTINGS_PAGES := [?]prefs_page.Page_Info{
 	{category = "paste",      title = "Paste",      icon = lucide.CLIPBOARD},
 	{category = "history",    title = "History",    icon = lucide.HISTORY},
 	{category = "capture",    title = "Capture",    icon = lucide.CLIPBOARD},
+	{category = "updates",    title = "Updates",    icon = lucide.DOWNLOAD},
 }
 
 @(private = "file", rodata)
@@ -52,6 +53,7 @@ settings_build :: proc(app: ^App) {
 		user = app, changed = settings_changed, choices = settings_choices,
 		custom_names = CUSTOM[:], custom = settings_custom,
 		hotkeys = HOTKEY_PREFS[:], problem = settings_problem,
+		updater = app.updater, update_pref = "update.auto", restart = proc(user: rawptr) { app_restart((^App)(user)) },
 		pages = SETTINGS_PAGES[:], icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.REFRESH_CW,
 		foot = "prefs: ~/.config/papier/prefs",
 	})
@@ -74,6 +76,7 @@ settings_changed :: proc(user: rawptr, name: string) {
 	if !config.save_user(&app.prefs, prefs_file()) { say(app, "The preferences cannot be written"); return }
 	settings_free(&app.settings)
 	app.settings = prefs_read(&app.prefs)
+	app_updates_auto(app)
 	watcher_send(&app.watcher, {verb = .Reload})
 }
 

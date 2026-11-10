@@ -18,6 +18,7 @@ import prefs_page "gt:prefs_page"
 import "gt:render"
 import setup "gt:setup"
 import "gt:ui"
+import update "gt:update"
 import "history"
 import lucide "gt:lucide"
 
@@ -77,6 +78,10 @@ App :: struct {
 	logo:       render.Texture,     // its logo (made at its first show)
 	logo_made:  bool,
 	launch_after: string,           // the installed copy, started once this one has ended (owned; "": none)
+	launch_hidden: bool,            // and in the notification area (an update: updates.odin)
+	updater:    ^update.Updater,    // updates.odin
+	update_serial: int,             // the updater's state last said
+	installed_copy: bool,           // this program is the installed copy: it updates itself (update.auto)
 	hotkey_held: bool,              // Windows: picker.shortcut is registered
 	shortcut_problem: string,       // why it is not (owned; "": it is)
 	status:     string,             // a message for the status bar (owned), until status_until (ui clock, ms)
@@ -124,6 +129,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	}
 	decoder_start(&app.decoder, win)
 	app_shortcut(app)
+	app_updates_start(app)
 	app.tray = platform.tray_create(win, LOGO_PNG, "Papier")
 	if app.tray != nil {
 		platform.tray_set_menu(app.tray, {
@@ -147,12 +153,14 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 		}
 		app_requests(app)
 		app_tray(app)
+		app_updates_follow(app)
 		if view_decoded(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if app.visible && !app.hide_due && !app.quit && !platform.is_closed(win) { host.host_frame(h) }
 		if app.hide_due { app_hide_now(app) }
 	}
 
 	app_remember(app)
+	update.updater_stop(app.updater)
 	watcher_stop(&app.watcher)   // (the instance is let go: the installed copy, started below, is the running papier)
 	decoder_stop(&app.decoder)
 	devtools.stop(app.devtools)
@@ -160,11 +168,11 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	if app.logo_made { render.destroy_texture(&app.shared.r, app.logo) }
 	host.host_close(h)
 	setup.finish(&app.setup, setup_config())
-	launch := app.launch_after
+	launch, launch_hidden := app.launch_after, app.launch_hidden
 	app.launch_after = ""
 	app_free(app)
 	if launch != "" {
-		if !setup.launch(launch) { errf("papier: %s does not start", launch) }
+		if !setup.launch(launch, launch_hidden ? []string{"--hidden"} : nil) { errf("papier: %s does not start", launch) }
 		delete(launch)
 	}
 	return 0
@@ -369,6 +377,7 @@ app_requests :: proc(app: ^App) {
 			settings_free(&app.settings)
 			app.settings = prefs_read(&app.prefs)
 			app_shortcut(app)
+			app_updates_auto(app)
 		case .Toggle: app_toggle(app)
 		case .Show:   app_show(app)
 		case .Hide:   app_hide(app)

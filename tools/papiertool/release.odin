@@ -17,6 +17,8 @@ import "core:strconv"
 import "core:strings"
 import "core:time"
 import toolbox "gt:toolbox"
+import update "gt:update"
+import papier_update "../../src/update"
 
 CHANGELOG    :: "CHANGELOG.md"
 VERSION_FILE :: "src/main.odin"
@@ -123,9 +125,13 @@ run_notes :: proc(args: []string) -> int {
 run_package :: proc(args: []string) -> int {
 	source, _ := read_text(VERSION_FILE)
 	version := version_of(source)
-	if len(args) > 0 {
+	// (a release, with its tag: the copies installed update themselves from its signed manifest, which needs the key)
+	release := len(args) > 0
+	signed := os.get_env(toolbox.UPDATE_KEY_ENV, context.temp_allocator) != ""
+	if release {
 		asked := strings.trim_prefix(args[0], "v")
 		if asked != version { fmt.eprintfln("papiertool: the tag says %s, APP_VERSION %s", asked, version); return 1 }
+		if !signed { fmt.eprintfln("papiertool: a release signs its update manifest: set %s", toolbox.UPDATE_KEY_ENV); return 1 }
 	}
 	if !os.exists(PROGRAM) { fmt.eprintfln("papiertool: %s is not built (papiertool build release)", PROGRAM); return 1 }
 	when ODIN_OS == .Windows {
@@ -152,7 +158,18 @@ run_package :: proc(args: []string) -> int {
 		_ = os.chmod(fmt.tprintf("%s/papier", stage), {.Read_User, .Write_User, .Execute_User, .Read_Group, .Execute_Group, .Read_Other, .Execute_Other})
 		if !toolbox.run({"tar", "--owner=0", "--group=0", "--numeric-owner", "-czf", archive, name}, {dir = DIST_DIR}) { return 1 }
 	}
+	// the program alone, what an installed copy downloads to update itself, and its signed manifest (on Linux its name is
+	// the staging folder's: written once that is gone)
+	program, read_err := os.read_entire_file(fmt.tprintf("%s/%s", stage, exe), context.temp_allocator)
+	if read_err != nil { fmt.eprintfln("papiertool: %s/%s cannot be read", stage, exe); return 1 }
 	_ = os.remove_all(stage)
+	alone := fmt.tprintf("%s/%s", DIST_DIR, update.expected_file_name(papier_update.PRODUCT, version, update.PLATFORM, context.temp_allocator))
+	if os.write_entire_file(alone, program) != nil { fmt.eprintfln("papiertool: %s cannot be written", alone); return 1 }
+	when ODIN_OS != .Windows { _ = os.chmod(alone, {.Read_User, .Write_User, .Execute_User, .Read_Group, .Execute_Group, .Read_Other, .Execute_Other}) }
+	if signed {
+		manifest := fmt.tprintf("%s/%s", DIST_DIR, update.manifest_name(update.PLATFORM, "", context.temp_allocator))
+		if why := toolbox.update_manifest(papier_update.PRODUCT, alone, version, "", manifest); why != "" { fmt.eprintfln("papiertool: %s", why); return 1 }
+	}
 	sum, ok := toolbox.sha256_file(fmt.tprintf("%s/%s", DIST_DIR, archive))
 	if !ok { return 1 }
 	// (one file per archive: the Linux and the Windows jobs of a release each upload their own)

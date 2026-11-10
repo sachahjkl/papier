@@ -11,6 +11,7 @@ import "core:fmt"
 import "core:os"
 import "core:strings"
 import toolbox "gt:toolbox"
+import papier_update "../../src/update"
 
 EXIT_USAGE :: 2
 ROOT_MARK  :: "odin.version"
@@ -25,7 +26,8 @@ COMMANDS :: [?]Command{
 	{name = "test", about = "the tests of the program, of its packages and of this tool", run = run_test},
 	{name = "check", about = "odin check of the program and of this tool (-vet), the tests, then a release build", run = run_check},
 	{name = "logo", about = "assets/logo*.png, drawn by the toolkit's paint package", run = run_logo},
-	{name = "package", about = "[version]: build/dist, the archive of a release build and its SHA-256", run = run_package},
+	{name = "package", about = "[version]: build/dist, the archive of a release build, its SHA-256, the program alone and (with $UPDATE_SIGNING_KEY) its signed update manifest", run = run_package},
+	{name = "update", about = "keygen <file> | pubkey | manifest <program> <version> - <out> | verify <manifest> -: papier's update key and manifests", run = proc(args: []string) -> int { return toolbox.update_command(papier_update.PRODUCT, args) }},
 	{name = "notes", about = "<version>: the changelog's section of that version (a release's notes)", run = run_notes},
 	{name = "ship", about = "<version> [--dry-run]: from a clean master: the changelog, APP_VERSION, the checks, a commit, the tag, the push", run = run_ship},
 	{name = "site", about = "build <site> <out> | check: the site's pages from site/ and CHANGELOG.md", run = run_site},

@@ -28,7 +28,8 @@ odin run tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papierto
 | `live [--keep]` | the real program in a headless sway, driven through wl-clipboard and the DevTools protocol |
 | `shots [--out folder]` | the pictures of the README and the site, the program's own frames |
 | `logo` | `assets/logo*.png`, drawn by the toolkit's paint package |
-| `package [version]` | `build/dist`: the archive of a release build and its SHA-256 |
+| `package [version]` | `build/dist`: the archive of a release build and its SHA-256, the program alone and, with `$UPDATE_SIGNING_KEY`, its signed update manifest |
+| `update <...>` | papier's update key and manifests: `keygen`, `pubkey`, `manifest`, `verify` (gui_toolkit's `toolbox.update_command`) |
 | `notes <version>` | the changelog's section of that version |
 | `ship <version> [--dry-run]` | a release: see below |
 | `site build <site> <out>`, `site check` | the site's pages, and their check in a real browser |
@@ -64,3 +65,9 @@ From a clean `master`: `[Unreleased]` becomes `[0.2.0]` with the date, `APP_VERS
 commit, the tag `v0.2.0` and the push. The release workflow (`.github/workflows/release.yml`) builds the archive on
 Ubuntu, checks that the tag is the program's version, and publishes the GitHub release with the changelog's section. The
 site (`.github/workflows/pages.yml`) follows: its download link names the new archive.
+
+Each job also publishes its program alone (`papier-<version>-<platform>`, `.exe` on Windows) and its update manifest
+(`update-<platform>.json` and `.sig`), signed with the repository's secret `UPDATE_SIGNING_KEY`. The installed copies
+read the manifests of the latest release (src/updates.odin). The key's private half is also in `secrets/production.yaml`
+(SOPS: `sops -d secrets/production.yaml`); its public half is `PRODUCT.public_key` in `src/update/product.odin`. A
+release without the key fails: `papiertool package <version>` refuses to publish unsigned.

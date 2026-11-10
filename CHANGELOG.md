@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-10
+
 ### Added
 - Papier updates itself (Windows, and a Linux copy installed with `papier install`): the installed copy checks the latest
   release once a day, downloads the new program, checks it against its signed manifest and puts it in place, then gives
@@ -220,3 +222,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.8.0]: https://github.com/sachahjkl/papier/releases/tag/v0.8.0
 [0.8.1]: https://github.com/sachahjkl/papier/releases/tag/v0.8.1
 [0.9.0]: https://github.com/sachahjkl/papier/releases/tag/v0.9.0
+[0.10.0]: https://github.com/sachahjkl/papier/releases/tag/v0.10.0

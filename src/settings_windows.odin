@@ -9,7 +9,7 @@ import config "gt:config"
 import "gt:platform"
 
 PREF_DEFS_SYSTEM := [?]config.Def{
-	{name = "picker.shortcut", category = "window", description = "The keys that show the history from any program: Ctrl, Shift, Alt, Win and a key, joined by +. Win+V stays the system's.", kind = .String, default = {s = "Win+Shift+V"}},
+	{name = "picker.shortcut", category = "window", description = "The keys that show the history from any program. In the settings, click the field and press them; as text, Ctrl, Shift, Alt, Win and a key joined by + (Ctrl+Shift+ù). Win+V stays the system's.", kind = .String, default = {s = "Ctrl+Shift+ù"}},
 }
 
 prefs_read_system :: proc(p: ^config.Prefs, s: ^Settings, allocator := context.allocator) {

@@ -183,6 +183,7 @@ view_build :: proc(h: ^host.Host, size: host.Vec2) {
 	app := (^App)(h.user)
 	em := ui.font_size()
 	app.room = size.x / max(ui.scale(), 0.01)
+	app_shortcut_follow(app)
 	// the keyboard is the search's, unless the edit view or the settings have it
 	if !app.edit.active && !app.settings_open && app.search_key != 0 && ui.focus_key() != app.search_key { ui.set_focus(app.search_key) }
 	view_keys(app)

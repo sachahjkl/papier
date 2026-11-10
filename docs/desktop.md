@@ -15,8 +15,8 @@ Apps > Papier > Uninstall. Keep standalone runs the copy where it is, and the Se
 `papier install` integrates the copy where it is, with no Setup (`--no-autostart`, `--no-path`: leave a part out). With the PATH comes `papier.com` beside `papier.exe`:
 papier has a window and no console of its own, so in cmd or PowerShell `papier` runs `papier.com`, which gives a command
 (`papier list`, `papier set`…) its output and its exit code, and gives the prompt back at once for `papier` and
-`papier toggle`. Win+Shift+V shows the window from any program
-(`papier set picker.shortcut <keys>` for others). The system reads its history only for the program in the foreground:
+`papier toggle`. Ctrl+Shift+ù shows the window from any program
+(Settings > Window > Shortcut: click the field and press other keys). The system reads its history only for the program in the foreground:
 papier reads it again each time its window shows.
 
 What Windows does not let a program do: pin an entry (pin it in Win+V), or change an entry in place (an edit is a new

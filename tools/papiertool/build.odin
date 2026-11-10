@@ -113,10 +113,31 @@ run_build :: proc(args: []string) -> int {
 	append(&extra, fmt.tprintf("-out:%s", PROGRAM))
 	append(&extra, ..mode)
 	// (Windows: no console of its own, none flashes at a start with the session; its text goes to the parent's: output.odin)
-	when ODIN_OS == .Windows { if release { append(&extra, "-subsystem:windows") } }
+	when ODIN_OS == .Windows {
+		if release { append(&extra, "-subsystem:windows") }
+		// the icon, the manifest and the version (res/papier.rc)
+		if !write_version_header() { return 1 }
+		append(&extra, "-resource:res/papier.rc")
+	}
 	if !toolbox.run(odin_cmd("build", "src", extra[:]), {echo = true}) { return 1 }
+	// (an exe without its icon shows a blank one in the Start menu and Settings > Apps)
+	when ODIN_OS == .Windows {
+		if !toolbox.exe_has_icon(PROGRAM) { fmt.eprintfln("papiertool: %s has no icon (res/papier.rc)", PROGRAM); return 1 }
+	}
 	fmt.printfln("built %s", PROGRAM)
 	return 0
+}
+
+// build/version.h: APP_VERSION's numbers for res/papier.rc.
+VERSION_H :: "build/version.h"
+
+write_version_header :: proc() -> bool {
+	source, _ := os.read_entire_file(VERSION_FILE, context.temp_allocator)
+	if why := toolbox.write_version_header(VERSION_H, version_of(string(source))); why != "" {
+		fmt.eprintfln("papiertool: %s", why)
+		return false
+	}
+	return true
 }
 
 run_test :: proc(args: []string) -> int {

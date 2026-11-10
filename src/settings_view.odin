@@ -34,12 +34,24 @@ SETTINGS_PAGES := [?]prefs_page.Page_Info{
 @(private = "file", rodata)
 CUSTOM := [?]string{"picker.theme"}
 
+// The preferences that hold a key combination: recorded from the keys pressed.
+@(private = "file", rodata)
+HOTKEY_PREFS := [?]string{"picker.shortcut"}
+
+// What papier has to say under a line: the shortcut that does not work, and why.
+@(private = "file")
+settings_problem :: proc(user: rawptr, name: string) -> string {
+	app := (^App)(user)
+	return name == "picker.shortcut" ? app.shortcut_problem : ""
+}
+
 // The page, as large as the body.
 settings_build :: proc(app: ^App) {
 	ui.next({width = ui.fill(), height = ui.fill()})
 	prefs_page.build(&app.settings_page, &app.prefs, {
 		user = app, changed = settings_changed, choices = settings_choices,
 		custom_names = CUSTOM[:], custom = settings_custom,
+		hotkeys = HOTKEY_PREFS[:], problem = settings_problem,
 		pages = SETTINGS_PAGES[:], icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.REFRESH_CW,
 		foot = "prefs: ~/.config/papier/prefs",
 	})

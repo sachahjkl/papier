@@ -4,15 +4,19 @@ package papiertool
 // with the depth of Wren's logo: two sheets of paper, the one behind turned a little and darker (the history under the
 // last copy), parted from the front one by a gap; each sheet a soft vertical gradient of paper with a darker edge; the
 // folded corner lighter; the lines of the text cut out. Small sizes drop the lines that would blur (detail_for).
-// assets/logo.png (1024 px) and the sizes the program and the site embed.
+// assets/logo.png (1024 px), the sizes the program and the site embed, papier.ico and .project/image.png: the toolkit's
+// toolbox.write_logo writes them from logo_render.
 
 import "core:fmt"
-import "core:os"
 import paint "gt:paint"
+import toolbox "gt:toolbox"
 
 LOGO_DIR    :: "assets"
 LOGO_MASTER :: 1024
 LOGO_SIZES  :: [?]int{16, 32, 64, 128, 256}
+// The icon of papier.exe (res/papier.rc): Explorer, the Start menu's shortcut, Settings > Apps, the window and the
+// taskbar (the sizes Windows asks for: toolbox.ICO_SIZES).
+LOGO_ICO    :: "assets/papier.ico"
 // The drawing's own units: a square of LOGO_UNITS, scaled to the canvas.
 LOGO_UNITS  :: 512.0
 // The transparent space between the sheets, and the width of an edge, in units.
@@ -139,26 +143,11 @@ logo_render :: proc(size: int) -> paint.Canvas {
 }
 
 run_logo :: proc(args: []string) -> int {
-	master := logo_render(LOGO_MASTER)
-	defer paint.canvas_destroy(&master)
-	path := fmt.tprintf("%s/logo.png", LOGO_DIR)
-	if !paint.write_png(master, path) { fmt.eprintfln("papiertool: %s cannot be written", path); return 1 }
-	fmt.printfln("wrote %s", path)
-	for size in LOGO_SIZES {
-		c := logo_render(size)
-		defer paint.canvas_destroy(&c)
-		p := fmt.tprintf("%s/logo_%d.png", LOGO_DIR, size)
-		if !paint.write_png(c, p) { fmt.eprintfln("papiertool: %s cannot be written", p); return 1 }
-		fmt.printfln("wrote %s", p)
-	}
-	// the project's picture (.project/image.png, 512 px): what the repository and opencode's sessions of it show
-	project := logo_render(PROJECT_IMAGE_SIZE)
-	defer paint.canvas_destroy(&project)
-	_ = os.make_directory_all(".project")
-	if !paint.write_png(project, PROJECT_IMAGE) { fmt.eprintfln("papiertool: %s cannot be written", PROJECT_IMAGE); return 1 }
-	fmt.printfln("wrote %s", PROJECT_IMAGE)
+	sizes := LOGO_SIZES
+	why := toolbox.write_logo({
+		render = proc(size: int, _: rawptr) -> paint.Canvas { return logo_render(size) },
+		dir = LOGO_DIR, master = LOGO_MASTER, sizes = sizes[:], ico = LOGO_ICO, project_image = true,
+	})
+	if why != "" { fmt.eprintfln("papiertool: %s", why); return 1 }
 	return 0
 }
-
-PROJECT_IMAGE      :: ".project/image.png"
-PROJECT_IMAGE_SIZE :: 512

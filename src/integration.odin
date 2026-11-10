@@ -69,7 +69,7 @@ cmd_install :: proc(args: []string) -> int {
 	outf("papier: installed for %s (%s)", o.exe, desktop.targets(false))
 	if o.autostart {
 		when ODIN_OS == .Windows {
-			outln("papier: it starts with the session, in the notification area; its shortcut shows it (picker.shortcut, Win+Shift+V)")
+			outln("papier: it starts with the session, in the notification area; its shortcut shows it (picker.shortcut, Ctrl+Shift+ù)")
 		} else {
 			outln("papier: it starts with the session, in the notification area; bind `papier toggle` to a key to show it")
 		}

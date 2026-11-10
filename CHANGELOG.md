@@ -5,6 +5,18 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Windows: the shortcut is **Ctrl+Shift+ù** by default, as on Linux. Win+Shift+V was Windows's own (it cycles through
+  the notifications): the shortcut did nothing.
+- Windows: the shortcut is recorded, not typed: in the settings, click the field and press the keys (gui_toolkit's
+  `ui.hotkey_field`). A shortcut that cannot be used says why, under its line and in the status bar.
+
+### Fixed
+- Windows: papier.exe has its icon (the Start menu's shortcut, Settings > Apps, the window, the taskbar), its manifest
+  and its version.
+- Windows: after an install, the Setup no longer asks to repair it (an install in the default folder is recorded:
+  gui_toolkit 0.143.0).
+
 ## [0.8.1] - 2026-11-10
 
 ### Fixed

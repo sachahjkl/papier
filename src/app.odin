@@ -77,6 +77,8 @@ App :: struct {
 	logo:       render.Texture,     // its logo (made at its first show)
 	logo_made:  bool,
 	launch_after: string,           // the installed copy, started once this one has ended (owned; "": none)
+	hotkey_held: bool,              // Windows: picker.shortcut is registered
+	shortcut_problem: string,       // why it is not (owned; "": it is)
 	status:     string,             // a message for the status bar (owned), until status_until (ui clock, ms)
 	status_until: f64,
 }
@@ -183,6 +185,7 @@ app_free :: proc(app: ^App) {
 	prefs_page.destroy(&app.settings_page)
 	setup.destroy(&app.setup)
 	delete(app.launch_after)
+	delete(app.shortcut_problem)
 	delete(app.place.setup)
 	history.close(&app.store)
 	settings_free(&app.settings)
@@ -267,16 +270,41 @@ HOTKEY_ID :: 1
 // The shortcut that shows the history from any program (picker.shortcut), registered again when it changes. Linux has
 // none of papier's own: the compositor binds `papier toggle` (docs/usage.md).
 @(private = "file")
+// What went wrong is kept for the settings (under the shortcut's line) and said in the status bar: a program of the
+// windows subsystem has no console where an error would be read.
 app_shortcut :: proc(app: ^App) {
 	when ODIN_OS == .Windows {
 		win := app.main.win
 		platform.hotkey_unregister(win, HOTKEY_ID)
+		app.hotkey_held = false
+		delete(app.shortcut_problem)
+		app.shortcut_problem = ""
 		hk, ok := platform.hotkey_parse(app.settings.shortcut)
 		switch {
 		case !ok:
-			errf("papier: picker.shortcut: %q is not a shortcut (Ctrl+Shift+V, Win+Alt+V...)", app.settings.shortcut)
+			app.shortcut_problem = fmt.aprintf("%q is not a shortcut: click the field and press the keys.", app.settings.shortcut)
 		case !platform.hotkey_register(win, HOTKEY_ID, hk):
-			errf("papier: %s is taken by another program: set another with papier set picker.shortcut <keys>", platform.hotkey_text(hk))
+			app.shortcut_problem = fmt.aprintf("%s cannot be used: Windows or another program holds it, or this keyboard has no such key. Choose other keys.", platform.hotkey_text(hk))
+		case:
+			app.hotkey_held = true
+		}
+		if app.shortcut_problem != "" {
+			errf("papier: picker.shortcut: %s", app.shortcut_problem)
+			say(app, "The shortcut does not work: %s", app.shortcut_problem)
+		}
+	}
+}
+
+// While a field of the settings records keys, papier lets its shortcut go (Windows would take the very keys being
+// recorded), and holds it again after. Called at each build.
+app_shortcut_follow :: proc(app: ^App) {
+	when ODIN_OS == .Windows {
+		recording := ui.hotkey_recording()
+		if recording && app.hotkey_held {
+			platform.hotkey_unregister(app.main.win, HOTKEY_ID)
+			app.hotkey_held = false
+		} else if !recording && !app.hotkey_held && app.shortcut_problem == "" {
+			app_shortcut(app)
 		}
 	}
 }

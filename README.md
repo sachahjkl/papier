@@ -21,7 +21,7 @@ lives in the notification area, sleeps at 0 % CPU, and its window comes up in a 
 
 - **Every kind of copy**: text, the HTML that comes with it, images (PNG, JPEG, WebP, GIF, BMP, SVG), files copied in a
   file manager. Put back, an entry offers every type it had: a rich paste stays rich.
-- **Fast to reach**: one process per session; `papier toggle` on a key (Linux) or Win+Shift+V (Windows) shows the window,
+- **Fast to reach**: one process per session; `papier toggle` on a key (Linux) or Ctrl+Shift+ù (Windows) shows the window,
   the newest entry selected, the keyboard in the search.
 - **Windows**: papier shows the system's clipboard history (the one Win+V shows) with its search, filters and menus.
 - **Search as you type**, filters (All, Text, Images, Files, Pinned), Enter to paste into the program you were in

@@ -5,6 +5,10 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- An image's row shows a thumbnail of it, so a scroll through the list tells the images apart. Thumbnails are made beside
+  the window for the rows in view only, the preview first (gui_toolkit 0.162.0: `paint.rgba_shrink`).
+
 ## [0.10.2] - 2026-11-10
 
 ### Changed

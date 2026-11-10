@@ -68,6 +68,7 @@ App :: struct {
 	shown:      [dynamic]int,       // the entries the search and the filter keep: indices in store.entries
 	ids:        [dynamic]u64,       // their ids (the list's row identities)
 	view:       View,
+	thumbs:     Thumbs,             // the list's thumbnails (thumbs.odin)
 	menu:       Entry_Menu,         // the entry's menu (entry_menu.odin)
 	edit:       Edit,               // the edit view (edit.odin)
 	settings_open: bool,            // the settings in place of the history (settings_view.odin)
@@ -155,6 +156,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 		app_tray(app)
 		app_updates_follow(app)
 		if view_decoded(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
+		if thumbs_take(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if app.visible && !app.hide_due && !app.quit && !platform.is_closed(win) { host.host_frame(h) }
 		if app.hide_due { app_hide_now(app) }
 	}
@@ -165,6 +167,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	decoder_stop(&app.decoder)
 	devtools.stop(app.devtools)
 	view_clear(app)
+	thumbs_destroy(app)
 	if app.logo_made { render.destroy_texture(&app.shared.r, app.logo) }
 	host.host_close(h)
 	setup.finish(&app.setup, setup_config())

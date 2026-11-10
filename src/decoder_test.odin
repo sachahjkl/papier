@@ -49,3 +49,37 @@ decoder_wait :: proc(d: ^Decoder) -> (p: Decoded, ok: bool) {
 	}
 	return
 }
+
+// The rows' thumbnails: a picture larger than THUMB_PX shrunk to it on its shorter side, a smaller one kept; an image that
+// is not there reported, so that it is asked no more.
+@(test)
+thumbnails_are_made_for_the_rows_in_view :: proc(t: ^testing.T) {
+	dir := fmt.tprintf("%s/papier_test_thumbs_%d", fsx.temp_dir(context.temp_allocator), os.get_pid())
+	fsx.remove_tree(dir)
+	defer fsx.remove_tree(dir)
+	store: history.Store
+	testing.expect(t, history.open(&store, dir))
+	defer history.close(&store)
+	big, _ := os.read_entire_file("assets/logo_256.png", context.temp_allocator)
+	small, _ := os.read_entire_file("assets/logo_32.png", context.temp_allocator)
+	history.add(&store, {{"image/png", big}}, 0, .Image, "", 1)
+	history.add(&store, {{"image/png", small}}, 0, .Image, "", 2)
+
+	d: Decoder
+	decoder_start(&d, nil)
+	defer decoder_stop(&d)
+	decoder_want_thumbs(&d, {{history.hash_bytes(big), dir, "image/png"}, {history.hash_bytes(small), dir, "image/png"}, {999, dir, "image/png"}})
+	got: [dynamic]Thumb
+	defer { for &m in got { thumb_free(&m) }; delete(got) }
+	for _ in 0 ..< 500 {
+		append(&got, ..decoder_take_thumbs(&d))
+		if len(got) == 3 { break }
+		time.sleep(5 * time.Millisecond)
+	}
+	testing.expect_value(t, len(got), 3)
+	if len(got) != 3 { return }
+	testing.expect(t, got[0].ok && got[0].size == {THUMB_PX, THUMB_PX}, "shrunk to THUMB_PX, in the rows' order")
+	testing.expect_value(t, len(got[0].rgba), THUMB_PX * THUMB_PX * 4)
+	testing.expect(t, got[1].ok && got[1].size == {32, 32}, "a small one as it is")
+	testing.expect(t, got[2].hash == 999 && !got[2].ok, "not there: said")
+}

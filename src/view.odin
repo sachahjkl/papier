@@ -41,6 +41,7 @@ FIELD_EM  :: 1.95   // the search and the filters
 HALO_ROOM_PX :: 2   // logical pixels past the halo's reach before the bar's rule
 FILTER_EM :: 23   // the filter's segmented control
 ROW_EM    :: 2.05
+MARK_EM   :: 2.6    // a row's mark: its kind's icon, or an image's thumbnail
 STATUS_EM :: 1.9
 // The grip between the search and the filters: its width in ems, its lines' share of the bar's height, their spacing in
 // logical pixels and their opacity (of the weak text's colour).
@@ -319,13 +320,18 @@ build_list :: proc(app: ^App, em: f32) {
 	rows, ok := ui.vlist("###list", &app.vl, app.ids[:])
 	if !ok { return }
 	now := now_ms()
+	thumbs_begin(app)
+	defer thumbs_end(app)
 	for i in rows.first ..< rows.last {
 		e := &app.store.entries[app.shown[i]]
 		ui.next({height = ui.px(ui.dense(em * ROW_EM))})
 		row := ui.list_row(&app.vl, i, "")
 		if ui.parent(row.box) {
 			ui.spacer(ui.px(em * 0.35))
-			if ui.tags("weak") { glyph(app, KIND_ICONS[e.kind], em * 1.9) }
+			// (an image: its thumbnail once made, its kind's mark until then)
+			if e.kind != .Image || !thumb_mark(app, e, em * MARK_EM) {
+				if ui.tags("weak") { glyph(app, KIND_ICONS[e.kind], em * MARK_EM) }
+			}
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			ui.label(fmt.tprintf("%s###t", shown_text(one_line(e.preview, 200))))
 			if e.pinned { glyph(app, lucide.PIN, em * 1.6, ui.color("accent")) }

@@ -78,7 +78,10 @@ One SQLite database, `history.db`, in WAL mode. SQLite is linked into papier: it
 The interface is built again at each frame (immediate mode), and only when something changed. The list is the toolkit's
 virtual list: it builds the rows in view, whatever the length of the history. The search looks for each word of three letters or more in
 the whole text (the full-text index), and for a shorter word in a lower-case copy of the preview. An image is decoded on a thread of its own (src/decoder.odin) when its
-entry is selected: the newest selection wins, and the window makes one texture of the picture when the decoder wakes it.
+entry is selected: the newest selection wins, and the window makes one texture of the picture when the decoder wakes it. The
+same thread makes the list's thumbnails (src/thumbs.odin): at each build the window says which image rows in view still
+want one, in place of what it said before, and the thread shrinks each picture to 72 pixels on its shorter side; the
+window keeps 300 of their textures, the least lately shown going first.
 
 ## Updates (src/updates.odin)
 

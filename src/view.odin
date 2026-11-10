@@ -37,7 +37,8 @@ LIST_SHARE    :: 0.48
 LIST_MIN_PX   :: 220
 VIEW_MIN_PX   :: 200
 // The heights of the bars and the rows, in ems.
-TITLE_EM  :: 2.7
+FIELD_EM  :: 1.95   // the search and the filters
+HALO_ROOM_PX :: 2   // logical pixels past the halo's reach before the bar's rule
 FILTER_EM :: 23   // the filter's segmented control
 ROW_EM    :: 2.05
 STATUS_EM :: 1.9
@@ -228,7 +229,8 @@ icon_action :: proc(app: ^App, id, g, tip: string, em: f32) -> bool {
 
 @(private = "file")
 build_title :: proc(app: ^App, em: f32) {
-	ui.next({width = ui.fill(), height = ui.px(ui.dense(em * TITLE_EM))})
+	// (as tall as its fields, and the halo of the focused one around them: the rule under the bar would cut it)
+	ui.next({width = ui.fill(), height = ui.px(ui.dense(em * FIELD_EM) + 2 * (ui.MACHINED_OVERFLOW_PX + HALO_ROOM_PX) * ui.scale())})
 	if ui.title_bar("###titlebar") {
 		ui.spacer(ui.px(em * 0.5))
 		glyph(app, lucide.CLIPBOARD, em * 1.8, ui.color("accent"))
@@ -244,7 +246,7 @@ build_title :: proc(app: ^App, em: f32) {
 			return
 		}
 		// the search: a field with its icon, as wide as the title leaves
-		ui.next({width = ui.fill(), height = ui.px(ui.dense(em * 1.95)), radius = em * 0.45})
+		ui.next({width = ui.fill(), height = ui.px(ui.dense(em * FIELD_EM)), radius = em * 0.45})
 		// one surface: the icon and the field, one focus ring around both (the field is bare: no box of its own)
 		if ui.field_frame("###searchbox") {
 			if ui.tags("weak") { glyph(app, lucide.SEARCH, em * 1.9) }
@@ -267,7 +269,7 @@ build_title :: proc(app: ^App, em: f32) {
 		if ui.tags("weak") { d.color = ui.color("text") }
 		ui.next({width = ui.px(em * GRIP_EM), height = ui.pct(1)})
 		ui.custom("###grip", grip_draw, d)
-		ui.next({width = ui.px(em * FILTER_EM), height = ui.px(ui.dense(em * 1.95))})
+		ui.next({width = ui.px(em * FILTER_EM), height = ui.px(ui.dense(em * FIELD_EM))})
 		sel := int(app.filter)
 		if ui.segmented("###filter", filter_labels[:FILTER_COUNT], &sel) { set_filter(app, Filter(sel)) }
 		ui.spacer(ui.px(em * 0.3))
@@ -304,7 +306,9 @@ build_body :: proc(app: ^App, em: f32) {
 	app.place.split = clamp(app.place.split, LIST_MIN_PX, max(room - VIEW_MIN_PX, LIST_MIN_PX))   // (a window made narrower)
 	ui.next({width = ui.px(app.place.split * scale), height = ui.fill()})
 	build_list(app, em)
-	ui.splitter("###split", .X, &app.place.split, LIST_MIN_PX, max(room - VIEW_MIN_PX, LIST_MIN_PX), {default_size = room * LIST_SHARE, total = room, min_other = VIEW_MIN_PX})
+	// (flush: the list and the entry's pane meet at its rule, whose lines join theirs; it is grabbed wider than it is drawn)
+	ui.splitter("###split", .X, &app.place.split, LIST_MIN_PX, max(room - VIEW_MIN_PX, LIST_MIN_PX),
+		{default_size = room * LIST_SHARE, total = room, min_other = VIEW_MIN_PX, flush = true})
 	ui.next({width = ui.fill(), height = ui.fill()})
 	build_view(app, em)
 }

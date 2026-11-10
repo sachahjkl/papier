@@ -243,8 +243,8 @@ app_show :: proc(app: ^App) {
 		ui.vlist_scroll_to(&app.vl, 0)
 	}
 	app.hide_due = false
-	// (Windows: on the screen the user works on, not the one it was last shown on)
-	platform.move_to_active_monitor(app.main.win)
+	// (Windows: on the screen the user works on, not the one it was last shown on: picker.follow)
+	platform.move_to_active_monitor(app.main.win, app.settings.follow)
 	if app.visible {
 		platform.raise_window(app.main.win)
 		app.main.settle = max(app.main.settle, FRAMES_AT_SHOW)

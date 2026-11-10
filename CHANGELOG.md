@@ -5,6 +5,10 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Windows: the window shows on the screen under the mouse pointer, with no click needed there. `picker.follow focus`
+  (Settings > Window) takes the screen of the window in front instead (gui_toolkit 0.157.0).
+
 ## [0.10.1] - 2026-11-10
 
 ### Fixed

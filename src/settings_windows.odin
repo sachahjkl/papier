@@ -10,10 +10,12 @@ import "gt:platform"
 
 PREF_DEFS_SYSTEM := [?]config.Def{
 	{name = "picker.shortcut", category = "window", description = "The keys that show the history from any program. In the settings, click the field and press them; as text, Ctrl, Shift, Alt, Win and a key joined by + (Ctrl+Shift+ù). Win+V stays the system's.", kind = .String, default = {s = "Ctrl+Shift+ù"}},
+	{name = "picker.follow", category = "window", description = "The screen the window shows on: the one under the mouse pointer, or the one of the window in front.", kind = .String, default = {s = "pointer"}, choices = {"pointer", "focus"}},
 }
 
 prefs_read_system :: proc(p: ^config.Prefs, s: ^Settings, allocator := context.allocator) {
 	s.shortcut = strings.clone(config.string_of(p, "picker.shortcut"), allocator)
+	s.follow, _ = platform.active_monitor_parse(config.string_of(p, "picker.follow"))
 }
 
 // The system has one history, and papier no directory of its own for it.

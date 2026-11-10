@@ -45,6 +45,7 @@ Settings :: struct {
 	size:           [2]int,
 	font_size:      f32,
 	shortcut:       string,   // Windows: picker.shortcut
+	follow:         platform.Active_Monitor,   // Windows: picker.follow
 	update_auto:    bool,
 }
 

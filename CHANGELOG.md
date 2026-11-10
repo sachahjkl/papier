@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-10
+
 ### Fixed
 - The window's panes join: the search's halo is no longer cut under the title bar, the rule under it has its lit line,
   and the list and the entry meet at the splitter's rule with no gap beside it (gui_toolkit 0.138.0).
@@ -194,3 +196,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.7.1]: https://github.com/sachahjkl/papier/releases/tag/v0.7.1
 [0.7.2]: https://github.com/sachahjkl/papier/releases/tag/v0.7.2
 [0.8.0]: https://github.com/sachahjkl/papier/releases/tag/v0.8.0
+[0.8.1]: https://github.com/sachahjkl/papier/releases/tag/v0.8.1

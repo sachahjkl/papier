@@ -19,7 +19,7 @@ SITE_META :: tk_site.Meta{
 	url         = "https://papier.sacha.house/",
 	name        = "papier",
 	repository  = REPOSITORY,
-	tagline     = "The clipboard's history for Linux",
+	tagline     = "The clipboard's history for Linux and Windows",
 	changes     = CHANGELOG,
 	card        = "img/main.png",
 	logo        = "img/logo.png",
@@ -33,9 +33,16 @@ SITE_META :: tk_site.Meta{
 	root_domain = false,   // (github.io answers for /robots.txt and /favicon.ico, not the site)
 }
 
+// The home page's download, for the reader's system (Windows first: what a phone or an unknown system is offered).
+@(rodata)
+SITE_DOWNLOADS := [?]tk_site.Download{
+	{os = "windows", label = "Windows", href = "https://github.com/sachahjkl/papier/releases/download/v{{version}}/papier-{{version}}-windows-x64.zip", detail = "v{{version}} · Windows 10 / 11 · x64 · .zip"},
+	{os = "linux", label = "Linux", href = "https://github.com/sachahjkl/papier/releases/download/v{{version}}/papier-{{version}}-linux-x64.tar.gz", detail = "v{{version}} · x64 · .tar.gz · Wayland"},
+}
+
 SITE_LD :: [?][2]string{
 	{"applicationCategory", "UtilitiesApplication"},
-	{"operatingSystem", "Linux"},
+	{"operatingSystem", "Windows, Linux"},
 	{"license", "https://opensource.org/license/mit"},
 }
 
@@ -50,7 +57,8 @@ site_meta :: proc() -> tk_site.Meta {
 
 @(private = "file")
 site_changelog :: proc(site, out: string) -> bool {
-	return tk_site.build_changelog(site, out, {changes = CHANGELOG, version_mark = VERSION_MARK})
+	downloads := SITE_DOWNLOADS
+	return tk_site.build_changelog(site, out, {changes = CHANGELOG, version_mark = VERSION_MARK, downloads = downloads[:]})
 }
 
 run_site :: proc(args: []string) -> int {

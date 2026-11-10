@@ -5,6 +5,12 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Windows: the window shows on the screen you work on (the one of the window in front, else the one under the pointer),
+  at the same place of that screen, not on the screen it was last shown on.
+- The site offers the download of your system (Windows or Linux), and the other one under it (gui_toolkit 0.151.0).
+- The Setup's options are one per line: a long label wraps in its box instead of running past it (gui_toolkit 0.150.0).
+
 ## [0.10.0] - 2026-11-10
 
 ### Added

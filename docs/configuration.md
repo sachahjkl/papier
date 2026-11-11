@@ -39,7 +39,8 @@ On Windows, the system keeps the history (Settings > System > Clipboard): the `h
 | `picker.close_on_copy` | boolean | true | Hide the window when an entry is copied. |
 | `picker.theme` | text | Papier | The colours: `Papier`, or a theme of gui_toolkit by its name (Midnight, Graphite, Nord, Dracula, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine, Kanagawa, One Dark, Solarized…). |
 | `picker.mode` | system, dark, light | system | The theme's version. `system` follows the system's light or dark as it changes. |
-| `picker.finish` | machined, flat, gradient, glass | machined | How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines; a light version is flat. |
+| `picker.finish` | machined, edged, flat, gradient, glass | machined | How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines; a light version is flat. Edged: the same reliefs drawn crisp, with square corners. |
+| `picker.system_title` | on/off | off | The window's title bar drawn by the system (its buttons, its snapping) in place of papier's own; the search and the filters go under it. Not on GNOME, which draws none. |
 | `picker.glow` | on/off | on | The halos of the machined finish: the ring of light around a focused field. |
 | `picker.width` | integer, 320 to 4000 | 900 | The width of the window at its first start, in logical pixels. |
 | `picker.height` | integer, 240 to 4000 | 560 | The height of the window at its first start, in logical pixels. |

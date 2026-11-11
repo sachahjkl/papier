@@ -249,7 +249,8 @@ build_title :: proc(app: ^App, em: f32) {
 			ui.label("Papier###apptitle")
 			if icon_action(app, "back", lucide.ARROW_LEFT, "Back to the history (Escape)", em) { app.settings_open = false }
 			ui.spacer(ui.px(em * 0.3))
-			if icon_action(app, "close", lucide.X, "Hide (Escape)", em) { app_hide(app) }
+			// (the system's title bar has its own close button)
+		if !app.settings.system_title && icon_action(app, "close", lucide.X, "Hide (Escape)", em) { app_hide(app) }
 			ui.spacer(ui.px(em * 0.4))
 			return
 		}
@@ -282,7 +283,8 @@ build_title :: proc(app: ^App, em: f32) {
 		if ui.segmented("###filter", filter_labels[:FILTER_COUNT], &sel) { set_filter(app, Filter(sel)) }
 		ui.spacer(ui.px(em * 0.3))
 		if icon_action(app, "settings", lucide.SETTINGS, "Settings (Ctrl+,)", em) { settings_toggle(app) }
-		if icon_action(app, "close", lucide.X, "Hide (Escape)", em) { app_hide(app) }
+		// (the system's title bar has its own close button)
+		if !app.settings.system_title && icon_action(app, "close", lucide.X, "Hide (Escape)", em) { app_hide(app) }
 		ui.spacer(ui.px(em * 0.4))
 	}
 }

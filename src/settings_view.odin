@@ -6,6 +6,7 @@ package papier
 
 import config "gt:config"
 import prefs_page "gt:prefs_page"
+import "gt:platform"
 import "gt:ui"
 import lucide "gt:lucide"
 
@@ -43,6 +44,9 @@ HOTKEY_PREFS := [?]string{"picker.shortcut"}
 @(private = "file")
 settings_problem :: proc(user: rawptr, name: string) -> string {
 	app := (^App)(user)
+	if name == "picker.system_title" && app.settings.system_title && !platform.system_title_available(app.main.win) {
+		return "This desktop draws no title bar for papier's window (GNOME): papier keeps its own."
+	}
 	return name == "picker.shortcut" ? app.shortcut_problem : ""
 }
 
@@ -89,6 +93,7 @@ settings_changed :: proc(user: rawptr, name: string) {
 	settings_free(&app.settings)
 	app.settings = prefs_read(&app.prefs)
 	app_updates_auto(app)
+	app_title_follow(app)
 	watcher_send(&app.watcher, {verb = .Reload})
 }
 

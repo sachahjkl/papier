@@ -18,7 +18,8 @@ PREF_DEFS := [?]config.Def{
 	{name = "picker.close_on_copy", category = "window", description = "Close the picker when an entry is copied.", kind = .Bool, default = {b = true}, tags = {"hide", "dismiss"}},
 	{name = "picker.theme", category = "appearance", description = "The window's colours: Papier, or a theme of the toolkit by its name (Midnight, Nord, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine...).", kind = .String, default = {s = "Papier"}, tags = {"colours", "colors", "palette", "dark", "light", "look"}},
 	{name = "picker.mode", category = "appearance", description = "The theme's version: the system's (light or dark, followed as it changes), dark, or light.", kind = .String, default = {s = "system"}, choices = {"system", "dark", "light"}, tags = {"dark", "light", "night", "day"}},
-	{name = "picker.finish", category = "appearance", description = "How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines (flat in a light version). Flat: plain surfaces and thin lines.", kind = .String, default = {s = "machined"}, choices = {"machined", "flat", "gradient", "glass"}, tags = {"style", "look", "bevel", "flat"}},
+	{name = "picker.finish", category = "appearance", description = "How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines (flat in a light version). Edged: the same reliefs drawn crisp, with square corners. Flat: plain surfaces and thin lines.", kind = .String, default = {s = "machined"}, choices = {"machined", "edged", "flat", "gradient", "glass"}, tags = {"style", "look", "bevel", "flat"}},
+	{name = "picker.system_title", category = "window", description = "The window's title bar drawn by the system (its buttons, its snapping) in place of papier's own; the search and the filters go under it.", kind = .Bool, default = {b = false}, tags = {"decorations", "native", "frame", "title bar"}},
 	{name = "picker.glow", category = "appearance", description = "The halos of the machined finish: a focused field's ring of light.", kind = .Bool, default = {b = true}, tags = {"halo", "light", "focus"}},
 	{name = "picker.width", category = "window", description = "The picker's width, in logical pixels.", kind = .Int, default = {i = 900}, min = 320, max = 4000, bounded = true, tags = {"size", "window"}},
 	{name = "picker.height", category = "window", description = "The picker's height, in logical pixels.", kind = .Int, default = {i = 560}, min = 240, max = 4000, bounded = true, tags = {"size", "window"}},
@@ -47,6 +48,7 @@ Settings :: struct {
 	shortcut:       string,   // Windows: picker.shortcut
 	follow:         platform.Active_Monitor,   // Windows: picker.follow
 	update_auto:    bool,
+	system_title:   bool,     // picker.system_title
 }
 
 prefs_file :: proc(allocator := context.temp_allocator) -> string {
@@ -72,6 +74,7 @@ prefs_read :: proc(p: ^config.Prefs, allocator := context.allocator) -> (s: Sett
 	s.mode = ui.theme_mode_of(config.string_of(p, "picker.mode"))
 	s.finish = ui.finish_of(config.string_of(p, "picker.finish"))
 	s.glow = config.bool_of(p, "picker.glow")
+	s.system_title = config.bool_of(p, "picker.system_title")
 	s.size = {int(config.int_of(p, "picker.width")), int(config.int_of(p, "picker.height"))}
 	s.font_size = f32(config.float_of(p, "picker.font_size"))
 	s.update_auto = config.bool_of(p, "update.auto")

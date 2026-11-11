@@ -5,6 +5,14 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- The edged finish (`picker.finish edged`: the machined reliefs drawn crisp, square corners) and the Console theme
+  (gui_toolkit 0.187.0).
+- `picker.system_title`: the system's title bar in place of papier's own, switched at once (Windows, X11, KDE).
+
+### Changed
+- Bold text in the window is the font's own bold, no longer a thickened regular (gui_toolkit 0.187.0).
+
 ## [0.16.0] - 2026-11-11
 
 ### Added

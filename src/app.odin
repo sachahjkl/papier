@@ -104,7 +104,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	platform.set_app_id(APP_NAME)
 	platform.dragdrop_thread_init()   // (Windows: OLE, for an entry dragged out: drag.odin)
 	size := app.place.size != {} ? app.place.size : app.settings.size
-	if !host.host_open(&app.main, &app.shared, {title = "Papier", size = size, integrated_title = true}, view_build, app) {
+	if !host.host_open(&app.main, &app.shared, {title = "Papier", size = size, integrated_title = !app.settings.system_title}, view_build, app) {
 		errln("papier: no window")
 		return 1
 	}
@@ -399,6 +399,7 @@ app_requests :: proc(app: ^App) {
 			app.settings = prefs_read(&app.prefs)
 			app_shortcut(app)
 			app_updates_auto(app)
+			app_title_follow(app)
 		case .Toggle: app_toggle(app)
 		case .Show:   app_show(app)
 		case .Hide:   app_hide(app)
@@ -452,4 +453,9 @@ themes :: proc() -> []ui.Theme_Def {
 		copy(list[1:], ui.THEMES[:])
 	}
 	return list[:]
+}
+
+// picker.system_title: the system's title bar, or papier's own, switched at once.
+app_title_follow :: proc(app: ^App) {
+	platform.set_integrated_title(app.main.win, !app.settings.system_title)
 }

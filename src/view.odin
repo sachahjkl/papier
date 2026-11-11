@@ -64,6 +64,7 @@ View :: struct {
 	size:    [2]int,
 	has_tex: bool,
 	loading: bool,              // its picture is being decoded (decoder.odin)
+	preview: ui.Preview,        // its picture's zoom and pan (fits again with each entry: view_clear)
 	image:   int,               // the representation of the picture, in the entry's reps
 	code:    syntax.Language,   // the language its text is in (has_code: syntax.guess found one)
 	has_code: bool,
@@ -459,22 +460,6 @@ view_decoded :: proc(app: ^App) -> bool {
 }
 
 @(private = "file")
-Image_Draw :: struct { tex: render.Texture, size: [2]f32 }
-
-// The image, as large as it fits without growing past its own size, centred.
-@(private = "file")
-image_draw :: proc(b: ^ui.Box, user: rawptr, dc: ^draw.Context) {
-	d := (^Image_Draw)(user)
-	r := b.rect
-	room := r.max - r.min
-	if d.size.x <= 0 || d.size.y <= 0 || room.x <= 0 || room.y <= 0 { return }
-	scale := min(room.x / d.size.x, room.y / d.size.y, 1)
-	sz := d.size * scale
-	at := r.min + (room - sz) * 0.5
-	draw.image(dc, d.tex, {at, at + sz}, radius = 6)
-}
-
-@(private = "file")
 build_view :: proc(app: ^App, em: f32) {
 	panel := ui.build_box({.Draw_Background, .Clip}, "###view")
 	if ui.parent(panel) { build_view_body(app, em) }
@@ -514,14 +499,9 @@ build_view_body :: proc(app: ^App, em: f32) {
 	ui.hline(ui.fill())
 	ui.next({width = ui.fill(), height = ui.fill()})
 	if app.view.has_tex {
-		d := ui.frame_new(Image_Draw)
-		d^ = {app.view.tex, {f32(app.view.size.x), f32(app.view.size.y)}}
-		if ui.row() {
-			ui.spacer(ui.px(em * 0.8))
-			ui.next({width = ui.fill(), height = ui.fill()})
-			ui.custom("image", image_draw, d)
-			ui.spacer(ui.px(em * 0.8))
-		}
+		// (gui_toolkit's preview: the wheel zooms, a drag moves it, a double click shows its pixels; its bar in the corner)
+		ui.next({width = ui.fill(), height = ui.fill()})
+		ui.preview_image("###image", &app.view.preview, app.view.tex, {f32(app.view.size.x), f32(app.view.size.y)}, {buttons = true, radius = 6})
 		return
 	}
 	if app.view.loading {

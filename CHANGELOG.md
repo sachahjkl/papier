@@ -5,6 +5,15 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- An image zooms and moves in the preview: the wheel zooms around the pointer, a drag moves it, a double click shows its
+  pixels and fits it again; a bar in its corner shows the zoom and −, +, 1:1, Fit (gui_toolkit 0.180.3: `ui.preview`).
+
+### Changed
+- The window shown again shows the history, not the settings it was hidden on.
+- The machined finish: a choice of the settings (Machined, Flat…) is a slot with a raised key; a switch's edges are
+  clean; its labels are centred on their key (gui_toolkit 0.180.3).
+
 ## [0.12.0] - 2026-11-11
 
 ### Added

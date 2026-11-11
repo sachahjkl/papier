@@ -248,6 +248,7 @@ app_show :: proc(app: ^App) {
 	// a new look, unless the window is shown and stays so (a hide asked in this step, then a show: a new look, in place)
 	if !app.visible || app.hide_due {
 		edit_end(app)
+		app.settings_open = false   // (a new look is at the history, not at what was open when it hid)
 		app.menu.close_due = true   // (closed at the next build: the interface is only touched from inside one)
 		ui.field_clear(&app.search)
 		app.filter = .All

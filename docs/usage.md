@@ -47,6 +47,9 @@ full beside the list.
 | a drag of an entry | out of the window, into another program: its text, its picture, its files |
 | Escape | clears the marks, then the search; when both are empty, hides the window |
 
+An image fits the preview first: the wheel zooms around the pointer, a drag moves it, a double click shows its pixels
+and fits it again, and the bar in its corner zooms out, in, to its pixels or to what fits.
+
 Code (the shell, Python, SQL, Odin, Go, Rust, C, JavaScript, PowerShell, JSON) is shown in colours, its language named
 in the entry's header. Papier finds the language from the text itself (gui_toolkit's `syntax.guess`); the edit view keeps
 the colours.

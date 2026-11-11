@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-11-11
+
 ### Fixed
 - An image no longer shows too large for a moment when its entry is selected: it fits from its first frame
   (gui_toolkit's `ui.preview`).
@@ -322,3 +324,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.15.0]: https://github.com/sachahjkl/papier/releases/tag/v0.15.0
 [0.16.0]: https://github.com/sachahjkl/papier/releases/tag/v0.16.0
 [0.17.0]: https://github.com/sachahjkl/papier/releases/tag/v0.17.0
+[0.17.1]: https://github.com/sachahjkl/papier/releases/tag/v0.17.1

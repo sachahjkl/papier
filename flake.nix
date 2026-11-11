@@ -163,7 +163,8 @@
 
     devShells.${system}.default = pkgs.mkShell {
       # (sway and wl-clipboard: papiertool live)
-      packages = [odin] ++ (with pkgs; [cargo rustc sway wl-clipboard]) ++ preCommitCheck.enabledPackages;
+      # (dbus: sway starts its session bus with dbus-run-session; the one of the system would load the shell's libdbus)
+      packages = [odin] ++ (with pkgs; [cargo rustc sway wl-clipboard dbus]) ++ preCommitCheck.enabledPackages;
       buildInputs = [pkgs.fontconfig];
       shellHook =
         preCommitCheck.shellHook

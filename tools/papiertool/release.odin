@@ -2,8 +2,8 @@ package papiertool
 
 // A release (gui_toolkit's release package): `package [version]` the archive of the release build, its SHA-256, the
 // program alone and its update manifest signed by $UPDATE_SIGNING_KEY; `notes <version>` the changelog's section; `ship
-// <version> [--dry-run]` the changelog dated, APP_VERSION set, the checks, a commit, the tag, the push. The release
-// workflow (.github/workflows/release.yml) builds and publishes a tag; the site follows.
+// <version> [--dry-run]` the fragments of changelog.d/ assembled into the changelog, APP_VERSION set, the checks, a
+// commit, the tag, the push. The release workflow (.github/workflows/release.yml) builds and publishes a tag; the site follows.
 
 import "core:os"
 import release "gt:release"

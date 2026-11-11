@@ -53,7 +53,8 @@ odin run ext/gui_toolkit/tools/tk -- cdp --port 9222 tree , shot window.png
   it).
 - What another program could use goes in gui_toolkit, generic, with its documentation, its test and its changelog
   fragment; papier then points to the toolkit's new tag.
-- Add what changed under `## [Unreleased]` in `CHANGELOG.md`.
+- Write what changed as one fragment in `changelog.d/` ([its README](../changelog.d/README.md)). Do not edit
+  `CHANGELOG.md`: two branches then never change the same lines.
 
 ## A release
 
@@ -61,7 +62,7 @@ odin run ext/gui_toolkit/tools/tk -- cdp --port 9222 tree , shot window.png
 odin run tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papiertool -keep-executable -- ship 0.2.0
 ```
 
-From a clean `master`: `[Unreleased]` becomes `[0.2.0]` with the date, `APP_VERSION` becomes `0.2.0`, `check` runs, then a
+From a clean `master`: the fragments of `changelog.d/` become the section `[0.2.0]` with the date and are deleted, `APP_VERSION` becomes `0.2.0`, `check` runs, then a
 commit, the tag `v0.2.0` and the push. The release workflow (`.github/workflows/release.yml`) builds the archive on
 Ubuntu, checks that the tag is the program's version, and publishes the GitHub release with the changelog's section. The
 site (`.github/workflows/pages.yml`) follows: its download link names the new archive.

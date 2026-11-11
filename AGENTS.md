@@ -20,7 +20,8 @@ Every step is a command of `tools/papiertool` (`help` lists them):
 - What more than one program needs goes in gui_toolkit, generic, with its docs, test and changelog fragment; papier then
   points to the toolkit's new tag.
 - A preference is a `config.Def` in `src/settings.odin` with its line in `docs/configuration.md` (a test checks it).
-- What changed goes under `## [Unreleased]` in `CHANGELOG.md`; `papiertool ship` releases it.
+- What changed is one fragment in `changelog.d/` (its README), never an edit of `CHANGELOG.md`; `papiertool ship`
+  assembles the fragments into the version's section.
 - Tests never read or write the person's clipboard or desktop: `live` and `shots` run in a sway of their own.
 - Automation is a command of `tools/papiertool`, never a shell, batch, PowerShell, Python or Node script.
 - Comments and commit messages are in English. Comments say why.

@@ -11,6 +11,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 - `picker.system_title`: the system's title bar in place of papier's own, switched at once (Windows, X11, KDE).
 
 ### Changed
+- The Linux archive is built in Debian 12 (glibc 2.36): it starts on Debian 12, Ubuntu 22.04 and later. The checks run in
+  the flake's shell, as on a developer's machine.
 - Bold text in the window is the font's own bold, no longer a thickened regular (gui_toolkit 0.187.0).
 
 ## [0.16.0] - 2026-11-11

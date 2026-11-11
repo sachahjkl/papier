@@ -57,6 +57,12 @@ jobs:
           </busconfig>
           EOF
 
+      # (Vulkan's drivers are in /run/opengl-driver on NixOS: here, Mesa's software one from the flake's nixpkgs)
+      - name: lavapipe
+        run: |
+          mesa="$(nix build --no-link --print-out-paths --inputs-from . nixpkgs#mesa | head -1)"
+          echo "VK_DRIVER_FILES=$(find "$mesa" -name 'lvp_icd*.json' | head -1)" >> "$GITHUB_ENV"
+
       - name: papiertool check, live
         run: |
           nix develop --command sh -c '

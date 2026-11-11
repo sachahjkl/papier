@@ -5,6 +5,10 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **Escape closes the dialog, not the window**: with the Setup, the palette, the QR code or the sheet of the keys open,
+  the keys are the dialog's (gui_toolkit: an open dialog holds the keys).
+
 ## [0.17.2] - 2026-11-11
 
 ### Fixed

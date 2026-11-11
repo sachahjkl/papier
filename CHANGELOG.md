@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-11
+
 ### Added
 - Code in colours: a copied script, query or snippet (the shell, Python, SQL, Odin, Go, Rust, C, JavaScript, PowerShell,
   JSON) is shown in the theme's colours, its language found from the text and named in the entry's header; the edit
@@ -262,3 +264,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.10.1]: https://github.com/sachahjkl/papier/releases/tag/v0.10.1
 [0.10.2]: https://github.com/sachahjkl/papier/releases/tag/v0.10.2
 [0.11.0]: https://github.com/sachahjkl/papier/releases/tag/v0.11.0
+[0.12.0]: https://github.com/sachahjkl/papier/releases/tag/v0.12.0

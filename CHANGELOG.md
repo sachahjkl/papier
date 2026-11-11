@@ -5,6 +5,10 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- An image no longer shows too large for a moment when its entry is selected: it fits from its first frame
+  (gui_toolkit's `ui.preview`).
+
 ## [0.17.0] - 2026-11-11
 
 ### Added

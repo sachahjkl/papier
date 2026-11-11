@@ -32,7 +32,7 @@ lives in the notification area, sleeps at 0 % CPU, and its window comes up in a 
 - **Edit an entry**: its text in an editor; copy what you edited, or save it in place of the entry.
 - **Code in colours**: a copied script, query or snippet is shown in colours, its language found from the text.
 - **Thumbnails**: an image's row shows a small picture of it.
-- **A command palette** (Ctrl+K) with every action, and the sheet of the keys (F1).
+- **A command palette** (Ctrl+K) with every action and every setting, and the sheet of the keys (F1).
 - **Several entries at once**: Ctrl or Shift click marks entries; copy their texts as one, pin them, remove them.
 - **Drag an entry out** into another program, or **show it as a QR code** for your phone.
 - **Secrets stay secret**: what a password manager marks (`x-kde-passwordManagerHint`) is never recorded.

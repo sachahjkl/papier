@@ -49,11 +49,12 @@ app_updates_follow :: proc(app: ^App) {
 	if st.phase == .Installed && !app.visible && !app.quit { app_restart(app) }
 }
 
-// The new program takes over: started hidden once this one has ended (it holds the single instance until then).
-app_restart :: proc(app: ^App) {
+// The program starts again once this one has ended (it holds the single instance until then): an update put in place,
+// or Restart asked. `hidden`: in the notification area (an update, while the window was hidden).
+app_restart :: proc(app: ^App, hidden := true) {
 	delete(app.launch_after)
 	app.launch_after = fmt.aprintf("%s", process.executable_path())
-	app.launch_hidden = true
+	app.launch_hidden = hidden
 	app.quit = true
 }
 

@@ -82,7 +82,8 @@ With several entries marked, the menu acts on all of them: copy their texts as o
 ![The command palette](screenshots/palette.png)
 
 Ctrl+K opens every action of papier in a dialog, under their groups: the entry's, the marks', the filters', papier's own
-(the settings, the setup, a check for updates, the sheet of the keys). Type to keep the ones whose words begin as typed;
+(the settings, the setup, a check for updates, the sheet of the keys, restart, quit), then every setting under its page.
+A setting chosen opens the settings on it alone, its page underneath. Type to keep the ones whose words begin as typed;
 Enter runs the first. An action that cannot act now is grey. The palette's keys, the menus' and the tooltips' come from
 one table (`src/actions.odin`).
 

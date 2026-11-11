@@ -5,6 +5,11 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- The command palette finds the settings: one chosen opens the settings on it alone, its page underneath
+  (gui_toolkit 0.182.0: `prefs_page.palette_commands`, `prefs_page.show`).
+- Restart Papier and Quit Papier (Ctrl+Q), in the palette.
+
 ## [0.13.0] - 2026-11-11
 
 ### Added

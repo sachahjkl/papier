@@ -49,14 +49,25 @@ settings_problem :: proc(user: rawptr, name: string) -> string {
 // The page, as large as the body.
 settings_build :: proc(app: ^App) {
 	ui.next({width = ui.fill(), height = ui.fill()})
-	prefs_page.build(&app.settings_page, &app.prefs, {
+	prefs_page.build(&app.settings_page, &app.prefs, settings_options(app))
+}
+
+// What the page is given: its pages, its controls of papier's own, the updater; the palette lists its settings by them.
+settings_options :: proc(app: ^App) -> prefs_page.Options {
+	return {
 		user = app, changed = settings_changed, choices = settings_choices,
 		custom_names = CUSTOM[:], custom = settings_custom,
 		hotkeys = HOTKEY_PREFS[:], problem = settings_problem,
-		updater = app.updater, update_pref = "update.auto", restart = proc(user: rawptr) { app_restart((^App)(user)) },
+		updater = app.updater, update_pref = "update.auto", restart = proc(user: rawptr) { app_restart((^App)(user), hidden = false) },
 		pages = SETTINGS_PAGES[:], icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.REFRESH_CW,
 		foot = "prefs: ~/.config/papier/prefs",
-	})
+	}
+}
+
+// A setting chosen in the palette: the settings, on it alone.
+settings_show :: proc(app: ^App, name: string) {
+	app.settings_open = true
+	prefs_page.show(&app.settings_page, &app.prefs, settings_options(app), name)
 }
 
 // The themes as cards, each in its own colours.

@@ -88,11 +88,14 @@ run_shots :: proc(args: []string) -> int {
 	// the command palette, searched
 	cdp.key(&c, "ctrl+k")
 	cdp.wait_for(&c, "Keyboard shortcuts", SESSION_WAIT)
-	cdp.type_text(&c, "pin")
+	cdp.type_text(&c, "theme")
 	cdp.wait_for(&c, "Show every entry", SESSION_WAIT, gone = true)
 	shot(&c, out, "palette", &failed)
-	cdp.key(&c, "Escape")
-	cdp.wait_for(&c, "Keyboard shortcuts", SESSION_WAIT, gone = true)
+	// a setting chosen: the settings, on it alone
+	cdp.key(&c, "Enter")
+	if !cdp.wait_for(&c, "The window's colours", SESSION_WAIT) { fmt.eprintln("papiertool shots: the palette's setting did not open the settings"); failed = true }
+	cdp.key(&c, "ctrl+,")
+	cdp.wait_for(&c, "The window's colours", SESSION_WAIT, gone = true)
 	// the address as a QR code
 	cdp.type_text(&c, "github")
 	cdp.wait_for(&c, "proc fibonacci", SESSION_WAIT, gone = true)

@@ -10,6 +10,7 @@ package papier
 
 import "core:slice"
 import "core:strings"
+import prefs_page "gt:prefs_page"
 import "gt:ui"
 import lucide "gt:lucide"
 import "history"
@@ -18,7 +19,7 @@ Action :: enum u8 {
 	Copy, Copy_Plain, Edit, Open, Save_As, Pin, Remove, Show_QR,
 	Mark_All, Clear_Marks,
 	Filter_All, Filter_Text, Filter_Images, Filter_Files, Filter_Pinned, Filter_Next, Filter_Previous,
-	Clear_History, Settings, Check_Updates, Setup, Palette, Shortcuts, Hide,
+	Clear_History, Settings, Check_Updates, Setup, Palette, Shortcuts, Hide, Restart, Quit,
 }
 
 ACTIONS := [Action]ui.Command{
@@ -46,6 +47,8 @@ ACTIONS := [Action]ui.Command{
 	.Palette         = {label = "Command palette", group = "Papier", keys = {{.K, {.Ctrl}}, {.P, {.Ctrl, .Shift}}}, icon = lucide.COMMAND},
 	.Shortcuts       = {label = "Keyboard shortcuts", group = "Papier", keys = {{.F1, {}}, {}}, icon = lucide.KEYBOARD},
 	.Hide            = {label = "Hide the window", group = "Papier", icon = lucide.X},
+	.Restart         = {label = "Restart Papier", group = "Papier", icon = lucide.ROTATE_CCW},
+	.Quit            = {label = "Quit Papier", group = "Papier", keys = {{.Q, {.Ctrl}}, {}}, icon = lucide.POWER},
 }
 
 // The entries an action acts on: the marked ones in the list's order, else the selected one (temp memory).
@@ -79,7 +82,7 @@ action_enabled :: proc(app: ^App, a: Action) -> bool {
 	case .Filter_Pinned: return PINS
 	case .Clear_History: return len(app.store.entries) > 0
 	case .Filter_All, .Filter_Text, .Filter_Images, .Filter_Files, .Filter_Next, .Filter_Previous,
-	     .Settings, .Check_Updates, .Setup, .Palette, .Shortcuts, .Hide:
+	     .Settings, .Check_Updates, .Setup, .Palette, .Shortcuts, .Hide, .Restart, .Quit:
 		return true
 	}
 	return false
@@ -127,6 +130,8 @@ action_run :: proc(app: ^App, a: Action) {
 	case .Palette:       ui.palette_open(&app.palette)
 	case .Shortcuts:     app.sheet_open = true
 	case .Hide:          app_hide(app)
+	case .Restart:       app_restart(app, hidden = false)
+	case .Quit:          app.quit = true
 	}
 }
 
@@ -137,13 +142,21 @@ actions_keys :: proc(app: ^App) {
 	}
 }
 
-// The palette and the sheet of the keys, when they are open (at the end of the window's build).
+// The palette and the sheet of the keys, when they are open (at the end of the window's build). The palette holds the
+// actions, then every setting: one chosen opens the settings on it alone.
 actions_build :: proc(app: ^App) {
-	enabled: [Action]bool
-	for a in Action { enabled[a] = action_enabled(app, a) }
-	commands := slice.enumerated_array(&ACTIONS)
-	if i, _ := ui.palette(&app.palette, commands, slice.enumerated_array(&enabled)); i >= 0 { action_run(app, Action(i)) }
-	ui.shortcuts_sheet("keys", commands, &app.sheet_open, "Papier's keys")
+	actions := slice.enumerated_array(&ACTIONS)
+	if app.palette.open {
+		settings, names := prefs_page.palette_commands(&app.prefs, settings_options(app))
+		all := slice.concatenate([][]ui.Command{actions, settings}, context.temp_allocator)
+		enabled := make([]bool, len(all), context.temp_allocator)
+		for a in Action { enabled[int(a)] = action_enabled(app, a) }
+		for i in len(actions) ..< len(all) { enabled[i] = true }
+		if i, _ := ui.palette(&app.palette, all, enabled); i >= 0 {
+			if i < len(actions) { action_run(app, Action(i)) } else { settings_show(app, names[i - len(actions)]) }
+		}
+	}
+	ui.shortcuts_sheet("keys", actions, &app.sheet_open, "Papier's keys")
 }
 
 // A tooltip: the action's label and its key.

@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-11
+
 ### Added
 - The settings show papier's version at the bottom of their pages (gui_toolkit 0.185.0).
 - An update shows in the status bar as a button: Install 0.x, Downloading…, then Restart to update, which restarts papier
@@ -302,3 +304,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.13.0]: https://github.com/sachahjkl/papier/releases/tag/v0.13.0
 [0.14.0]: https://github.com/sachahjkl/papier/releases/tag/v0.14.0
 [0.15.0]: https://github.com/sachahjkl/papier/releases/tag/v0.15.0
+[0.16.0]: https://github.com/sachahjkl/papier/releases/tag/v0.16.0

@@ -61,6 +61,7 @@ settings_options :: proc(app: ^App) -> prefs_page.Options {
 		updater = app.updater, update_pref = "update.auto", restart = proc(user: rawptr) { app_restart((^App)(user), hidden = false) },
 		pages = SETTINGS_PAGES[:], icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.REFRESH_CW,
 		foot = "prefs: ~/.config/papier/prefs",
+		version = "Papier " + APP_VERSION,
 	}
 }
 

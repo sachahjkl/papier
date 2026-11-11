@@ -23,6 +23,7 @@ import "gt:host"
 import "gt:platform"
 import "gt:render"
 import syntax "gt:syntax"
+import prefs_page "gt:prefs_page"
 import "gt:ui"
 import "history"
 import lucide "gt:lucide"
@@ -376,6 +377,9 @@ build_status :: proc(app: ^App, em: f32) {
 	ui.next({width = ui.fill(), height = ui.px(ui.dense(em * STATUS_EM))})
 	if ui.row(.Center) {
 		ui.spacer(ui.px(em * 0.7))
+		// (an update on offer, coming or in place: a button to act on it, where the eye goes)
+		ui.next({height = ui.px(ui.dense(em * (STATUS_EM - 0.45)))})
+		if prefs_page.update_badge(app.updater, proc(user: rawptr) { app_restart((^App)(user), hidden = false) }, app) { ui.spacer(ui.px(em * 0.6)) }
 		if ui.style({font_size = em * 0.88}) {
 			if ui.tags("weak") {
 				ui.next({width = ui.fill()})

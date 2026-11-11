@@ -5,6 +5,15 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- The settings show papier's version at the bottom of their pages (gui_toolkit 0.185.0).
+- An update shows in the status bar as a button: Install 0.x, Downloading…, then Restart to update, which restarts papier
+  on the new version (gui_toolkit's `prefs_page.update_badge`).
+
+### Fixed
+- The machined finish at a small scale: the rings of a switch, a slider and a choice are clean in their curves, with no
+  break nor change of grey (gui_toolkit 0.186.0).
+
 ## [0.15.0] - 2026-11-11
 
 ### Added

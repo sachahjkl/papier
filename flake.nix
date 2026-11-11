@@ -130,7 +130,7 @@
 
       meta = {
         description = "A fast clipboard history, searched as you type.";
-        homepage = "https://papier.sacha.house/";
+        homepage = "https://papier.froment.software/";
         license = lib.licenses.mit;
         platforms = [system];
         mainProgram = "papier";

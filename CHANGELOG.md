@@ -5,6 +5,10 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- The search field and the editor have a menu on a right click: Undo, Redo, Cut, Copy, Paste, Delete, Select all
+  (gui_toolkit 0.172.0).
+
 ## [0.11.0] - 2026-11-10
 
 ### Added

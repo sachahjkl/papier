@@ -11,8 +11,9 @@ import toolbox "gt:toolbox"
 // wgpu-native carry linked once (the same code: the toolkit's own CI does the same).
 LINUX_DEFINES :: "-define:FONT_BACKEND=native"
 LINUX_LINK    :: "-extra-linker-flags:-Wl,--allow-multiple-definition"
-// The packages that have tests, and this tool.
-TEST_PACKAGES :: [?]string{"src", "src/history", "tools/papiertool"}
+// The packages that have tests (this tool has none of its own: its release steps are gui_toolkit's, tested there; check
+// still type-checks it).
+TEST_PACKAGES :: [?]string{"src", "src/history"}
 when ODIN_OS == .Windows {
 	PROGRAM :: "build/papier.exe"
 } else {
@@ -145,8 +146,7 @@ run_test :: proc(args: []string) -> int {
 	for pkg in TEST_PACKAGES {
 		name, _ := strings.replace_all(pkg, "/", "_", context.temp_allocator)
 		out := fmt.tprintf("-out:build/test_%s%s", name, ODIN_OS == .Windows ? ".exe" : "")
-		cmd := pkg == "tools/papiertool" ? []string{"odin", "test", pkg, collection(), "-vet", out} : odin_cmd("test", pkg, {out})
-		if !toolbox.run(cmd, {echo = true}) { return 1 }
+		if !toolbox.run(odin_cmd("test", pkg, {out}), {echo = true}) { return 1 }
 	}
 	return 0
 }

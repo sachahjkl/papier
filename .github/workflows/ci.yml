@@ -37,6 +37,13 @@ jobs:
           path: ext/gui_toolkit/build/text
           key: text-linux-nix-${{ hashFiles('ext/gui_toolkit/native/text/**', 'flake.lock') }}
 
+      # (the shell's dbus reads its session bus's configuration where NixOS keeps it: sway's dbus-run-session needs it)
+      - name: dbus's session configuration
+        run: |
+          daemon="$(nix develop --command sh -c 'readlink -f "$(command -v dbus-daemon)"')"
+          conf="$(find "$(dirname "$(dirname "$daemon")")" -path '*share/dbus-1/session.conf' | head -1)"
+          sudo mkdir -p /etc/dbus-1 && sudo cp "$conf" /etc/dbus-1/session.conf
+
       - name: papiertool check, live
         run: |
           nix develop --command sh -c '

@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-11
+
 ### Added
 - The search lights its words in the list, the palette and the settings (gui_toolkit 0.184.0).
 - Actions and settings have other words they are found by: "delete" finds Remove, "dark" the theme, "hotkey" the
@@ -290,3 +292,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.12.0]: https://github.com/sachahjkl/papier/releases/tag/v0.12.0
 [0.13.0]: https://github.com/sachahjkl/papier/releases/tag/v0.13.0
 [0.14.0]: https://github.com/sachahjkl/papier/releases/tag/v0.14.0
+[0.15.0]: https://github.com/sachahjkl/papier/releases/tag/v0.15.0

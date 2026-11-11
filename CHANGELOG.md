@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.17.3] - 2026-11-11
+
 ### Fixed
 - **Escape closes the dialog, not the window**: with the Setup, the palette, the QR code or the sheet of the keys open,
   the keys are the dialog's (gui_toolkit: an open dialog holds the keys).
@@ -336,3 +338,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.17.0]: https://github.com/sachahjkl/papier/releases/tag/v0.17.0
 [0.17.1]: https://github.com/sachahjkl/papier/releases/tag/v0.17.1
 [0.17.2]: https://github.com/sachahjkl/papier/releases/tag/v0.17.2
+[0.17.3]: https://github.com/sachahjkl/papier/releases/tag/v0.17.3

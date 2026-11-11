@@ -37,12 +37,25 @@ jobs:
           path: ext/gui_toolkit/build/text
           key: text-linux-nix-${{ hashFiles('ext/gui_toolkit/native/text/**', 'flake.lock') }}
 
-      # (the shell's dbus reads its session bus's configuration where NixOS keeps it: sway's dbus-run-session needs it)
+      # (the shell's dbus reads its session bus's configuration where NixOS keeps it, /etc/dbus-1, which this runner does not
+      # have: a session bus of its own for sway's dbus-run-session)
       - name: dbus's session configuration
         run: |
-          daemon="$(nix develop --command sh -c 'readlink -f "$(command -v dbus-daemon)"' 2>/dev/null | tail -1)"   # (the shell's hook writes too)
-          conf="$(find "$(dirname "$(dirname "$daemon")")" -path '*share/dbus-1/session.conf' | head -1)"
-          sudo mkdir -p /etc/dbus-1 && sudo cp "$conf" /etc/dbus-1/session.conf
+          sudo mkdir -p /etc/dbus-1
+          sudo tee /etc/dbus-1/session.conf >/dev/null <<'EOF'
+          <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
+           "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+          <busconfig>
+            <type>session</type>
+            <listen>unix:tmpdir=/tmp</listen>
+            <auth>EXTERNAL</auth>
+            <policy context="default">
+              <allow send_destination="*" eavesdrop="true"/>
+              <allow eavesdrop="true"/>
+              <allow own="*"/>
+            </policy>
+          </busconfig>
+          EOF
 
       - name: papiertool check, live
         run: |

@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-11
+
 ### Added
 - An image zooms and moves in the preview: the wheel zooms around the pointer, a drag moves it, a double click shows its
   pixels and fits it again; a bar in its corner shows the zoom and −, +, 1:1, Fit (gui_toolkit 0.180.3: `ui.preview`).
@@ -274,3 +276,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.10.2]: https://github.com/sachahjkl/papier/releases/tag/v0.10.2
 [0.11.0]: https://github.com/sachahjkl/papier/releases/tag/v0.11.0
 [0.12.0]: https://github.com/sachahjkl/papier/releases/tag/v0.12.0
+[0.13.0]: https://github.com/sachahjkl/papier/releases/tag/v0.13.0

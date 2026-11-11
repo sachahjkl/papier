@@ -1,2 +1,2 @@
 name=papier
-description=The clipboard's history for Linux (Wayland): text, rich text, images and files, searched and put back in a keystroke.
+description=The clipboard's history, searched as you type.

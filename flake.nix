@@ -1,5 +1,5 @@
 {
-  description = "papier: a clipboard manager for Linux, built with gui_toolkit";
+  description = "papier: the clipboard's history, searched as you type.";
 
   inputs = {
     self.submodules = true;
@@ -108,7 +108,7 @@
           name = "papier";
           desktopName = "Papier";
           genericName = "Clipboard Manager";
-          comment = "The clipboard's history: text, rich text, images and files, searched and put back in a keystroke.";
+          comment = "The clipboard's history, searched as you type.";
           exec = "papier";
           icon = "papier";
           categories = ["Utility"];
@@ -129,7 +129,7 @@
       '';
 
       meta = {
-        description = "The clipboard's history for Linux (Wayland)";
+        description = "The clipboard's history, searched as you type.";
         homepage = "https://papier.sacha.house/";
         license = lib.licenses.mit;
         platforms = [system];

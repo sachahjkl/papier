@@ -2,7 +2,7 @@
 
 <h1 align="center">papier</h1>
 
-<p align="center"><b>The clipboard's history for Linux and Windows.</b></p>
+<p align="center"><b>The clipboard's history, searched as you type.</b></p>
 
 <p align="center">
 <a href="https://github.com/sachahjkl/papier/actions/workflows/ci.yml"><img src="https://github.com/sachahjkl/papier/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -11,9 +11,7 @@
 <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-555" alt="MIT"></a>
 </p>
 
-Papier keeps everything you copy, text, rich text, images and files, and gives it back in a keystroke. It is one small
-native program, written in [Odin](https://odin-lang.org) on [gui_toolkit](https://github.com/sachahjkl/gui_toolkit). It
-lives in the notification area, sleeps at 0 % CPU, and its window comes up in a few milliseconds.
+One small native program, written in [Odin](https://odin-lang.org) on [gui_toolkit](https://github.com/sachahjkl/gui_toolkit).
 
 ![papier's window](docs/screenshots/main.png)
 

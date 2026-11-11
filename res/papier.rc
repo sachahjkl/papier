@@ -30,7 +30,7 @@ BEGIN
             VALUE "OriginalFilename", "papier.exe"
             VALUE "ProductName", "Papier"
             VALUE "ProductVersion", VER_STRING
-            VALUE "Comments", "The clipboard's history, searched as you type."
+            VALUE "Comments", "A fast clipboard history, searched as you type."
         END
     END
     BLOCK "VarFileInfo"

@@ -2,7 +2,7 @@
 
 <h1 align="center">papier</h1>
 
-<p align="center"><b>The clipboard's history, searched as you type.</b></p>
+<p align="center"><b>A fast clipboard history, searched as you type.</b></p>
 
 <p align="center">
 <a href="https://github.com/sachahjkl/papier/actions/workflows/ci.yml"><img src="https://github.com/sachahjkl/papier/actions/workflows/ci.yml/badge.svg" alt="CI"></a>

@@ -1,5 +1,5 @@
 {
-  description = "papier: the clipboard's history, searched as you type.";
+  description = "papier: a fast clipboard history, searched as you type.";
 
   inputs = {
     self.submodules = true;
@@ -108,7 +108,7 @@
           name = "papier";
           desktopName = "Papier";
           genericName = "Clipboard Manager";
-          comment = "The clipboard's history, searched as you type.";
+          comment = "A fast clipboard history, searched as you type.";
           exec = "papier";
           icon = "papier";
           categories = ["Utility"];
@@ -129,7 +129,7 @@
       '';
 
       meta = {
-        description = "The clipboard's history, searched as you type.";
+        description = "A fast clipboard history, searched as you type.";
         homepage = "https://papier.sacha.house/";
         license = lib.licenses.mit;
         platforms = [system];

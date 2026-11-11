@@ -1,2 +1,2 @@
 name=papier
-description=The clipboard's history, searched as you type.
+description=A fast clipboard history, searched as you type.

@@ -19,7 +19,7 @@ SITE_META :: tk_site.Meta{
 	url         = "https://papier.sacha.house/",
 	name        = "papier",
 	repository  = REPOSITORY,
-	tagline     = "The clipboard's history, searched as you type",
+	tagline     = "A fast clipboard history, searched as you type",
 	changes     = CHANGELOG,
 	card        = "img/main.png",
 	logo        = "img/logo.png",

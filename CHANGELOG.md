@@ -3,6 +3,11 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.17.5] - 2026-11-11
+
+### Changed
+- **A clearer command palette**: a magnifier before the search and the number of results at the end of its line, a line under it, the selected command in a dark well with a bar of the accent, and what the search found readable, in the palette and in the list.
+
 ## [0.17.4] - 2026-11-11
 
 ### Changed
@@ -310,6 +315,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.17.5]: https://github.com/sachahjkl/papier/releases/tag/v0.17.5
 [0.17.4]: https://github.com/sachahjkl/papier/releases/tag/v0.17.4
 [0.1.0]: https://github.com/sachahjkl/papier/releases/tag/v0.1.0
 [0.1.1]: https://github.com/sachahjkl/papier/releases/tag/v0.1.1

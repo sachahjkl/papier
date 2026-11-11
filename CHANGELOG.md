@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-11
+
 ### Added
 - The edged finish (`picker.finish edged`: the machined reliefs drawn crisp, square corners) and the Console theme
   (gui_toolkit 0.187.0).
@@ -315,3 +317,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.14.0]: https://github.com/sachahjkl/papier/releases/tag/v0.14.0
 [0.15.0]: https://github.com/sachahjkl/papier/releases/tag/v0.15.0
 [0.16.0]: https://github.com/sachahjkl/papier/releases/tag/v0.16.0
+[0.17.0]: https://github.com/sachahjkl/papier/releases/tag/v0.17.0

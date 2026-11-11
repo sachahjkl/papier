@@ -337,8 +337,10 @@ build_list :: proc(app: ^App, em: f32) {
 			if e.kind != .Image || !thumb_mark(app, e, em * MARK_EM) {
 				if ui.tags("weak") { glyph(app, KIND_ICONS[e.kind], em * MARK_EM) }
 			}
-			ui.next({width = ui.fill(), height = ui.pct(1)})
-			ui.label(fmt.tprintf("%s###t", shown_text(one_line(e.preview, 200))))
+			// (the search's words lit in the line)
+			line := shown_text(one_line(e.preview, 200))
+			ui.next({width = ui.fill()})
+			ui.matched_label("###t", line, ui.word_ranges(line, app.query))
 			if e.pinned { glyph(app, lucide.PIN, em * 1.6, ui.color("accent")) }
 			if i < 9 && len(app.query) == 0 {
 				if ui.tags("weak") {

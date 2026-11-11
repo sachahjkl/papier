@@ -13,17 +13,17 @@ APP_NAME :: "papier"
 
 // The preferences of every system; each system adds its own (settings_linux.odin, settings_windows.odin).
 PREF_DEFS := [?]config.Def{
-	{name = "paste.on_select", category = "paste", description = "An entry chosen (Enter, a double click, Alt+1…9) is pasted into the program papier was called from: the window hides and papier presses the paste keys there.", kind = .Bool, default = {b = true}},
-	{name = "paste.keys", category = "paste", description = "The keys papier presses to paste: Ctrl+V in most programs, Ctrl+Shift+V in a terminal, Shift+Insert in both on many systems.", kind = .String, default = {s = "Ctrl+V"}},
-	{name = "picker.close_on_copy", category = "window", description = "Close the picker when an entry is copied.", kind = .Bool, default = {b = true}},
-	{name = "picker.theme", category = "appearance", description = "The window's colours: Papier, or a theme of the toolkit by its name (Midnight, Nord, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine...).", kind = .String, default = {s = "Papier"}},
-	{name = "picker.mode", category = "appearance", description = "The theme's version: the system's (light or dark, followed as it changes), dark, or light.", kind = .String, default = {s = "system"}, choices = {"system", "dark", "light"}},
-	{name = "picker.finish", category = "appearance", description = "How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines (flat in a light version). Flat: plain surfaces and thin lines.", kind = .String, default = {s = "machined"}, choices = {"machined", "flat", "gradient", "glass"}},
-	{name = "picker.glow", category = "appearance", description = "The halos of the machined finish: a focused field's ring of light.", kind = .Bool, default = {b = true}},
-	{name = "picker.width", category = "window", description = "The picker's width, in logical pixels.", kind = .Int, default = {i = 900}, min = 320, max = 4000, bounded = true},
-	{name = "picker.height", category = "window", description = "The picker's height, in logical pixels.", kind = .Int, default = {i = 560}, min = 240, max = 4000, bounded = true},
-	{name = "update.auto", category = "updates", description = "The installed papier checks for a newer one once a day and installs it, then gives way to it when its window is hidden. A copy installed by a package manager (Nix) is updated by it.", kind = .Bool, default = {b = true}},
-	{name = "picker.font_size", category = "appearance", description = "The picker's text size, in logical pixels.", kind = .Float, default = {f = 14}, min = 8, max = 40, bounded = true},
+	{name = "paste.on_select", category = "paste", description = "An entry chosen (Enter, a double click, Alt+1…9) is pasted into the program papier was called from: the window hides and papier presses the paste keys there.", kind = .Bool, default = {b = true}, tags = {"auto paste", "insert", "type"}},
+	{name = "paste.keys", category = "paste", description = "The keys papier presses to paste: Ctrl+V in most programs, Ctrl+Shift+V in a terminal, Shift+Insert in both on many systems.", kind = .String, default = {s = "Ctrl+V"}, tags = {"ctrl+v", "terminal", "shortcut"}},
+	{name = "picker.close_on_copy", category = "window", description = "Close the picker when an entry is copied.", kind = .Bool, default = {b = true}, tags = {"hide", "dismiss"}},
+	{name = "picker.theme", category = "appearance", description = "The window's colours: Papier, or a theme of the toolkit by its name (Midnight, Nord, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine...).", kind = .String, default = {s = "Papier"}, tags = {"colours", "colors", "palette", "dark", "light", "look"}},
+	{name = "picker.mode", category = "appearance", description = "The theme's version: the system's (light or dark, followed as it changes), dark, or light.", kind = .String, default = {s = "system"}, choices = {"system", "dark", "light"}, tags = {"dark", "light", "night", "day"}},
+	{name = "picker.finish", category = "appearance", description = "How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines (flat in a light version). Flat: plain surfaces and thin lines.", kind = .String, default = {s = "machined"}, choices = {"machined", "flat", "gradient", "glass"}, tags = {"style", "look", "bevel", "flat"}},
+	{name = "picker.glow", category = "appearance", description = "The halos of the machined finish: a focused field's ring of light.", kind = .Bool, default = {b = true}, tags = {"halo", "light", "focus"}},
+	{name = "picker.width", category = "window", description = "The picker's width, in logical pixels.", kind = .Int, default = {i = 900}, min = 320, max = 4000, bounded = true, tags = {"size", "window"}},
+	{name = "picker.height", category = "window", description = "The picker's height, in logical pixels.", kind = .Int, default = {i = 560}, min = 240, max = 4000, bounded = true, tags = {"size", "window"}},
+	{name = "update.auto", category = "updates", description = "The installed papier checks for a newer one once a day and installs it, then gives way to it when its window is hidden. A copy installed by a package manager (Nix) is updated by it.", kind = .Bool, default = {b = true}, tags = {"upgrade", "version", "automatic"}},
+	{name = "picker.font_size", category = "appearance", description = "The picker's text size, in logical pixels.", kind = .Float, default = {f = 14}, min = 8, max = 40, bounded = true, tags = {"text size", "zoom", "bigger", "smaller"}},
 }
 
 // The values the program reads, copied out of the registry (prefs_read).

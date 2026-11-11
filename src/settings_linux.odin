@@ -8,18 +8,18 @@ import "core:strings"
 import config "gt:config"
 
 PREF_DEFS_SYSTEM := [?]config.Def{
-	{name = "history.max_entries", category = "history", description = "How many entries the history keeps, pinned ones aside. 0: no limit.", kind = .Int, default = {i = 1000}, min = 0, max = 1_000_000, bounded = true},
-	{name = "history.max_age_days", category = "history", description = "Entries older than this many days go, pinned ones aside. 0: no limit.", kind = .Int, default = {i = 0}, min = 0, max = 36500, bounded = true, unit = "days"},
-	{name = "history.persist", category = "history", description = "Keep the history on the disk across sessions. Off: it lives in $XDG_RUNTIME_DIR and goes at logout.", kind = .Bool, default = {b = true}, restart = true},
+	{name = "history.max_entries", category = "history", description = "How many entries the history keeps, pinned ones aside. 0: no limit.", kind = .Int, default = {i = 1000}, min = 0, max = 1_000_000, bounded = true, tags = {"limit", "count", "size"}},
+	{name = "history.max_age_days", category = "history", description = "Entries older than this many days go, pinned ones aside. 0: no limit.", kind = .Int, default = {i = 0}, min = 0, max = 36500, bounded = true, unit = "days", tags = {"expire", "age", "old"}},
+	{name = "history.persist", category = "history", description = "Keep the history on the disk across sessions. Off: it lives in $XDG_RUNTIME_DIR and goes at logout.", kind = .Bool, default = {b = true}, restart = true, tags = {"disk", "save", "keep", "reboot"}},
 	{name = "capture.text", category = "capture", description = "Record text.", kind = .Bool, default = {b = true}},
 	{name = "capture.html", category = "capture", description = "Record the HTML that comes with a copy from a browser or an editor.", kind = .Bool, default = {b = true}},
 	{name = "capture.image", category = "capture", description = "Record images.", kind = .Bool, default = {b = true}},
 	{name = "capture.files", category = "capture", description = "Record files copied in a file manager.", kind = .Bool, default = {b = true}},
-	{name = "capture.primary", category = "capture", description = "Also record the primary selection (the text selected with the mouse).", kind = .Bool, default = {b = false}},
-	{name = "capture.size_limit", category = "capture", description = "A representation larger than this is not recorded.", kind = .Int, default = {i = 64 << 20}, min = 1024, max = 2 << 30, bounded = true, bytes = true, unit = "bytes"},
-	{name = "capture.ignore_secrets", category = "capture", description = "Do not record what a password manager marks as secret (x-kde-passwordManagerHint).", kind = .Bool, default = {b = true}},
+	{name = "capture.primary", category = "capture", description = "Also record the primary selection (the text selected with the mouse).", kind = .Bool, default = {b = false}, tags = {"selection", "middle click"}},
+	{name = "capture.size_limit", category = "capture", description = "A representation larger than this is not recorded.", kind = .Int, default = {i = 64 << 20}, min = 1024, max = 2 << 30, bounded = true, bytes = true, unit = "bytes", tags = {"large", "limit", "bytes"}},
+	{name = "capture.ignore_secrets", category = "capture", description = "Do not record what a password manager marks as secret (x-kde-passwordManagerHint).", kind = .Bool, default = {b = true}, tags = {"password", "private", "keepass"}},
 	{name = "capture.ignore_mimes", category = "capture", description = "MIME types, separated by commas: a copy that offers one of them is not recorded.", kind = .String, default = {s = ""}},
-	{name = "clipboard.keep", category = "capture", description = "When the program that owned the clipboard quits and empties it, put the last entry back.", kind = .Bool, default = {b = true}},
+	{name = "clipboard.keep", category = "capture", description = "When the program that owned the clipboard quits and empties it, put the last entry back.", kind = .Bool, default = {b = true}, tags = {"restore", "persist"}},
 }
 
 prefs_read_system :: proc(p: ^config.Prefs, s: ^Settings, allocator := context.allocator) {

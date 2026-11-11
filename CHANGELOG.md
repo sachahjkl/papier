@@ -5,6 +5,11 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- The search lights its words in the list, the palette and the settings (gui_toolkit 0.184.0).
+- Actions and settings have other words they are found by: "delete" finds Remove, "dark" the theme, "hotkey" the
+  shortcut (gui_toolkit 0.183.0: tags).
+
 ## [0.14.0] - 2026-11-11
 
 ### Added

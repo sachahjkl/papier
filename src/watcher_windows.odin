@@ -103,11 +103,11 @@ watcher_message :: proc(user: rawptr, message: []byte) {
 watcher_apply :: proc(wt: ^Watcher, c: Command) {
 	switch c.verb {
 	case .Ping:
-	case .Show:   watcher_request(wt, .Show)
+	case .Show:   watcher_token(wt, c.token); watcher_request(wt, .Show)
 	case .Hide:   watcher_request(wt, .Hide)
-	case .Toggle: watcher_request(wt, .Toggle)
+	case .Toggle: watcher_token(wt, c.token); watcher_request(wt, .Toggle)
 	case .Quit:   watcher_request(wt, .Quit)
-	case .Setup:  watcher_request(wt, .Setup)
+	case .Setup:  watcher_token(wt, c.token); watcher_request(wt, .Setup)
 	case .Refresh: watcher_refresh(wt)
 	case .Copy:
 		if !history.system_copy(c.id) { errf("papier: entry %d cannot be put on the clipboard", c.id); break }

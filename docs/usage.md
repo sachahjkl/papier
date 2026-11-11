@@ -38,10 +38,20 @@ full beside the list.
 | Ctrl+E | edits the entry (text and rich text) |
 | Ctrl+O | opens the entry |
 | Ctrl+S | saves the entry into a file |
+| Ctrl+Shift+Q | shows the entry as a QR code, for a phone's camera |
+| Ctrl+click, Shift+click | marks entries: Enter copies their texts as one, Ctrl+P pins them, Shift+Delete removes them |
+| Ctrl+Shift+A | marks every entry shown |
+| Ctrl+K, Ctrl+Shift+P | the command palette: every action, searched as you type |
+| F1 | the sheet of the keys |
 | a right click, Menu, Shift+F10 | the entry's menu |
-| Escape | clears the search; when it is empty, hides the window |
+| a drag of an entry | out of the window, into another program: its text, its picture, its files |
+| Escape | clears the marks, then the search; when both are empty, hides the window |
 
-The buttons beside the entry copy, pin and remove it. The splitter between the list and the entry sets the width of the
+Code (the shell, Python, SQL, Odin, Go, Rust, C, JavaScript, PowerShell, JSON) is shown in colours, its language named
+in the entry's header. Papier finds the language from the text itself (gui_toolkit's `syntax.guess`); the edit view keeps
+the colours.
+
+The buttons beside the entry copy, edit, show as a QR code, pin and remove it. The splitter between the list and the entry sets the width of the
 list. Papier remembers the size of the window, its place (X11 only: on Wayland the compositor places windows) and the
 width of the list.
 
@@ -57,9 +67,25 @@ width of the list.
 | Open | opens an address in the browser, a copied file with its program, anything else as a file of its type |
 | Open with | the applications that your system knows for the type of the entry; the default is marked |
 | Show in folder | a copied file: opens its folder |
+| Show as a QR code | text, an address or a path: a QR code in a dialog |
 | Save as… | writes the bytes of the entry into a file that you name |
 | Pin, Unpin | pins or unpins the entry |
 | Remove | removes the entry |
+
+With several entries marked, the menu acts on all of them: copy their texts as one, pin or unpin them, remove them.
+
+## The command palette
+
+![The command palette](screenshots/palette.png)
+
+Ctrl+K opens every action of papier in a dialog, under their groups: the entry's, the marks', the filters', papier's own
+(the settings, the setup, a check for updates, the sheet of the keys). Type to keep the ones whose words begin as typed;
+Enter runs the first. An action that cannot act now is grey. The palette's keys, the menus' and the tooltips' come from
+one table (`src/actions.odin`).
+
+## A QR code
+
+![An entry as a QR code](screenshots/qr.png)
 
 To open an entry that is not a file, papier writes it to `$XDG_RUNTIME_DIR/papier/open/papier-<id>.<extension>`: a
 program needs a file. The session's runtime folder is yours alone and empty at the next session.

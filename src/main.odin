@@ -10,6 +10,7 @@ import "core:strconv"
 import "core:strings"
 import config "gt:config"
 import instance "gt:instance"
+import "gt:platform"
 import "history"
 
 APP_VERSION :: "0.11.0"
@@ -78,6 +79,10 @@ run :: proc(all_args: []string) -> int {
 start :: proc(prefs: ^config.Prefs, verb: string) -> int {
 	hidden := verb == "--hidden"
 	message := hidden ? "ping" : verb == "toggle" ? "toggle" : verb == "--setup" ? "setup" : "show"
+	// (Wayland: the launcher's token goes with it, so the running papier's window gets the keyboard)
+	if token := platform.activation_token_from_env(context.temp_allocator); token != "" && !hidden && !strings.contains_any(token, " \n") {
+		message = fmt.tprintf("%s %s", message, token)
+	}
 	outcome, owner := instance.acquire({name = DAEMON_NAME, wait_ms = 1500}, transmute([]u8)message)
 	switch outcome {
 	case .First:          return app_run(prefs, hidden, owner, setup_asked = verb == "--setup")

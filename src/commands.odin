@@ -27,10 +27,15 @@ Command :: struct {
 	id:   u64,
 	text: string,   // Add_Text, Replace_Text: the text (the queue owns its copy: watcher_send)
 	paste: bool,    // Copy, Copy_Plain, Add_Text: once on the clipboard, the window pastes it (Request.Paste)
+	token: string,  // Show, Toggle, Setup: the activation token the launcher gave the second start ("" none; Wayland)
 }
+
+// The verbs that may carry an activation token: the window comes up with it.
+VERBS_WITH_TOKEN :: bit_set[Verb]{.Show, .Toggle, .Setup}
 
 command_format :: proc(c: Command, allocator := context.temp_allocator) -> string {
 	if c.verb in VERBS_WITH_ID { return fmt.aprintf("%s %d", COMMAND_NAMES[c.verb], c.id, allocator = allocator) }
+	if c.verb in VERBS_WITH_TOKEN && c.token != "" { return fmt.aprintf("%s %s", COMMAND_NAMES[c.verb], c.token, allocator = allocator) }
 	return strings.clone(COMMAND_NAMES[c.verb], allocator)
 }
 
@@ -43,6 +48,8 @@ command_parse :: proc(text: string) -> (c: Command, ok: bool) {
 		if v in VERBS_WITH_ID {
 			if len(f) != 2 { return }
 			c.id = strconv.parse_u64(f[1]) or_return
+		} else if v in VERBS_WITH_TOKEN && len(f) == 2 {
+			c.token = f[1]   // (the message's own bytes: watcher_token keeps a copy)
 		} else if len(f) != 1 {
 			return
 		}

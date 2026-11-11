@@ -84,6 +84,23 @@ run_shots :: proc(args: []string) -> int {
 	cdp.wait_for(&c, "Editing", SESSION_WAIT)
 	shot(&c, out, "edit", &failed)
 	cdp.key(&c, "Escape")
+	cdp.wait_for(&c, "Editing", SESSION_WAIT, gone = true)
+	// the command palette, searched
+	cdp.key(&c, "ctrl+k")
+	cdp.wait_for(&c, "Keyboard shortcuts", SESSION_WAIT)
+	cdp.type_text(&c, "pin")
+	cdp.wait_for(&c, "Show every entry", SESSION_WAIT, gone = true)
+	shot(&c, out, "palette", &failed)
+	cdp.key(&c, "Escape")
+	cdp.wait_for(&c, "Keyboard shortcuts", SESSION_WAIT, gone = true)
+	// the address as a QR code
+	cdp.type_text(&c, "github")
+	cdp.wait_for(&c, "proc fibonacci", SESSION_WAIT, gone = true)
+	cdp.key(&c, "ctrl+shift+q")
+	shot(&c, out, "qr", &failed)
+	cdp.key(&c, "Escape")
+	cdp.key(&c, "Escape")   // (the search, cleared)
+	cdp.wait_for(&c, "proc fibonacci", SESSION_WAIT)
 	// the settings
 	cdp.key(&c, "ctrl+,")
 	cdp.wait_for(&c, "Max entries", SESSION_WAIT, gone = true)   // (the first page: Appearance)
@@ -106,7 +123,7 @@ run_shots :: proc(args: []string) -> int {
 
 	// the site shows the same pictures
 	_ = os.make_directory_all(SHOTS_SITE)
-	for name in ([]string{"main", "images", "search", "menu", "edit", "settings", "light"}) {
+	for name in ([]string{"main", "images", "search", "menu", "edit", "palette", "qr", "settings", "light"}) {
 		data, err := os.read_entire_file(fmt.tprintf("%s/%s.png", out, name), context.temp_allocator)
 		if err == nil { _ = os.write_entire_file(fmt.tprintf("%s/%s.png", SHOTS_SITE, name), data) }
 	}

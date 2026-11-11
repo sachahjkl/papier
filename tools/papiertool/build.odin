@@ -132,8 +132,7 @@ run_build :: proc(args: []string) -> int {
 VERSION_H :: "build/version.h"
 
 write_version_header :: proc() -> bool {
-	source, _ := os.read_entire_file(VERSION_FILE, context.temp_allocator)
-	if why := toolbox.write_version_header(VERSION_H, version_of(string(source))); why != "" {
+	if why := toolbox.write_version_header(VERSION_H, app_version()); why != "" {
 		fmt.eprintfln("papiertool: %s", why)
 		return false
 	}
@@ -165,8 +164,7 @@ run_check :: proc(args: []string) -> int {
 check_launcher :: proc() -> int {
 	when ODIN_OS == .Windows {
 		out, code := toolbox.capture({LAUNCHER_OUT, "version"})
-		source, _ := os.read_entire_file(VERSION_FILE, context.temp_allocator)
-		want := fmt.tprintf("papier %s", version_of(string(source)))
+		want := fmt.tprintf("papier %s", app_version())
 		if code != 0 || strings.trim_space(out) != want {
 			fmt.eprintfln("papiertool: papier.com version gave %q (exit code %d), not %q", strings.trim_space(out), code, want)
 			return 1

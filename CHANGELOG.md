@@ -6,6 +6,18 @@ and the versions follow [semantic versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Code in colours: a copied script, query or snippet (the shell, Python, SQL, Odin, Go, Rust, C, JavaScript, PowerShell,
+  JSON) is shown in the theme's colours, its language found from the text and named in the entry's header; the edit
+  view keeps the colours (gui_toolkit 0.176.0: `syntax.guess`, `ui.code_runs`).
+- The command palette (Ctrl+K, Ctrl+Shift+P): every action, searched as you type; F1 shows every key. The palette, the
+  menus, the tooltips and the keys come from one table of actions.
+- Several entries at once: a Ctrl or Shift click marks entries, Ctrl+Shift+A marks all; Enter copies their texts as one
+  new entry, Ctrl+P pins them, Shift+Delete removes them; the menu acts on them.
+- An entry as a QR code (Ctrl+Shift+Q, the menu, the button beside the entry): text, an address, a path, for a phone.
+- An entry dragged out of the list into another program: its text, its markup, its picture, its files.
+- Middle-click autoscroll in the list, the preview and the settings (gui_toolkit 0.174.0).
+- Linux (Wayland): `papier toggle` from a launcher hands its activation token to the running papier, whose window gets
+  the keyboard even from a strict compositor.
 - The search field and the editor have a menu on a right click: Undo, Redo, Cut, Copy, Paste, Delete, Select all
   (gui_toolkit 0.172.0).
 

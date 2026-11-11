@@ -120,11 +120,11 @@ watcher_apply :: proc(wt: ^Watcher, c: Command) {
 	changed := false
 	switch c.verb {
 	case .Ping, .Refresh:   // (the history is papier's own: always up to date)
-	case .Show:   watcher_request(wt, .Show)
+	case .Show:   watcher_token(wt, c.token); watcher_request(wt, .Show)
 	case .Hide:   watcher_request(wt, .Hide)
-	case .Toggle: watcher_request(wt, .Toggle)
+	case .Toggle: watcher_token(wt, c.token); watcher_request(wt, .Toggle)
 	case .Quit:   watcher_request(wt, .Quit)
-	case .Setup:  watcher_request(wt, .Setup)
+	case .Setup:  watcher_token(wt, c.token); watcher_request(wt, .Setup)
 	case .Copy, .Copy_Plain:
 		served, moved := watcher_serve(wt, c.id, true, plain = c.verb == .Copy_Plain)
 		changed = moved

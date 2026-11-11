@@ -2,6 +2,9 @@ package papier
 
 // The menu of an entry: a right click on its row, or the Menu key / Shift+F10 on the selected one. What it does:
 //
+// Its items are the actions of actions.odin (their labels, keys and icons). With several entries marked, it offers what
+// acts on all of them: copy their texts as one, pin, remove.
+//
 //   Copy                 Enter         the entry back on the clipboard
 //   Copy as plain text                 its text only, without its rich text (rich text only)
 //   Edit…                Ctrl+E        the edit view (text and rich text)
@@ -58,14 +61,21 @@ entry_menu_build :: proc(app: ^App, em: f32) {
 		at := history.find(&app.store, m.id)
 		if at < 0 { ui.ctx_menu_close(); return }
 		e := &app.store.entries[at]
-		text_kind := e.kind == .Text || e.kind == .Html
-		if ui.menu_item("Copy", "Enter").clicked { entry_copy(app, e.id) }
-		if e.kind == .Html && history.rep_find(e^, TEXT_MIME) >= 0 {
-			if ui.menu_item("Copy as plain text").clicked { entry_copy(app, e.id, plain = true) }
+		// (several marked: what acts on all of them; else the entry's own items)
+		if n := ui.list_mark_count(&app.vl); n > 1 {
+			item(app, .Copy, fmt.tprintf("Copy the %d texts as one", n))
+			ui.menu_separator()
+			if PINS { item(app, .Pin, fmt.tprintf("Pin or unpin the %d entries", n)) }
+			item(app, .Remove, fmt.tprintf("Remove the %d entries", n))
+			item(app, .Clear_Marks)
+			return
 		}
-		if ui.menu_item("Edit…", "Ctrl+E", enabled = text_kind).clicked { edit_begin(app, e) }
+		item(app, .Copy)
+		if action_enabled(app, .Copy_Plain) { item(app, .Copy_Plain) }
+		item(app, .Edit)
+		item(app, .Show_QR)
 		ui.menu_separator()
-		if ui.menu_item("Open", "Ctrl+O").clicked { entry_open(app, e) }
+		item(app, .Open)
 		if ui.menu_submenu("Open with", enabled = len(m.handlers) > 0) {
 			for h in m.handlers {
 				label := h.default ? fmt.tprintf("%s (default)", h.name) : h.name
@@ -77,11 +87,18 @@ entry_menu_build :: proc(app: ^App, em: f32) {
 				if !platform.reveal_in_folder(entry_file_name(e)) { say(app, "The file manager does not start") }
 			}
 		}
-		if ui.menu_item("Save as…", "Ctrl+S", enabled = e.kind != .Files).clicked { entry_save_as(app, e) }
+		item(app, .Save_As)
 		ui.menu_separator()
-		if PINS && ui.menu_item(e.pinned ? "Unpin" : "Pin", "Ctrl+P").clicked { toggle_pin(app, e) }
-		if ui.menu_item("Remove", "Shift+Del").clicked { remove_entry(app, e.id) }
+		if PINS { item(app, .Pin, e.pinned ? "Unpin" : "Pin") }
+		item(app, .Remove)
 	}
+}
+
+// A line of the menu: an action, its keys and its icon from the table (actions.odin), greyed when it cannot act.
+@(private = "file")
+item :: proc(app: ^App, a: Action, label := "") {
+	c := ACTIONS[a]
+	if ui.menu_item(label != "" ? label : c.label, ui.command_shortcut(c), enabled = action_enabled(app, a), icon = c.icon).clicked { action_run(app, a) }
 }
 
 ////////////////////////////////

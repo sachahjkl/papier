@@ -87,7 +87,10 @@ edit_build :: proc(app: ^App, e: ^history.Entry, em: f32) {
 	if ui.row() {
 		ui.spacer(ui.px(em * 0.5))
 		ui.next({width = ui.fill(), height = ui.fill(), font = app.mono, font_size = em * 0.95})
-		res := ui.text_edit("###editor", &app.edit.area, "The entry's text", wrap = true)
+		// (code keeps its colours while it is edited)
+		hl: ^ui.Text_Highlight
+		if app.view.has_code && app.view.id == e.id { hl = ui.code_highlight(app.view.code) }
+		res := ui.text_edit("###editor", &app.edit.area, "The entry's text", wrap = true, highlight = hl)
 		if app.edit.fresh { ui.set_focus(res.box.key); app.edit.fresh = false }
 		if res.cancelled { edit_end(app) }
 		ui.spacer(ui.px(em * 0.5))

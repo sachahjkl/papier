@@ -69,6 +69,10 @@ App :: struct {
 	ids:        [dynamic]u64,       // their ids (the list's row identities)
 	view:       View,
 	thumbs:     Thumbs,             // the list's thumbnails (thumbs.odin)
+	palette:    ui.Command_Palette, // Ctrl+K: every action (actions.odin)
+	sheet_open: bool,               // F1: the sheet of the keys
+	qr:         Qr_View,            // an entry as a QR code (qr.odin)
+	drag_out:   u64,                // the entry dragged out of the list, run between two frames (drag.odin; 0: none)
 	menu:       Entry_Menu,         // the entry's menu (entry_menu.odin)
 	edit:       Edit,               // the edit view (edit.odin)
 	settings_open: bool,            // the settings in place of the history (settings_view.odin)
@@ -98,6 +102,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	app.place = state_load()
 
 	platform.set_app_id(APP_NAME)
+	platform.dragdrop_thread_init()   // (Windows: OLE, for an entry dragged out: drag.odin)
 	size := app.place.size != {} ? app.place.size : app.settings.size
 	if !host.host_open(&app.main, &app.shared, {title = "Papier", size = size, integrated_title = true}, view_build, app) {
 		errln("papier: no window")
@@ -107,7 +112,9 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	win := h.win
 	app.icons, _ = font.load_embedded(&app.shared.fonts, lucide.DATA)
 	app.mono, _ = font.load_embedded(&app.shared.fonts, font.FALLBACK_MONO_DATA)
-	h.state.icon_font, _ = font.load_embedded(&app.shared.fonts, ui.ICON_FONT_DATA)
+	// (Lucide: the icons of the palette and of the menus; the widgets' own marks have the toolkit's font)
+	h.state.icon_font = app.icons
+	app.vl.multi = true   // (a Ctrl or Shift click marks entries: actions.odin acts on them)
 	h.after_input = FRAMES_AFTER_INPUT
 	h.params = app_params
 	h.input = app_input
@@ -158,6 +165,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 		if view_decoded(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if thumbs_take(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if app.visible && !app.hide_due && !app.quit && !platform.is_closed(win) { host.host_frame(h) }
+		drag_run(app)
 		if app.hide_due { app_hide_now(app) }
 	}
 
@@ -191,6 +199,8 @@ app_free :: proc(app: ^App) {
 	delete(app.status)
 	ui.field_destroy(&app.search)
 	ui.vlist_destroy(&app.vl)
+	ui.field_destroy(&app.palette.field)
+	qr_destroy(app)
 	entry_menu_free(&app.menu)
 	ui.area_destroy(&app.edit.area)
 	prefs_page.destroy(&app.settings_page)
@@ -249,13 +259,18 @@ app_show :: proc(app: ^App) {
 	// (Windows: on the screen the user works on, not the one it was last shown on: picker.follow)
 	platform.move_to_active_monitor(app.main.win, app.settings.follow)
 	if app.visible {
-		platform.raise_window(app.main.win)
+		token := watcher_take_token(&app.watcher)
+		defer delete(token)
+		platform.raise_window_token(app.main.win, token)
 		app.main.settle = max(app.main.settle, FRAMES_AT_SHOW)
 		return
 	}
 	host.host_show(&app.main)
-	// the keyboard: a compositor may not focus a new window by itself (ShojiWM's Windows 7 configuration)
-	platform.raise_window(app.main.win)
+	// the keyboard: a compositor may not focus a new window by itself (ShojiWM's Windows 7 configuration); with the
+	// token a second start handed, a strict one does too
+	token := watcher_take_token(&app.watcher)
+	defer delete(token)
+	platform.raise_window_token(app.main.win, token)
 	app.visible = true
 	app.main.settle = max(app.main.settle, FRAMES_AT_SHOW)
 }

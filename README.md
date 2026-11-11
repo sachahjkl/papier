@@ -30,6 +30,11 @@ lives in the notification area, sleeps at 0 % CPU, and its window comes up in a 
 - **An entry's menu** (right click, Menu key): copy, copy as plain text, edit, open, open with any application your
   system knows for its type, show in folder, save as.
 - **Edit an entry**: its text in an editor; copy what you edited, or save it in place of the entry.
+- **Code in colours**: a copied script, query or snippet is shown in colours, its language found from the text.
+- **Thumbnails**: an image's row shows a small picture of it.
+- **A command palette** (Ctrl+K) with every action, and the sheet of the keys (F1).
+- **Several entries at once**: Ctrl or Shift click marks entries; copy their texts as one, pin them, remove them.
+- **Drag an entry out** into another program, or **show it as a QR code** for your phone.
 - **Secrets stay secret**: what a password manager marks (`x-kde-passwordManagerHint`) is never recorded.
 - **The clipboard kept**: when the program you copied from quits, the last entry goes back.
 - **Light**: 0 % CPU at rest, a list that builds only the rows in view, the same bytes stored once.
@@ -79,7 +84,10 @@ Sway, older Hyprland, KDE and NixOS: [docs/desktop.md](docs/desktop.md).
 | Tab, Shift+Tab | the next, the previous filter |
 | Ctrl+P | pin |
 | Shift+Delete | remove |
-| Escape | clear the search, then hide |
+| Ctrl+click, Shift+click | mark several entries |
+| Ctrl+K | the command palette |
+| F1 | every key |
+| Escape | clear the marks, the search, then hide |
 
 ```sh
 papier list             # the newest entries

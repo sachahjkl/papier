@@ -22,6 +22,7 @@ import "gt:draw"
 import "gt:host"
 import "gt:platform"
 import "gt:render"
+import syntax "gt:syntax"
 import "gt:ui"
 import "history"
 import lucide "gt:lucide"
@@ -64,6 +65,8 @@ View :: struct {
 	has_tex: bool,
 	loading: bool,              // its picture is being decoded (decoder.odin)
 	image:   int,               // the representation of the picture, in the entry's reps
+	code:    syntax.Language,   // the language its text is in (has_code: syntax.guess found one)
+	has_code: bool,
 }
 
 ////////////////////////////////
@@ -120,7 +123,6 @@ select_row :: proc(app: ^App, row: int) {
 	app.vl.reveal = REVEAL_BUILDS
 }
 
-@(private = "file")
 set_filter :: proc(app: ^App, f: Filter) {
 	if app.filter == f { return }
 	app.filter = f
@@ -147,33 +149,32 @@ remove_entry :: proc(app: ^App, id: u64) {
 // The keys of the window, taken before the search field sees them.
 @(private = "file")
 view_keys :: proc(app: ^App) {
-	if app.setup.open { return }   // (the dialog has the keyboard)
+	if app.setup.open || app.palette.open || app.sheet_open || app.qr.open { return }   // (a dialog has the keyboard)
 	if app.settings_open { settings_keys(app); return }
 	if app.edit.active { edit_keys(app); return }
-	if ui.key_press(.Comma, {.Ctrl}) { settings_toggle(app); return }
-	if ui.key_press(.Down) || ui.key_press(.N, {.Ctrl}) { select_row(app, app.vl.sel + 1) }
-	if ui.key_press(.Up) || ui.key_press(.P, {.Alt}) { select_row(app, app.vl.sel - 1) }
-	if ui.key_press(.Page_Down) { select_row(app, app.vl.sel + PAGE_ROWS) }
-	if ui.key_press(.Page_Up) { select_row(app, app.vl.sel - PAGE_ROWS) }
-	if ui.key_press(.Home, {.Ctrl}) { select_row(app, 0) }
-	if ui.key_press(.End, {.Ctrl}) { select_row(app, len(app.shown) - 1) }
-	if ui.key_press(.Tab) { set_filter(app, Filter((int(app.filter) + 1) % FILTER_COUNT)) }
-	if ui.key_press(.Tab, {.Shift}) { set_filter(app, Filter((int(app.filter) + FILTER_COUNT - 1) % FILTER_COUNT)) }
-	if ui.key_press(.Return) { if e := selected(app); e != nil { entry_copy(app, e.id) } }
+	// (the moves of the selection: a move clears the marks, as the list's own keys do)
+	moved := false
+	if ui.key_press(.Down) || ui.key_press(.N, {.Ctrl}) { select_row(app, app.vl.sel + 1); moved = true }
+	if ui.key_press(.Up) || ui.key_press(.P, {.Alt}) { select_row(app, app.vl.sel - 1); moved = true }
+	if ui.key_press(.Page_Down) { select_row(app, app.vl.sel + PAGE_ROWS); moved = true }
+	if ui.key_press(.Page_Up) { select_row(app, app.vl.sel - PAGE_ROWS); moved = true }
+	if ui.key_press(.Home, {.Ctrl}) { select_row(app, 0); moved = true }
+	if ui.key_press(.End, {.Ctrl}) { select_row(app, len(app.shown) - 1); moved = true }
+	if moved { ui.list_marks_clear(&app.vl) }
 	digits := [9]platform.Key{.N1, .N2, .N3, .N4, .N5, .N6, .N7, .N8, .N9}
 	for k, i in digits {
 		if ui.key_press(k, {.Alt}) && i < len(app.shown) { entry_copy(app, app.store.entries[app.shown[i]].id) }
 	}
-	if PINS && ui.key_press(.P, {.Ctrl}) { if e := selected(app); e != nil { toggle_pin(app, e) } }
-	if ui.key_press(.Delete, {.Shift}) { if e := selected(app); e != nil { remove_entry(app, e.id) } }
-	if ui.key_press(.E, {.Ctrl}) { if e := selected(app); e != nil { edit_begin(app, e) } }
-	if ui.key_press(.O, {.Ctrl}) { if e := selected(app); e != nil { entry_open(app, e) } }
-	if ui.key_press(.S, {.Ctrl}) { if e := selected(app); e != nil && e.kind != .Files { entry_save_as(app, e) } }
+	actions_keys(app)
 	if ui.key_press(.Menu) || ui.key_press(.F10, {.Shift}) {
 		if e := selected(app); e != nil { entry_menu_open(app, e, {app.sel_rect.min.x + 24, app.sel_rect.max.y}, from_keyboard = true) }
 	}
 	if ui.key_press(.Escape) {
-		if len(app.search.buf) > 0 { ui.field_clear(&app.search) } else { app_hide(app) }
+		switch {
+		case ui.list_mark_count(&app.vl) > 0: ui.list_marks_clear(&app.vl)
+		case len(app.search.buf) > 0:         ui.field_clear(&app.search)
+		case:                                 app_hide(app)
+		}
 	}
 }
 
@@ -186,12 +187,15 @@ view_build :: proc(h: ^host.Host, size: host.Vec2) {
 	app.room = size.x / max(ui.scale(), 0.01)
 	app_shortcut_follow(app)
 	// the keyboard is the search's, unless the edit view or the settings have it
-	if !app.edit.active && !app.settings_open && app.search_key != 0 && ui.focus_key() != app.search_key { ui.set_focus(app.search_key) }
+	dialog := app.palette.open || app.sheet_open || app.qr.open || app.setup.open
+	if !app.edit.active && !app.settings_open && !dialog && app.search_key != 0 && ui.focus_key() != app.search_key { ui.set_focus(app.search_key) }
 	view_keys(app)
 	ui.next({width = ui.fill(), height = ui.fill(), axis = .Y})
 	page := ui.build_box({.Draw_Background}, "###page")
 	if ui.parent(page) { build_page(app, em) }
 	entry_menu_build(app, em)
+	actions_build(app)
+	qr_build(app, em)
 	setup_build(app, em)
 }
 
@@ -348,6 +352,7 @@ build_list :: proc(app: ^App, em: f32) {
 		}
 		if i == app.vl.sel { app.sel_rect = row.box.rect }
 		if row.double_clicked { entry_copy(app, e.id) }
+		drag_watch(app, row, e)
 		if row.right_clicked {
 			select_row(app, i)
 			entry_menu_open(app, e, ui.mouse_pos())
@@ -427,6 +432,8 @@ view_load :: proc(app: ^App, e: ^history.Entry) {
 		text := string(data[:min(len(data), VIEW_TEXT_MAX_BYTES)])
 		for len(text) > 0 && !utf8.valid_string(text) { text = text[:len(text) - 1] }   // (cut inside a character)
 		app.view.text = strings.clone(text)
+		// (code: shown in the theme's colours, its language named in the header)
+		if e.kind == .Text { app.view.code, app.view.has_code = syntax.guess(app.view.text) }
 	}
 }
 
@@ -491,15 +498,17 @@ build_view_body :: proc(app: ^App, em: f32) {
 		if ui.tags("weak") {
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			if ui.style({font_size = em * 0.88}) {
-				ui.label(fmt.tprintf("%s · %d type%s · %s ago###meta", size_text(history.entry_size(e^)), len(e.reps), len(e.reps) == 1 ? "" : "s", age_text(now_ms() - e.time_ms)))
+				lang := app.view.has_code ? fmt.tprintf("%s · ", app.view.code.label) : ""
+				ui.label(fmt.tprintf("%s%s · %d type%s · %s ago###meta", lang, size_text(history.entry_size(e^)), len(e.reps), len(e.reps) == 1 ? "" : "s", age_text(now_ms() - e.time_ms)))
 			}
 		}
-		if icon_action(app, "copy", lucide.COPY, "Copy (Enter)", em) { entry_copy(app, e.id) }
+		if icon_action(app, "copy", lucide.COPY, action_tip(.Copy), em) { entry_copy(app, e.id) }
 		if e.kind == .Text || e.kind == .Html {
-			if icon_action(app, "edit", lucide.EDIT, "Edit (Ctrl+E)", em) { edit_begin(app, e) }
+			if icon_action(app, "edit", lucide.EDIT, action_tip(.Edit), em) { edit_begin(app, e) }
 		}
-		if PINS && icon_action(app, "pin", e.pinned ? lucide.PIN_OFF : lucide.PIN, e.pinned ? "Unpin (Ctrl+P)" : "Pin (Ctrl+P)", em) { toggle_pin(app, e) }
-		if icon_action(app, "delete", lucide.TRASH_2, "Remove (Shift+Delete)", em) { remove_entry(app, e.id); return }
+		if qr_text(app, e) != "" && icon_action(app, "qr", lucide.QR_CODE, action_tip(.Show_QR), em) { qr_open(app, e) }
+		if PINS && icon_action(app, "pin", e.pinned ? lucide.PIN_OFF : lucide.PIN, fmt.tprintf("%s (%s)", e.pinned ? "Unpin" : "Pin", ui.command_shortcut(ACTIONS[.Pin])), em) { toggle_pin(app, e) }
+		if icon_action(app, "delete", lucide.TRASH_2, action_tip(.Remove), em) { remove_entry(app, e.id); return }
 		ui.spacer(ui.px(em * 0.4))
 	}
 	ui.hline(ui.fill())
@@ -529,7 +538,13 @@ build_view_body :: proc(app: ^App, em: f32) {
 			ui.spacer(ui.px(em * 0.8))
 			ui.next({width = ui.fill()})
 			if ui.style({font = app.mono, font_size = em * 0.95}) {
-				ui.paragraph(fmt.tprintf("%s###body%d", shown_text(app.view.text), e.id))
+				if app.view.has_code {
+					runs := make([dynamic]ui.Rich_Run, context.temp_allocator)
+					ui.code_runs(shown_text(app.view.text), app.view.code, {}, &runs)
+					ui.rich_paragraph(fmt.tprintf("###code%d", e.id), runs[:])
+				} else {
+					ui.paragraph(fmt.tprintf("%s###body%d", shown_text(app.view.text), e.id))
+				}
 			}
 			ui.spacer(ui.px(em * 0.8))
 		}

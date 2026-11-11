@@ -17,7 +17,7 @@ settings_toggle :: proc(app: ^App) {
 // The keys of the settings: Escape goes back, unless an editor of a preference has the keyboard (Escape gives it back to
 // the list first).
 settings_keys :: proc(app: ^App) {
-	if ui.key_press(.Comma, {.Ctrl}) { settings_toggle(app); return }
+	if ui.command_pressed(ACTIONS[.Settings]) { settings_toggle(app); return }
 	if ui.key_press(.Escape) && !prefs_page.editing(&app.settings_page) { app.settings_open = false }
 }
 

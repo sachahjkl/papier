@@ -56,3 +56,6 @@ app_restart :: proc(app: ^App) {
 	app.launch_hidden = true
 	app.quit = true
 }
+
+// "Check for updates" (the palette): asked, its answer said in the status bar whatever it is.
+update_check_asked :: proc(app: ^App) { update.check_now(app.updater) }

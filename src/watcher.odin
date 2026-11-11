@@ -35,6 +35,23 @@ Watcher :: struct {
 	version:   u64,                  // atomic: bumped after each change of the history
 	stop:      bool,                 // atomic
 	error:     string,               // why it stopped, when it did by itself (read after the thread ended)
+	token:     string,               // the last activation token a second start handed (owned; guarded by `mutex`)
+}
+
+// A second start's activation token, for the window's next show (Wayland: the compositor gives it the keyboard).
+watcher_token :: proc(wt: ^Watcher, token: string) {
+	if token == "" { return }
+	sync.guard(&wt.mutex)
+	delete(wt.token)
+	wt.token = strings.clone(token)
+}
+
+// The token handed since the last call ("" none; the caller owns it).
+watcher_take_token :: proc(wt: ^Watcher) -> string {
+	sync.guard(&wt.mutex)
+	t := wt.token
+	wt.token = ""
+	return t
 }
 
 // A command of the window, run by the watcher's thread.
@@ -87,6 +104,7 @@ watcher_free :: proc(wt: ^Watcher) {
 	delete(wt.asked)
 	settings_free(&wt.settings)
 	delete(wt.error)
+	delete(wt.token)
 }
 
 now_ms :: proc() -> i64 { return time.to_unix_nanoseconds(time.now()) / 1e6 }

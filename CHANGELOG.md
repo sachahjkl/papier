@@ -5,6 +5,8 @@ and the versions follow [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-11-11
+
 ### Fixed
 - Linux: a desktop whose portal says "no preference" for light or dark follows its GTK theme again (dark here): the
   window showed its light version, and the machined finish flat (gui_toolkit's `platform.dark_mode_preferred`).
@@ -329,3 +331,4 @@ and the versions follow [semantic versioning](https://semver.org/).
 [0.16.0]: https://github.com/sachahjkl/papier/releases/tag/v0.16.0
 [0.17.0]: https://github.com/sachahjkl/papier/releases/tag/v0.17.0
 [0.17.1]: https://github.com/sachahjkl/papier/releases/tag/v0.17.1
+[0.17.2]: https://github.com/sachahjkl/papier/releases/tag/v0.17.2

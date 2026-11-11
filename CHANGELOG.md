@@ -3,6 +3,12 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.17.4] - 2026-11-11
+
+### Changed
+- **Square rows**: a selected row of a list, a table or a menu fills its whole width with square corners, and a table's tinted cell is square too. The Console theme is named Kernel (gui_toolkit 0.191.1).
+- **The command palette's field stands out**: it keeps its place from edge to edge, on a darker background, so the place to type is clear.
+
 ## [0.17.3] - 2026-11-11
 
 ### Fixed
@@ -304,6 +310,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.17.4]: https://github.com/sachahjkl/papier/releases/tag/v0.17.4
 [0.1.0]: https://github.com/sachahjkl/papier/releases/tag/v0.1.0
 [0.1.1]: https://github.com/sachahjkl/papier/releases/tag/v0.1.1
 [0.1.2]: https://github.com/sachahjkl/papier/releases/tag/v0.1.2

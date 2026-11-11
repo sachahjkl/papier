@@ -23,7 +23,7 @@ odin run tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papierto
 | Command | What it does |
 |---|---|
 | `build [release]` | the toolkit's text library (when its sources changed), then `build/papier` |
-| `test` | the unit tests of `src`, `src/history` and the tool |
+| `test` | the unit tests of `src` and `src/history` |
 | `check` | `odin check -vet` of the program and the tool, the tests, a release build |
 | `live [--keep]` | the real program in a headless sway, driven through wl-clipboard and the DevTools protocol |
 | `shots [--out folder]` | the pictures of the README and the site, the program's own frames |

@@ -7,8 +7,10 @@ runs:
     - name: clang, fontconfig, unzip
       shell: bash
       run: |
-        sudo apt-get update -qq
-        sudo apt-get install -y -qq clang lld libfontconfig-dev unzip
+        # (a runner has sudo; a container runs as root without it)
+        SUDO="$(command -v sudo || true)"
+        $SUDO apt-get update -qq
+        $SUDO apt-get install -y -qq clang lld libfontconfig-dev unzip
 
     # (the archive kept between runs, keyed by this file, which names the version: GitHub's release downloads may not answer for
     # an hour, a 504 at each try. Its SHA-256 is checked below, whether it came from the cache or the download)

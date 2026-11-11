@@ -1,7 +1,7 @@
 name: CI
 
 # Every push to master and every pull request: papiertool check (odin check -vet of the program and the tool, the unit tests,
-# a release build), then papiertool live (the real program in a headless sway: the clipboard through wl-clipboard, the window
+# a release build), then papiertool live, in the flake's shell (the real program in a headless sway: the clipboard through wl-clipboard, the window
 # over the DevTools protocol, rendered by Mesa's lavapipe). The program is kept as an artifact.
 on:
   push:
@@ -17,6 +17,8 @@ permissions:
   contents: read
 
 jobs:
+  # Linux: the flake's development shell (nix develop), as on a developer's machine: Odin, cargo, sway, wl-clipboard,
+  # Mesa's lavapipe, from the NixOS cache. No distribution's package mirror in the way.
   linux:
     name: Linux x64
     runs-on: ubuntu-24.04
@@ -26,26 +28,24 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: ./.github/actions/setup-odin-linux
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
 
       # (the toolkit's text library: cargo's target directory, keyed by its sources)
       - uses: actions/cache@v4
         with:
-          path: |
-            ext/gui_toolkit/build/text
-            ~/.cargo/registry
-          key: text-linux-${{ hashFiles('ext/gui_toolkit/native/text/**') }}
+          path: ext/gui_toolkit/build/text
+          key: text-linux-nix-${{ hashFiles('ext/gui_toolkit/native/text/**', 'flake.lock') }}
 
-      - name: papiertool check
+      - name: papiertool check, live
         run: |
-          odin build tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papiertool -vet
-          build/papiertool check
-
-      - name: sway, wl-clipboard, lavapipe
-        run: sudo apt-get install -y -qq sway wl-clipboard mesa-vulkan-drivers libvulkan1 libxkbcommon0
-
-      - name: papiertool live
-        run: build/papiertool live --keep
+          nix develop --command sh -c '
+            set -e
+            mkdir -p build
+            odin build tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papiertool -vet
+            build/papiertool check
+            build/papiertool live --keep
+          '
 
       - uses: actions/upload-artifact@v4
         if: always()

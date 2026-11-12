@@ -3,6 +3,11 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.17.7] - 2026-11-12
+
+### Fixed
+- **The window at rest uses no processor again** (Wayland): since 0.17.6 an open window drew a new picture at every refresh, and kept a core busy. Also: the scroll bars look like a thing to take, the dialogs' rounded corners are clean, and a menu's search edits as a field does (gui_toolkit 0.199.0).
+
 ## [0.17.6] - 2026-11-12
 
 ### Changed
@@ -320,6 +325,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.17.7]: https://github.com/sachahjkl/papier/releases/tag/v0.17.7
 [0.17.6]: https://github.com/sachahjkl/papier/releases/tag/v0.17.6
 [0.17.5]: https://github.com/sachahjkl/papier/releases/tag/v0.17.5
 [0.17.4]: https://github.com/sachahjkl/papier/releases/tag/v0.17.4

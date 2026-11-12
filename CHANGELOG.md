@@ -3,6 +3,14 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.19.1] - 2026-11-12
+
+### Changed
+- **The machined finish in the light version too**: bevelled buttons, sunken fields and carved lines are drawn on the light themes as well, with light shadows and strong highlights, where they were drawn flat (gui_toolkit 0.229.0).
+
+### Fixed
+- **The settings say where the preferences file really is**: their foot showed `~/.config/papier/prefs` on Windows too, where the file is in `%APPDATA%\papier\prefs`.
+
 ## [0.19.0] - 2026-11-12
 
 ### Added
@@ -346,6 +354,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.19.1]: https://github.com/sachahjkl/papier/releases/tag/v0.19.1
 [0.19.0]: https://github.com/sachahjkl/papier/releases/tag/v0.19.0
 [0.18.1]: https://github.com/sachahjkl/papier/releases/tag/v0.18.1
 [0.18.0]: https://github.com/sachahjkl/papier/releases/tag/v0.18.0

@@ -13,7 +13,7 @@ import instance "gt:instance"
 import "gt:platform"
 import "history"
 
-APP_VERSION :: "0.19.0"
+APP_VERSION :: "0.19.1"
 
 USAGE :: `papier: the clipboard's history
 

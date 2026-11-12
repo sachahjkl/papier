@@ -3,6 +3,11 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.18.1] - 2026-11-12
+
+### Fixed
+- **The window no longer freezes after a copy** (Linux, Wayland): with NVIDIA's driver, a compositor that held back its word that it showed the window's picture (ShojiWM, counting the window on the wrong screen) left the window without a new picture for good. Papier now presents in a way that never waits, waits for that word a quarter of a second at most, and draws at once after a key or a click (gui_toolkit 0.221.1).
+
 ## [0.18.0] - 2026-11-12
 
 ### Added
@@ -336,6 +341,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.18.1]: https://github.com/sachahjkl/papier/releases/tag/v0.18.1
 [0.18.0]: https://github.com/sachahjkl/papier/releases/tag/v0.18.0
 [0.17.7]: https://github.com/sachahjkl/papier/releases/tag/v0.17.7
 [0.17.6]: https://github.com/sachahjkl/papier/releases/tag/v0.17.6

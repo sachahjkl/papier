@@ -3,6 +3,11 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.19.0] - 2026-11-12
+
+### Added
+- **The preview shows what a text is**: Markdown is shown rendered (headings, lists, tables, code, links), with Ctrl+Shift+M or a button for its source; a diff shows its lines numbered and coloured; code is coloured in more languages (Java, C#, Kotlin, Swift, PHP, Ruby, Lua, Zig, Nix, YAML, TOML, HTML, XML, CSS and more), in the edit view too. The text is drawn in the system's monospace font (Cascadia Mono or Consolas on Windows), which reads better than the one papier carried, at 125 % above all.
+
 ## [0.18.1] - 2026-11-12
 
 ### Fixed
@@ -341,6 +346,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.19.0]: https://github.com/sachahjkl/papier/releases/tag/v0.19.0
 [0.18.1]: https://github.com/sachahjkl/papier/releases/tag/v0.18.1
 [0.18.0]: https://github.com/sachahjkl/papier/releases/tag/v0.18.0
 [0.17.7]: https://github.com/sachahjkl/papier/releases/tag/v0.17.7

@@ -3,6 +3,17 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.18.0] - 2026-11-12
+
+### Added
+- **The text of a copied image, a QR code's content, and the thumbnails of copied files**: Ctrl+Shift+T (or the entry's menu, or the palette) copies the text read in an image, with the system's text recognition (on Linux, Tesseract). When a copied image holds a QR code, one click copies what it says. A copied file's row shows the system's thumbnail of it: a PDF's first page, a video's frame.
+
+### Changed
+- **The window never waits for the disk**: the search, the preview of the selected entry, saving or opening an entry, a drag and the settings are read and written on a thread of their own. Typing a search or moving through a long history stays smooth while the disk is slow or busy.
+
+### Fixed
+- **A dialog's Enter no longer opens the entry behind it**, and a paste into the search no longer waits for a slow program's clipboard. Also: each page of the settings restores its defaults with one button, and the command palette's last line is never cut in half (gui_toolkit 0.207.0).
+
 ## [0.17.7] - 2026-11-12
 
 ### Fixed
@@ -325,6 +336,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.18.0]: https://github.com/sachahjkl/papier/releases/tag/v0.18.0
 [0.17.7]: https://github.com/sachahjkl/papier/releases/tag/v0.17.7
 [0.17.6]: https://github.com/sachahjkl/papier/releases/tag/v0.17.6
 [0.17.5]: https://github.com/sachahjkl/papier/releases/tag/v0.17.5

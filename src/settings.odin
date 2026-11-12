@@ -55,6 +55,11 @@ prefs_file :: proc(allocator := context.temp_allocator) -> string {
 	return strings.concatenate({platform.user_dir(.Config, APP_NAME, context.temp_allocator), "/prefs"}, allocator)
 }
 
+// Where the settings' foot says the file is: its path as this system writes it (path_shown).
+prefs_shown :: proc(allocator := context.allocator) -> string {
+	return strings.concatenate({"prefs: ", path_shown(prefs_file())}, allocator)
+}
+
 // The registry with the user's file and `args`' --pref read in. Returns the arguments that are not preferences.
 prefs_open :: proc(p: ^config.Prefs, args: []string) -> (rest: [dynamic]string, problems: [dynamic]string) {
 	p^ = config.prefs_make()

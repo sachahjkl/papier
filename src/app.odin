@@ -100,6 +100,7 @@ App :: struct {
 	hotkey_held: bool,              // Windows: picker.shortcut is registered
 	shortcut_problem: string,       // why it is not (owned; "": it is)
 	status:     string,             // a message for the status bar (owned), until status_until (ui clock, ms)
+	prefs_shown: string,            // the settings' foot: where the preferences file is (owned; made once)
 	status_until: f64,
 }
 
@@ -109,6 +110,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	app.prefs = prefs^
 	prefs^ = {}
 	app.settings = prefs_read(&app.prefs)
+	app.prefs_shown = prefs_shown()
 	// (read here, on this thread, before the window exists: they size it; from now on the reader does the files)
 	app.place = state_load()
 	app.ids_version = 1   // (0 would tell the list to compare the ids)
@@ -215,6 +217,7 @@ app_free :: proc(app: ^App) {
 	delete(app.ids)
 	delete(app.query)
 	delete(app.status)
+	delete(app.prefs_shown)
 	ui.field_destroy(&app.search)
 	ui.vlist_destroy(&app.vl)
 	ui.field_destroy(&app.palette.field)

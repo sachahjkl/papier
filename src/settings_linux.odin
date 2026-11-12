@@ -61,3 +61,10 @@ state_path :: proc(allocator := context.temp_allocator) -> string {
 	}
 	return strings.concatenate({os.get_env("HOME", context.temp_allocator), "/.local/state/", APP_NAME, "/window"}, allocator)
 }
+
+// A path as the user reads it: the home folder as "~" (temp allocator).
+path_shown :: proc(path: string) -> string {
+	home := os.get_env("HOME", context.temp_allocator)
+	if home == "" || !strings.has_prefix(path, home) { return path }
+	return strings.concatenate({"~", path[len(home):]}, context.temp_allocator)
+}

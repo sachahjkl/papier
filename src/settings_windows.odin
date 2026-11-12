@@ -25,3 +25,9 @@ history_dir :: proc(persist: bool, allocator := context.temp_allocator) -> strin
 state_path :: proc(allocator := context.temp_allocator) -> string {
 	return strings.concatenate({platform.user_dir(.Config, APP_NAME, context.temp_allocator), "/window"}, allocator)
 }
+
+// A path as the user reads it: Windows' separators (temp allocator).
+path_shown :: proc(path: string) -> string {
+	out, _ := strings.replace_all(path, "/", "\\", context.temp_allocator)
+	return out
+}

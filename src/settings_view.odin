@@ -1,8 +1,8 @@
 package papier
 
 // The settings: gui_toolkit's page of the preferences (gt:prefs_page), in place of the history. The gear of the title
-// bar or Ctrl+, opens it; the arrow, Escape or Ctrl+, again goes back. Each change is saved to the preferences file and
-// applied at once: the window reads its settings again, and the watcher reads the file again (a Reload).
+// bar or Ctrl+, opens it; the arrow, Escape or Ctrl+, again goes back. Each change is applied at once (the window reads
+// its settings again) and saved to the preferences file by the reader; then the watcher reads the file again (a Reload).
 
 import config "gt:config"
 import prefs_page "gt:prefs_page"
@@ -85,16 +85,16 @@ settings_custom :: proc(user: rawptr, name: string, em: f32) {
 	}
 }
 
-// A preference was set or reset: saved, and applied by the window and the watcher.
+// A preference was set or reset: applied by the window at once, and saved by the reader; once the file is written, the
+// watcher reads it again (app_job_done).
 @(private = "file")
 settings_changed :: proc(user: rawptr, name: string) {
 	app := (^App)(user)
-	if !config.save_user(&app.prefs, prefs_file()) { say(app, "The preferences cannot be written"); return }
+	reader_job(&app.reader, {kind = .Write_Prefs, path = prefs_file(), text = config.serialize_user(&app.prefs, context.temp_allocator)})
 	settings_free(&app.settings)
 	app.settings = prefs_read(&app.prefs)
 	app_updates_auto(app)
 	app_title_follow(app)
-	watcher_send(&app.watcher, {verb = .Reload})
 }
 
 // The choices of a preference known at run time: the themes.

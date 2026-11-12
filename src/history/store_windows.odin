@@ -6,7 +6,7 @@ package history
 // copy, keeps its last 25 and its pins (which it does not tell).
 //
 // The watcher's thread reads it (system_refresh) into a snapshot: the entries, and the bytes of each type of each, by
-// their hash. The window and the decoder read the snapshot (reload, blob_read), whatever their thread. The system
+// their hash. The window's reader and its decoder read the snapshot (reload, blob_read), each on its thread. The system
 // answers only a program in the foreground: the watcher reads it again each time the window shows, and when the system
 // says it changed (an access refused then keeps the snapshot as it was).
 //
@@ -91,15 +91,6 @@ blob_read_in :: proc(dir: string, hash: u64, allocator := context.allocator) -> 
 // The system's history has no index of its own: the window searches the previews (used = false).
 search :: proc(s: ^Store, words: []string, allocator := context.temp_allocator) -> (ids: map[u64]bool, used: bool) {
 	return make(map[u64]bool, allocator), false
-}
-
-@(private = "file")
-entry_clone :: proc(e: Entry) -> Entry {
-	out := e
-	out.preview = strings.clone(e.preview)
-	out.reps = make([]Rep, len(e.reps))
-	for r, i in e.reps { out.reps[i] = {strings.clone(r.mime), r.hash, r.size} }
-	return out
 }
 
 ////////////////////////////////

@@ -15,7 +15,7 @@ THUMBS_KEPT :: 300
 Thumbs :: struct {
 	kept:   map[u64]Thumb_Texture,   // by the image's hash
 	failed: map[u64]bool,            // images that cannot be read: asked no more
-	asks:   [dynamic]Thumb_Ask,      // this build's (strings borrowed from the store)
+	asks:   [dynamic]Thumb_Ask,      // this build's (strings borrowed from the list shown)
 	build:  u64,                     // builds counted, for "least lately shown"
 }
 
@@ -60,7 +60,7 @@ thumb_mark :: proc(app: ^App, e: ^history.Entry, width: f32) -> bool {
 		ui.custom("thumb", thumb_draw, d)
 		return true
 	}
-	if !t.failed[hash] { append(&t.asks, Thumb_Ask{hash, app.store.dir, e.reps[at].mime}) }
+	if !t.failed[hash] { append(&t.asks, Thumb_Ask{hash, app.list.dir, e.reps[at].mime}) }
 	return false
 }
 

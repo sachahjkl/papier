@@ -9,8 +9,8 @@ package history
 //   texts    the full text of each entry (FTS5, trigram): what the search reads
 //   meta     the next id
 //
-// The list is also in memory (Store.entries, newest first): the window reads it at each frame. Each change is one
-// transaction, written at once: another connection (the window, `papier list`) reads the old list or the new one,
+// The list is also in memory (Store.entries, newest first). Each change is one transaction, written at once: another
+// connection (the window's reader thread, `papier list`) reads the old list or the new one,
 // never half. One process writes (the watcher); the others read, and ask it for changes.
 //
 // A copy whose key is already there moves that entry to the top instead of adding a second one.

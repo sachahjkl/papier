@@ -15,8 +15,11 @@ package papier
 //   Pin / Unpin          Ctrl+P
 //   Remove               Shift+Del
 //
-// An entry that is not a file is written to a file of its own to be opened (open_dir): a program needs a path.
+// An entry that is not a file is written to a file of its own to be opened (open_dir): a program needs a path. What
+// reads the entry's bytes, writes a file or starts a program is a job of the reader (reader.odin); its message comes back
+// to the status bar.
 
+import "base:runtime"
 import "core:fmt"
 import "core:os"
 import "core:strings"
@@ -32,7 +35,7 @@ MENU_WIDTH_EM :: 16
 Entry_Menu :: struct {
 	key:      ui.Key,
 	id:       u64,                 // the entry it was opened on
-	handlers: []desktop.Handler,   // "Open with", read when the menu opened (owned)
+	handlers: []desktop.Handler,   // "Open with": asked of the reader when the menu opened (its heap; nil until they come)
 	close_due: bool,               // a new look at the history (app_show): the menu closes at the next build
 }
 
@@ -42,13 +45,20 @@ entry_menu_open :: proc(app: ^App, e: ^history.Entry, pos: ui.Vec2, from_keyboar
 	if m.key == 0 { m.key = ui.key_from_string(0, "papier_entry_menu") }
 	entry_menu_free(m)
 	m.id, m.close_due = e.id, false
-	// (the type is in the name: the file need not be written for its applications to be found)
-	m.handlers = desktop.handlers_for_file(entry_file_name(e))
+	// (the system's lists of applications are files: the reader reads them, the submenu fills when they come)
+	reader_job(&app.reader, {kind = .Handlers, id = e.id, path = entry_file_name(e)})
 	ui.ctx_menu_open(m.key, pos, from_keyboard = from_keyboard)
 }
 
+// The applications for the entry the menu is open on, from the reader; let go when the menu moved on.
+entry_menu_handlers :: proc(app: ^App, done: ^Job_Done) {
+	m := &app.menu
+	if done.id != m.id || m.handlers != nil { return }
+	m.handlers, done.handlers = done.handlers, nil
+}
+
 entry_menu_free :: proc(m: ^Entry_Menu) {
-	if m.handlers != nil { desktop.handlers_destroy(m.handlers) }
+	if m.handlers != nil { desktop.handlers_destroy(m.handlers, runtime.heap_allocator()) }
 	m.handlers = nil
 }
 
@@ -58,9 +68,9 @@ entry_menu_build :: proc(app: ^App, em: f32) {
 	if m.key == 0 { return }
 	if m.close_due { ui.ctx_menu_close(); m.close_due = false }
 	if ui.ctx_menu(m.key, em * MENU_WIDTH_EM) {
-		at := history.find(&app.store, m.id)
-		if at < 0 { ui.ctx_menu_close(); return }
-		e := &app.store.entries[at]
+		// (the menu is the selected entry's: it opens on it, and goes when the entry does)
+		e := selected(app)
+		if e == nil || e.id != m.id { ui.ctx_menu_close(); return }
 		// (several marked: what acts on all of them; else the entry's own items)
 		if n := ui.list_mark_count(&app.vl); n > 1 {
 			item(app, .Copy, fmt.tprintf("Copy the %d texts as one", n))
@@ -83,9 +93,7 @@ entry_menu_build :: proc(app: ^App, em: f32) {
 			}
 		}
 		if e.kind == .Files {
-			if ui.menu_item("Show in folder").clicked {
-				if !platform.reveal_in_folder(entry_file_name(e)) { say(app, "The file manager does not start") }
-			}
+			if ui.menu_item("Show in folder").clicked { reader_job(&app.reader, {kind = .Reveal, path = entry_file_name(e)}) }
 		}
 		item(app, .Save_As)
 		ui.menu_separator()
@@ -113,33 +121,21 @@ entry_copy :: proc(app: ^App, id: u64, plain := false) {
 }
 
 // An address in the browser, a copied file with its program, anything else as a file of its type with the system's
-// program for it.
+// program for it (the reader's job).
 entry_open :: proc(app: ^App, e: ^history.Entry) {
-	if e.kind == .Text {
-		if url := strings.trim_space(e.preview); is_address(url) {
-			if !platform.open_url(url) { say(app, "No program opens addresses") }
-			return
-		}
-	}
-	path, ok := entry_file(app, e)
-	if !ok { say(app, "The entry cannot be written to a file"); return }
-	if !platform.open_path(path) { say(app, "No program opens %s", file_name(path)) }
+	reader_job(&app.reader, {kind = .Open, id = e.id})
 }
 
 entry_open_with :: proc(app: ^App, e: ^history.Entry, handler: string) {
-	path, ok := entry_file(app, e)
-	if !ok { say(app, "The entry cannot be written to a file"); return }
-	if !desktop.open_with(path, handler) { say(app, "The program does not start") }
+	reader_job(&app.reader, {kind = .Open_With, id = e.id, handler = handler})
 }
 
+// The system's dialog runs here (its own loop, as a drag's); the reader writes the file.
 entry_save_as :: proc(app: ^App, e: ^history.Entry) {
-	at := entry_open_rep(e)
-	if at < 0 { return }
+	if entry_open_rep(e) < 0 { return }
 	r := platform.save_file_dialog({owner = app.main.win, title = "Save the entry", suggested_name = entry_file_name(e), overwrite_prompt = true}, context.temp_allocator)
 	if r.status != .Chosen || len(r.paths) == 0 { return }
-	data := history.blob_read(&app.store, e.reps[at].hash, context.temp_allocator)
-	if data == nil || !fsx.write_atomic(r.paths[0], data) { say(app, "%s cannot be written", file_name(r.paths[0])); return }
-	say(app, "Saved %s", file_name(r.paths[0]))
+	reader_job(&app.reader, {kind = .Save_As, id = e.id, path = r.paths[0]})
 }
 
 ////////////////////////////////
@@ -164,19 +160,6 @@ entry_file_name :: proc(e: ^history.Entry) -> string {
 	}
 	at := entry_open_rep(e)
 	return fmt.tprintf("papier-%d.%s", e.id, at >= 0 ? extension_of(e.reps[at].mime) : "bin")
-}
-
-// The file a program opens for the entry: a copied file itself, else its bytes written under open_dir (temp allocator).
-entry_file :: proc(app: ^App, e: ^history.Entry) -> (path: string, ok: bool) {
-	if e.kind == .Files { return entry_file_name(e), true }
-	at := entry_open_rep(e)
-	if at < 0 { return }
-	data := history.blob_read(&app.store, e.reps[at].hash, context.temp_allocator)
-	if data == nil { return }
-	dir := open_dir()
-	fsx.make_dirs(dir)
-	path = fmt.tprintf("%s/%s", dir, entry_file_name(e))
-	return path, fsx.write_atomic(path, data)
 }
 
 // Where the entries opened as files are written: the session's runtime directory (the user's alone, emptied at the

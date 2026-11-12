@@ -9,7 +9,6 @@ package papier
 // marked.
 
 import "core:slice"
-import "core:strings"
 import prefs_page "gt:prefs_page"
 import "gt:ui"
 import lucide "gt:lucide"
@@ -51,36 +50,53 @@ ACTIONS := [Action]ui.Command{
 	.Quit            = {label = "Quit Papier", group = "Papier", keys = {{.Q, {.Ctrl}}, {}}, icon = lucide.POWER, tags = {"exit", "close", "stop"}},
 }
 
-// The entries an action acts on: the marked ones in the list's order, else the selected one (temp memory).
+// The entries an action acts on: the marked ones in the list's order, else the selected one (temp memory). Run when an
+// action runs, not at each build: it goes over the marks.
 acted_on :: proc(app: ^App) -> []^history.Entry {
 	out := make([dynamic]^history.Entry, context.temp_allocator)
 	if ui.list_mark_count(&app.vl) > 0 {
-		for i in 0 ..< len(app.shown) {
-			if ui.list_is_marked(&app.vl, i) { append(&out, &app.store.entries[app.shown[i]]) }
-		}
+		at := make([dynamic]int, context.temp_allocator)
+		for id in app.vl.marks { if i, ok := app.list.at[id]; ok { append(&at, i) } }
+		slice.sort(at[:])   // (the list's order is its entries' order)
+		for i in at { append(&out, &app.list.entries[i]) }
 	} else if e := selected(app); e != nil {
 		append(&out, e)
 	}
 	return out[:]
 }
 
+// How many entries an action acts on, and the one when it is one: what action_enabled needs, at each build, without a
+// pass over the marks.
+@(private = "file")
+acted_count :: proc(app: ^App) -> (n: int, one: ^history.Entry) {
+	switch ui.list_mark_count(&app.vl) {
+	case 0:
+		one = selected(app)
+		return one != nil ? 1 : 0, one
+	case 1:
+		for id in app.vl.marks { one = list_entry(app, id) }
+		return one != nil ? 1 : 0, one
+	}
+	return ui.list_mark_count(&app.vl), nil
+}
+
 // Whether `a` can act now.
 action_enabled :: proc(app: ^App, a: Action) -> bool {
-	on := acted_on(app)
-	one := len(on) == 1 ? on[0] : nil
+	n, one := acted_count(app)
 	switch a {
-	case .Copy:          return len(on) == 1 || (len(on) > 1 && marked_text(app, on) != "")
+	// (several: their texts joined by the reader; none of them a text says so then)
+	case .Copy:          return n >= 1
 	case .Copy_Plain:    return one != nil && one.kind == .Html && history.rep_find(one^, TEXT_MIME) >= 0
 	case .Edit:          return one != nil && (one.kind == .Text || one.kind == .Html)
 	case .Open:          return one != nil
 	case .Save_As:       return one != nil && one.kind != .Files
-	case .Pin:           return PINS && len(on) > 0
-	case .Remove:        return len(on) > 0
+	case .Pin:           return PINS && n > 0
+	case .Remove:        return n > 0
 	case .Show_QR:       return one != nil && qr_text(app, one) != ""
 	case .Mark_All:      return len(app.shown) > 0
 	case .Clear_Marks:   return ui.list_mark_count(&app.vl) > 0
 	case .Filter_Pinned: return PINS
-	case .Clear_History: return len(app.store.entries) > 0
+	case .Clear_History: return len(app.list.entries) > 0
 	case .Filter_All, .Filter_Text, .Filter_Images, .Filter_Files, .Filter_Next, .Filter_Previous,
 	     .Settings, .Check_Updates, .Setup, .Palette, .Shortcuts, .Hide, .Restart, .Quit:
 		return true
@@ -94,10 +110,12 @@ action_run :: proc(app: ^App, a: Action) {
 	switch a {
 	case .Copy:
 		if len(on) == 1 { entry_copy(app, on[0].id); break }
-		// (several: their texts as one new entry, a line between two)
-		watcher_send(&app.watcher, {verb = .Add_Text, text = marked_text(app, on), paste = app.settings.paste_on_select})
+		if len(on) == 0 { break }
+		// (several: their texts as one new entry, a line between two; the reader reads them, app_job_done copies them)
+		ids := make([]u64, len(on), context.temp_allocator)
+		for e, i in on { ids[i] = e.id }
+		reader_job(&app.reader, {kind = .Join, ids = ids})
 		ui.list_marks_clear(&app.vl)
-		if app.settings.close_on_copy || app.settings.paste_on_select { app_hide(app) } else { say(app, "Copied %d entries", len(on)) }
 	case .Copy_Plain: entry_copy(app, on[0].id, plain = true)
 	case .Edit:       edit_begin(app, on[0])
 	case .Open:       entry_open(app, on[0])
@@ -161,15 +179,4 @@ actions_build :: proc(app: ^App) {
 
 // A tooltip: the action's label and its key.
 action_tip :: proc(a: Action) -> string { return ui.command_tip(ACTIONS[a]) }
-
-// The texts of several entries, a line between two (the ones without text left out).
-@(private = "file")
-marked_text :: proc(app: ^App, on: []^history.Entry) -> string {
-	parts := make([dynamic]string, context.temp_allocator)
-	for e in on {
-		if e.kind != .Text && e.kind != .Html { continue }
-		if t := entry_text(app, e); t != "" { append(&parts, t) }
-	}
-	return strings.join(parts[:], "\n", context.temp_allocator)
-}
 

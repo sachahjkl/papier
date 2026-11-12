@@ -50,12 +50,21 @@ clear_entries :: proc(s: ^Store) {
 	clear(&s.entries)
 }
 
-@(private)
-entry_free :: proc(e: ^Entry) {
-	delete(e.preview)
-	for r in e.reps { delete(r.mime) }
-	delete(e.reps)
+// Frees what an entry owns (made with `allocator`: another thread's list is given its own allocator).
+entry_free :: proc(e: ^Entry, allocator := context.allocator) {
+	delete(e.preview, allocator)
+	for r in e.reps { delete(r.mime, allocator) }
+	delete(e.reps, allocator)
 	e^ = {}
+}
+
+// A copy of an entry that owns its strings (for a list that crosses to another thread).
+entry_clone :: proc(e: Entry, allocator := context.allocator) -> Entry {
+	out := e
+	out.preview = strings.clone(e.preview, allocator)
+	out.reps = make([]Rep, len(e.reps), allocator)
+	for r, i in e.reps { out.reps[i] = {strings.clone(r.mime, allocator), r.hash, r.size} }
+	return out
 }
 
 // Where the entry `id` is in the list, -1 when it is not.

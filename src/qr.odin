@@ -16,16 +16,21 @@ Qr_View :: struct {
 	text: string,   // owned
 }
 
-// The text an entry's code would hold ("" when it has none, or too much): a text, an address, a file's path.
-qr_text :: proc(app: ^App, e: ^history.Entry) -> string {
+// The text an entry's code would hold ("" when it has none, or too much): a text, an address, a file's path. `text` is
+// the entry's whole text (the reader computes it with the entry's content).
+qr_content :: proc(kind: history.Kind, text: string) -> string {
 	t: string
-	switch e.kind {
-	case .Text, .Html: t = entry_text(app, e)
-	case .Files:       t = e.preview
+	switch kind {
+	case .Text, .Html, .Files: t = text
 	case .Image, .Other:
 	}
 	t = strings.trim_space(t)
 	return len(t) <= QR_MAX_BYTES ? t : ""
+}
+
+// The text of the code of `e`, once the reader loaded it ("" until then, or when it has none).
+qr_text :: proc(app: ^App, e: ^history.Entry) -> string {
+	return loaded_for(app, e) ? app.loaded.qr : ""
 }
 
 qr_open :: proc(app: ^App, e: ^history.Entry) {

@@ -19,7 +19,6 @@ import "gt:render"
 import setup "gt:setup"
 import "gt:ui"
 import update "gt:update"
-import "history"
 import lucide "gt:lucide"
 
 Filter :: enum u8 { All, Text, Images, Files, Pinned }   // (Pinned last: a system with no pins shows the others)
@@ -54,25 +53,31 @@ App :: struct {
 	quit:       bool,
 	place:      Window_State,
 
-	// the history, as the window reads it (the watcher writes it)
-	store:      history.Store,
-	seen:       u64,                // the watcher's version `store` was read at
-	lowered:    [dynamic]string,    // each entry's preview in lower case (the search reads them)
+	// the history, as the reader reads it (the watcher writes it): the window's thread touches no file (reader.odin)
+	reader:     Reader,
+	list:       History_List,       // the list shown (the reader's heap)
+	list_next:  History_List,       // a newer list, while it waits for the view of the newest query (has_list_next)
+	has_list_next: bool,
+	seen:       u64,                // the watcher's version last asked of the reader
+	exit_code:  int,
 
 	// the interface
 	search:     ui.Text_Field,
 	search_key: ui.Key,
 	query:      string,             // what `shown` was filtered with (owned)
+	query_seq:  u64,                // the last query sent to the reader (a view of an older one is not applied)
 	filter:     Filter,
 	vl:         ui.Virtual_List,
-	shown:      [dynamic]int,       // the entries the search and the filter keep: indices in store.entries
+	shown:      [dynamic]int,       // the entries the search and the filter keep: indices in list.entries
 	ids:        [dynamic]u64,       // their ids (the list's row identities)
+	ids_version: u64,               // moves each time `ids` changes (the list compares no ids then)
 	view:       View,
+	loaded:     Loaded_Entry,       // the reader's last answer for the selected entry (the reader's heap)
+	drag:       Drag_Out,           // an entry dragged out of the list (drag.odin)
 	thumbs:     Thumbs,             // the list's thumbnails (thumbs.odin)
 	palette:    ui.Command_Palette, // Ctrl+K: every action (actions.odin)
 	sheet_open: bool,               // F1: the sheet of the keys
 	qr:         Qr_View,            // an entry as a QR code (qr.odin)
-	drag_out:   u64,                // the entry dragged out of the list, run between two frames (drag.odin; 0: none)
 	menu:       Entry_Menu,         // the entry's menu (entry_menu.odin)
 	edit:       Edit,               // the edit view (edit.odin)
 	settings_open: bool,            // the settings in place of the history (settings_view.odin)
@@ -99,7 +104,9 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	app.prefs = prefs^
 	prefs^ = {}
 	app.settings = prefs_read(&app.prefs)
+	// (read here, on this thread, before the window exists: they size it; from now on the reader does the files)
 	app.place = state_load()
+	app.ids_version = 1   // (0 would tell the list to compare the ids)
 
 	platform.set_app_id(APP_NAME)
 	platform.dragdrop_thread_init()   // (Windows: OLE, for an entry dragged out: drag.odin)
@@ -126,12 +133,10 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 		platform.set_placement(win, p)
 	}
 
-	if ok, why := history.open(&app.store, history_dir(app.settings.persist)); !ok {
-		errf("papier: the history cannot be opened: %s", why)
-		return 1
-	}
-	refilter(app)
+	// (the reader opens the history on its thread: the first list comes as a view, or why it cannot be opened)
+	reader_start(&app.reader, win, history_dir(app.settings.persist))
 	if !watcher_start(&app.watcher, owner, win, &app.prefs) {
+		reader_stop(&app.reader)
 		errln("papier: the clipboard watcher cannot start")
 		return 1
 	}
@@ -162,6 +167,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 		app_requests(app)
 		app_tray(app)
 		app_updates_follow(app)
+		if app_follow_reader(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if view_decoded(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if thumbs_take(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if app.visible && !app.hide_due && !app.quit && !platform.is_closed(win) { host.host_frame(h) }
@@ -173,6 +179,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	update.updater_stop(app.updater)
 	watcher_stop(&app.watcher)   // (the instance is let go: the installed copy, started below, is the running papier)
 	decoder_stop(&app.decoder)
+	reader_stop(&app.reader)     // (after app_remember: the state it asked to write is written first)
 	devtools.stop(app.devtools)
 	view_clear(app)
 	thumbs_destroy(app)
@@ -181,18 +188,21 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	setup.finish(&app.setup, setup_config())
 	launch, launch_hidden := app.launch_after, app.launch_hidden
 	app.launch_after = ""
+	exit_code := app.exit_code
 	app_free(app)
 	if launch != "" {
 		if !setup.launch(launch, launch_hidden ? []string{"--hidden"} : nil) { errf("papier: %s does not start", launch) }
 		delete(launch)
 	}
-	return 0
+	return exit_code
 }
 
 @(private = "file")
 app_free :: proc(app: ^App) {
-	for s in app.lowered { delete(s) }
-	delete(app.lowered)
+	history_list_free(&app.list)
+	if app.has_list_next { history_list_free(&app.list_next) }
+	loaded_free(&app.loaded)
+	drag_reset(app)
 	delete(app.shown)
 	delete(app.ids)
 	delete(app.query)
@@ -208,7 +218,6 @@ app_free :: proc(app: ^App) {
 	delete(app.launch_after)
 	delete(app.shortcut_problem)
 	delete(app.place.setup)
-	history.close(&app.store)
 	settings_free(&app.settings)
 	config.prefs_destroy(&app.prefs)
 }
@@ -219,7 +228,10 @@ app_params :: proc(h: ^host.Host, bp: ^ui.Build_Params) {
 	app := (^App)(h.user)
 	// (applied only when it changes, or the system goes light or dark: a palette applied starts a cross-fade)
 	choice := ui.Theme_Choice{name = app.settings.theme, mode = app.settings.mode, finish = app.settings.finish, glow = app.settings.glow ? 1 : 0}
-	if ui.theme_show(&app.shared.theme, themes(), choice, &app.theme_shown, render.blend_space(&app.shared.r)) { platform.set_dark_title(h.win, !app.theme_shown.light) }
+	if ui.theme_show(&app.shared.theme, themes(), choice, &app.theme_shown, render.blend_space(&app.shared.r)) {
+		platform.set_dark_title(h.win, !app.theme_shown.light)
+		app.view.runs_for = {}   // (the code's colours are the theme's)
+	}
 	bp.base = ui.Style{pref = {.X = ui.text_size(), .Y = ui.px(28)}, font = app.shared.font, font_size = app.settings.font_size, text_pad = 6, cursor = .Arrow}
 }
 
@@ -251,10 +263,13 @@ app_show :: proc(app: ^App) {
 		app.settings_open = false   // (a new look is at the history, not at what was open when it hid)
 		app.menu.close_due = true   // (closed at the next build: the interface is only touched from inside one)
 		ui.field_clear(&app.search)
+		delete(app.query)
+		app.query = ""
 		app.filter = .All
-		refilter(app)
+		// (the rows shown until the new view comes start at the top too)
 		select_row(app, 0)
 		ui.vlist_scroll_to(&app.vl, 0)
+		refilter(app, reset = true)
 	}
 	app.hide_due = false
 	// (Windows: on the screen the user works on, not the one it was last shown on: picker.follow)
@@ -366,23 +381,72 @@ app_remember :: proc(app: ^App) {
 		p := platform.get_placement(win)
 		app.place.place, app.place.placed = {p.rect[0], p.rect[1]}, true
 	}
-	state_save(app.place)
+	state_write(app)
 }
 
-// The history again when the watcher wrote it.
+// The history again when the watcher wrote it: asked of the reader, whose list comes with its view (app_follow_reader).
 @(private = "file")
 app_reload :: proc(app: ^App) {
 	v := watcher_version(&app.watcher)
 	if v == app.seen { return }
 	app.seen = v
-	keep := selected_id(app)
-	history.reload(&app.store)
-	// (the order may have changed with the count the same: an entry copied again moves to the top)
-	for s in app.lowered { delete(s) }
-	clear(&app.lowered)
-	refilter(app)
-	if keep != 0 { for id, i in app.ids { if id == keep { app.vl.sel = i; break } } }
-	app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT)
+	reader_reload(&app.reader, v)
+}
+
+// What the reader put in its mailbox since the last turn of the loop. True when something shown changed.
+@(private = "file")
+app_follow_reader :: proc(app: ^App) -> bool {
+	res := reader_take(&app.reader)
+	defer reader_results_free(&res)
+	changed := false
+	if res.failed {
+		errf("papier: the history cannot be opened: %s", res.failure)
+		app.exit_code = 1
+		app.quit = true
+	}
+	// (a list waits for the view of the newest query: never a view of one list shown with another)
+	if res.has_list {
+		if app.has_list_next { history_list_free(&app.list_next) }
+		app.list_next, app.has_list_next = res.list, true
+		res.list, res.has_list = {}, false
+	}
+	if res.has_view && view_arrived(app, &res.view) { changed = true }
+	if res.has_loaded && view_loaded(app, &res.loaded) { changed = true }
+	for &d in res.done {
+		app_job_done(app, &d)
+		changed = true
+	}
+	return changed
+}
+
+// A job of the reader done: its message in the status bar, and what follows from it.
+@(private = "file")
+app_job_done :: proc(app: ^App, d: ^Job_Done) {
+	#partial switch d.kind {
+	case .Drag:     drag_arrived(app, d)
+	case .Handlers: entry_menu_handlers(app, d)
+	case .Write_Prefs:
+		// (the file is on the disk: the watcher reads it again, and says Reload back)
+		if d.ok { watcher_send(&app.watcher, {verb = .Reload}) }
+	case .Read_Prefs:
+		if d.ok {
+			config.prefs_destroy(&app.prefs)
+			app.prefs, d.prefs, d.ok = d.prefs, {}, false
+			settings_free(&app.settings)
+			app.settings = prefs_read(&app.prefs)
+			app_shortcut(app)
+			app_updates_auto(app)
+			app_title_follow(app)
+		}
+	case .Join:
+		// (several entries' texts as one new entry)
+		if d.ok {
+			paste := app.settings.paste_on_select
+			watcher_send(&app.watcher, {verb = .Add_Text, text = d.text, paste = paste})
+			if app.settings.close_on_copy || paste { app_hide(app); return }
+		}
+	}
+	if d.message != "" { say(app, "%s", d.message) }
 }
 
 // What the watcher asked for.
@@ -393,13 +457,8 @@ app_requests :: proc(app: ^App) {
 		switch r {
 		case .Quit: app.quit = true; return
 		case .Reload:
-			config.prefs_destroy(&app.prefs)
-			prefs_open(&app.prefs, nil)
-			settings_free(&app.settings)
-			app.settings = prefs_read(&app.prefs)
-			app_shortcut(app)
-			app_updates_auto(app)
-			app_title_follow(app)
+			// (the file changed: the reader reads it, app_job_done applies it)
+			reader_job(&app.reader, {kind = .Read_Prefs})
 		case .Toggle: app_toggle(app)
 		case .Show:   app_show(app)
 		case .Hide:   app_hide(app)

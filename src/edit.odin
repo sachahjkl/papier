@@ -16,22 +16,29 @@ import "gt:ui"
 import "history"
 import lucide "gt:lucide"
 
+// The edit view's states: closed (not active, no pending), waiting for the entry's text from the reader (pending: the
+// entry's id), open (active). A wait ends open when the text comes, closed when the selection moves on (view_load).
 Edit :: struct {
-	active: bool,
-	id:     u64,          // the entry edited
-	area:   ui.Text_Area,
-	fresh:  bool,         // the editor takes the keyboard at the next build
+	active:  bool,
+	id:      u64,          // the entry edited
+	pending: u64,          // the entry whose edit waits for its text (0: none)
+	area:    ui.Text_Area,
+	fresh:   bool,         // the editor takes the keyboard at the next build
 }
 
-// Opens the edit view on the text of `e` (text and rich text).
+// Opens the edit view on the text of `e` (text and rich text), the selected entry: at once when the reader has loaded
+// it, else when its text comes (app_follow_reader).
 edit_begin :: proc(app: ^App, e: ^history.Entry) {
 	if e.kind != .Text && e.kind != .Html { return }
-	ui.area_set(&app.edit.area, entry_text(app, e))
+	if !loaded_for(app, e) { app.edit.pending = e.id; return }
+	app.edit.pending = 0
+	ui.area_set(&app.edit.area, app.loaded.text)
 	ui.area_clear_history(&app.edit.area)
 	app.edit.active, app.edit.id, app.edit.fresh = true, e.id, true
 }
 
 edit_end :: proc(app: ^App) {
+	app.edit.pending = 0
 	if !app.edit.active { return }
 	app.edit.active = false
 	ui.area_set(&app.edit.area, "")
@@ -89,24 +96,11 @@ edit_build :: proc(app: ^App, e: ^history.Entry, em: f32) {
 		ui.next({width = ui.fill(), height = ui.fill(), font = app.mono, font_size = em * 0.95})
 		// (code keeps its colours while it is edited)
 		hl: ^ui.Text_Highlight
-		if app.view.has_code && app.view.id == e.id { hl = ui.code_highlight(app.view.code) }
+		if loaded_for(app, e) && app.loaded.has_code { hl = ui.code_highlight(app.loaded.code) }
 		res := ui.text_edit("###editor", &app.edit.area, "The entry's text", wrap = true, highlight = hl)
 		if app.edit.fresh { ui.set_focus(res.box.key); app.edit.fresh = false }
 		if res.cancelled { edit_end(app) }
 		ui.spacer(ui.px(em * 0.5))
 	}
 	ui.spacer(ui.px(em * 0.5))
-}
-
-// The whole text of an entry: its text, unless that is its markup (a program may offer HTML as text too); else its
-// markup without the tags.
-entry_text :: proc(app: ^App, e: ^history.Entry) -> string {
-	html := ""
-	if at := history.rep_find(e^, HTML_MIME); at >= 0 { html = string(history.blob_read(&app.store, e.reps[at].hash, context.temp_allocator)) }
-	if at := history.rep_find(e^, TEXT_MIME); at >= 0 {
-		text := string(history.blob_read(&app.store, e.reps[at].hash, context.temp_allocator))
-		if text != html { return text }
-	}
-	if html != "" { return strip_tags(html) }
-	return e.preview
 }

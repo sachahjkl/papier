@@ -3,28 +3,46 @@
 Papier is one program in [Odin](https://odin-lang.org) on [gui_toolkit](https://github.com/sachahjkl/gui_toolkit) (the
 `ext/gui_toolkit` submodule, the collection `gt`). This page says how its parts fit, and why.
 
-## One process, three threads
+## One process, four threads
 
 ```
 papier --hidden ─┬─ the window's thread (app.odin, view.odin)
-                 │     the window, hidden or shown; the tray icon; the history as it reads it
+                 │     the window, hidden or shown; the tray icon; the list and the view the reader gave it
                  │
                  ├─ the watcher thread (watcher.odin)
                  │     the clipboard (wlclip), the history it writes (history), the instance socket
                  │
+                 ├─ the reader thread (reader.odin)
+                 │     the history as the window reads it, the search, the selected entry's text, the window's files
+                 │
                  └─ the decoder thread (decoder.odin)
-                       the picture of the selected image, decoded for the preview
+                       the picture of the selected image and the list's thumbnails, decoded
 ```
 
 - **The watcher** sleeps in one `poll` on three descriptors: the Wayland connection of the data-control protocol, the
   instance socket (commands of other processes), an eventfd (commands of the window). It is the only writer of the
-  history. Each change is one transaction of the database; then it bumps a version, and the window reads the list again
-  when the version moves.
+  history. Each change is one transaction of the database; then it bumps a version, and the window asks the reader for
+  the list again when the version moves.
+- **The reader** owns the window's connection to the history. It reads the list again, computes the view of a search
+  (the newest query wins), reads the selected entry's text (the newest selection wins), and does the window's jobs in
+  order: an entry saved or opened as a file, a program started, a drag's data, the preferences and the window's state
+  written. It puts each answer in a mailbox and wakes the window. A new list comes with its view, in one hold of the
+  mailbox: the window never shows the view of one list with another. An entry the user removes leaves the reader's list
+  at once, and the view comes again without it.
+- **The decoder** decodes pictures, through a connection of its own to the store.
 - **The window** sleeps in the toolkit's wait: its own Wayland connection, its wake, the session bus (the tray). It asks
   the watcher by a queue (copy, pin, delete, clear) and the watcher asks it by another (show, hide, toggle, reload, quit),
-  in order: a hide then a show that come between two steps of the loop end shown.
+  in order: a hide then a show that come between two steps of the loop end shown. It empties the reader's mailbox once
+  per step of its loop.
 
-At rest both threads sleep: 0 % CPU, hidden or shown (the caret's blink aside).
+**The rule**: the window's thread (its loop and each build) touches no disk, network, process or blocking system call,
+and does no work in proportion to the history in a frame. What reads or writes goes to the reader; what goes over the
+list (the search, the count of pinned entries, an entry by its id) is computed by the reader when the list changes, and
+kept. A request to the reader never waits: it takes the mailbox's mutex for a copy, never for a search. Two exceptions
+remain: the start, which reads the window's state and the preferences before the window exists (they give its size),
+and the system's own loops, which block by nature (the Save dialog, a drag out of the list).
+
+At rest every thread sleeps: 0 % CPU, hidden or shown (the caret's blink aside).
 
 ## Why one process
 
@@ -66,7 +84,7 @@ One SQLite database, `history.db`, in WAL mode. SQLite is linked into papier: it
 - **texts**: the whole text of each entry, in a full-text index (FTS5, trigrams): the search finds a word past the
   preview.
 - **Transactions**: each change (a copy, an edit, a removal, a trim) is one transaction: another connection sees the old
-  list or the new one. The image decoder reads the bytes through a connection of its own.
+  list or the new one. The reader and the image decoder read through connections of their own.
 - **Keys**: a copy whose key is already there moves that entry to the top.
 - **Import**: at open, the history of papier 0.4 (a text index and a directory of blobs) goes into the database in one
   transaction, then its files are deleted (src/history/import.odin).
@@ -76,8 +94,11 @@ One SQLite database, `history.db`, in WAL mode. SQLite is linked into papier: it
 ## The window (src/view.odin)
 
 The interface is built again at each frame (immediate mode), and only when something changed. The list is the toolkit's
-virtual list: it builds the rows in view, whatever the length of the history. The search looks for each word of three letters or more in
-the whole text (the full-text index), and for a shorter word in a lower-case copy of the preview. An image is decoded on a thread of its own (src/decoder.odin) when its
+virtual list: it builds the rows in view, whatever the length of the history. The search runs on the reader: it looks for each word of three letters or more in
+the whole text (the full-text index), and for a shorter word in a lower-case copy of the preview. Each query has a
+number; the window applies the view of the newest one only, and keeps a newer list aside until that view comes. The
+selected entry's text, its code's language and its QR text come from the reader too: the preview says "Loading…" until
+they do, and an edit asked meanwhile begins when they come. An image is decoded on a thread of its own (src/decoder.odin) when its
 entry is selected: the newest selection wins, and the window makes one texture of the picture when the decoder wakes it. The
 same thread makes the list's thumbnails (src/thumbs.odin): at each build the window says which image rows in view still
 want one, in place of what it said before, and the thread shrinks each picture to 72 pixels on its shorter side; the
@@ -93,7 +114,7 @@ hidden, and the new one starts hidden (`--hidden`). Settings > Updates shows the
 
 ## Tests
 
-- Unit tests: `src` (capture, commands, window state), `src/history`, `tools/papiertool` (versions, the changelog).
+- Unit tests: `src` (capture, commands, window state, the reader, the decoder), `src/history`, `tools/papiertool` (versions, the changelog).
 - `papiertool live`: the real program in a sway with no screen; copies of each kind through wl-clipboard, a secret, a
   copy again, an entry put back byte for byte, the clipboard emptied, the window read, searched, hidden and shown over
   the DevTools protocol.

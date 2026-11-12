@@ -1,8 +1,8 @@
 package papier
 
 // What the window remembers from one run to the next: its size, its place (X11 only: a Wayland client cannot place its
-// window), the width of the list. A few lines of text in $XDG_STATE_HOME/papier/window, written when the window hides
-// and when papier quits.
+// window), the width of the list. A few lines of text in $XDG_STATE_HOME/papier/window, written by the reader when the
+// window hides and when papier quits (state_write). It is read at start, before the window exists: its size comes from it.
 
 import "core:fmt"
 import "core:strconv"
@@ -56,8 +56,7 @@ state_load :: proc() -> Window_State {
 	return ok ? state_parse(string(data)) : {}
 }
 
-state_save :: proc(s: Window_State) -> bool {
-	path := state_path()
-	fsx.make_dirs(path[:strings.last_index_byte(path, '/')])
-	return fsx.write_atomic(path, transmute([]u8)state_format(s))
+// The state, written by the reader's thread (its folder made when it is not there).
+state_write :: proc(app: ^App) {
+	reader_job(&app.reader, {kind = .Write, path = state_path(), data = transmute([]u8)state_format(app.place)})
 }

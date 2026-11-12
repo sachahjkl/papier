@@ -17,7 +17,6 @@ package papier
 
 import "core:fmt"
 import "core:strings"
-import "core:unicode/utf8"
 import "gt:draw"
 import "gt:host"
 import "gt:platform"
@@ -55,63 +54,90 @@ GRIP_ALPHA  :: 0.45
 KIND_ICONS := [history.Kind]string{.Text = lucide.ALIGN_LEFT, .Html = lucide.CODE, .Image = lucide.IMAGE, .Files = lucide.FILES, .Other = lucide.FILE}
 KIND_LABELS := [history.Kind]string{.Text = "Text", .Html = "Rich text", .Image = "Image", .Files = "Files", .Other = "Data"}
 
-// The selected entry, read in full for the preview.
+// The selected entry, shown in full. Its states: nothing asked (asked = false); its content asked (of the reader, or of
+// the decoder for a picture: loading); shown (app.loaded is the reader's answer for this id and key, or the texture
+// came). Another entry selected, or the same with another key (an edit), asks again.
 View :: struct {
 	id:      u64,
-	key:     u64,               // the entry's content when it was read (an edit keeps the id, not the key)
-	loaded:  bool,
-	text:    string,            // owned
+	key:     u64,               // the entry's content when it was asked (an edit keeps the id, not the key)
+	asked:   bool,
+	text:    string,            // a picture that cannot be shown says why (owned)
 	tex:     render.Texture,
 	size:    [2]int,
 	has_tex: bool,
 	loading: bool,              // its picture is being decoded (decoder.odin)
 	preview: ui.Preview,        // its picture's zoom and pan (fits again with each entry: view_clear)
 	image:   int,               // the representation of the picture, in the entry's reps
-	code:    syntax.Language,   // the language its text is in (has_code: syntax.guess found one)
-	has_code: bool,
+	asked_at: f64,              // when its content was asked (ui clock, ms): "Loading…" only for a slow answer
+	runs:    [dynamic]ui.Rich_Run,   // its code in the theme's colours, made once per answer (runs_for) and per theme
+	runs_for: [2]u64,           // the id and key `runs` were made for ({}: none)
 }
+
+// How long an answer of the reader may take before the preview says "Loading…": a text comes in well under a frame,
+// and a word shown for one frame at each move of the selection would flicker.
+LOADING_SHOWN_AFTER_MS :: 150
 
 ////////////////////////////////
 // The list and the search
 
-// Whether an entry passes the filter.
-@(private = "file")
-filter_keeps :: proc(f: Filter, e: history.Entry) -> bool {
-	switch f {
-	case .All:    return true
-	case .Text:   return e.kind == .Text || e.kind == .Html
-	case .Images: return e.kind == .Image
-	case .Files:  return e.kind == .Files
-	case .Pinned: return e.pinned
+// The entries that pass the filter and hold every word of the search: asked of the reader, which computes them on its
+// thread (view_arrived applies them). `reset`: a new look, the first row selected and the list at its top when they come.
+refilter :: proc(app: ^App, reset := false) {
+	app.query_seq += 1
+	reader_query(&app.reader, app.query_seq, app.query, app.filter, reset)
+}
+
+// A view the reader computed. Applied only when it answers the newest query sent, on the list the window holds or on
+// the one that waits for it (which it then puts in place). True when the list or the rows changed.
+view_arrived :: proc(app: ^App, v: ^History_View) -> bool {
+	fits, next := view_fits(v^, app.query_seq, app.list.serial, app.list_next.serial, app.has_list_next)
+	if !fits { return false }
+	keep := selected_id(app)   // (on the list shown until now)
+	if next {
+		history_list_free(&app.list)
+		app.list, app.list_next, app.has_list_next = app.list_next, {}, false
+	}
+	delete(app.shown)
+	delete(app.ids)
+	app.shown, app.ids = v.shown, v.ids
+	v.shown, v.ids = nil, nil
+	app.ids_version += 1
+	count := len(app.shown)
+	switch {
+	case v.reset:
+		app.vl.sel = count > 0 ? 0 : -1
+		select_row(app, 0)
+		ui.vlist_scroll_to(&app.vl, 0)
+	case keep != 0 && v.keep_id == keep && v.keep_row >= 0:
+		app.vl.sel = v.keep_row
+	case:
+		app.vl.sel = count > 0 ? clamp(app.vl.sel, 0, count - 1) : -1
 	}
 	return true
 }
 
-// The entries that pass the filter and hold every word of the search, in the history's order.
-refilter :: proc(app: ^App) {
-	if len(app.lowered) != len(app.store.entries) {
-		for s in app.lowered { delete(s) }
-		clear(&app.lowered)
-		for e in app.store.entries { append(&app.lowered, strings.to_lower(e.preview)) }
-	}
-	words := strings.fields(strings.to_lower(app.query, context.temp_allocator), context.temp_allocator)
-	// the words long enough for the full-text index are looked for in the whole text; the shorter ones in the preview
-	found, indexed := history.search(&app.store, words)
-	clear(&app.shown)
-	clear(&app.ids)
-	outer: for e, i in app.store.entries {
-		if !filter_keeps(app.filter, e) { continue }
-		if indexed && e.id not_in found { continue }
-		for w in words { if len(w) < history.SEARCH_WORD_MIN && !strings.contains(app.lowered[i], w) { continue outer } }
-		append(&app.shown, i)
-		append(&app.ids, e.id)
-	}
-	app.vl.sel = len(app.shown) > 0 ? clamp(app.vl.sel, 0, len(app.shown) - 1) : -1
+// Whether a view is applied: it answers the newest query sent, on the list shown or on the one that waits (on_next: that
+// one then takes the shown one's place).
+view_fits :: proc(v: History_View, query_seq, list_serial, next_serial: u64, has_next: bool) -> (fits, on_next: bool) {
+	on_next = has_next && v.serial == next_serial
+	fits = v.seq == query_seq && (on_next || v.serial == list_serial)
+	return
 }
 
 selected :: proc(app: ^App) -> ^history.Entry {
 	if app.vl.sel < 0 || app.vl.sel >= len(app.shown) { return nil }
-	return &app.store.entries[app.shown[app.vl.sel]]
+	return &app.list.entries[app.shown[app.vl.sel]]
+}
+
+// The entry `id` of the list shown (nil: not there).
+list_entry :: proc(app: ^App, id: u64) -> ^history.Entry {
+	at, ok := app.list.at[id]
+	return ok ? &app.list.entries[at] : nil
+}
+
+// Whether app.loaded is the reader's answer for `e` as it is now.
+loaded_for :: proc(app: ^App, e: ^history.Entry) -> bool {
+	return app.loaded.id != 0 && app.loaded.id == e.id && app.loaded.key == e.key
 }
 
 selected_id :: proc(app: ^App) -> u64 {
@@ -128,24 +154,38 @@ select_row :: proc(app: ^App, row: int) {
 set_filter :: proc(app: ^App, f: Filter) {
 	if app.filter == f { return }
 	app.filter = f
-	refilter(app)
-	select_row(app, 0)
-	ui.vlist_scroll_to(&app.vl, 0)
+	refilter(app, reset = true)
 }
 
 toggle_pin :: proc(app: ^App, e: ^history.Entry) {
 	watcher_send(&app.watcher, {verb = e.pinned ? .Unpin : .Pin, id = e.id})
-	e.pinned = !e.pinned   // (shown at once; the watcher's index says the same at the next reload)
+	// (shown at once, in the list that waits for its view too; the watcher's index says the same at the next reload)
+	pinned := !e.pinned
+	e.pinned = pinned
+	app.list.pinned += pinned ? 1 : -1
+	if app.has_list_next {
+		if at, ok := app.list_next.at[e.id]; ok && app.list_next.entries[at].pinned != pinned {
+			app.list_next.entries[at].pinned = pinned
+			app.list_next.pinned += pinned ? 1 : -1
+		}
+	}
+	reader_pin(&app.reader, e.id, pinned)
 }
 
+// The row goes at once; the reader takes the entry out of its list (a view that still holds it is not applied: the
+// query's seq moves) and the watcher deletes it.
 remove_entry :: proc(app: ^App, id: u64) {
 	watcher_send(&app.watcher, {verb = .Delete, id = id})
-	at := history.find(&app.store, id)
-	if at < 0 { return }
-	history.forget(&app.store, id)
-	delete(app.lowered[at])
-	ordered_remove(&app.lowered, at)
-	refilter(app)
+	app.query_seq += 1
+	reader_forget(&app.reader, id, app.query_seq)
+	for row_id, row in app.ids {
+		if row_id != id { continue }
+		ordered_remove(&app.shown, row)
+		ordered_remove(&app.ids, row)
+		app.ids_version += 1
+		break
+	}
+	app.vl.sel = len(app.shown) > 0 ? clamp(app.vl.sel, 0, len(app.shown) - 1) : -1
 }
 
 // The keys of the window, taken before the search field sees them.
@@ -165,7 +205,7 @@ view_keys :: proc(app: ^App) {
 	if moved { ui.list_marks_clear(&app.vl) }
 	digits := [9]platform.Key{.N1, .N2, .N3, .N4, .N5, .N6, .N7, .N8, .N9}
 	for k, i in digits {
-		if ui.key_press(k, {.Alt}) && i < len(app.shown) { entry_copy(app, app.store.entries[app.shown[i]].id) }
+		if ui.key_press(k, {.Alt}) && i < len(app.ids) { entry_copy(app, app.ids[i]) }
 	}
 	actions_keys(app)
 	if ui.key_press(.Menu) || ui.key_press(.F10, {.Shift}) {
@@ -268,9 +308,7 @@ build_title :: proc(app: ^App, em: f32) {
 		if q := ui.field_string(&app.search); q != app.query {
 			delete(app.query)
 			app.query = strings.clone(q)
-			refilter(app)
-			select_row(app, 0)
-			ui.vlist_scroll_to(&app.vl, 0)
+			refilter(app, reset = true)
 		}
 		// a grip between the search and the filters: the window is moved from there (an empty part of the title bar)
 		d := ui.frame_new(Grip_Draw)
@@ -325,13 +363,14 @@ build_body :: proc(app: ^App, em: f32) {
 
 @(private = "file")
 build_list :: proc(app: ^App, em: f32) {
-	rows, ok := ui.vlist("###list", &app.vl, app.ids[:])
+	drag_build_begin(app)
+	rows, ok := ui.vlist("###list", &app.vl, app.ids[:], ids_version = app.ids_version)
 	if !ok { return }
 	now := now_ms()
 	thumbs_begin(app)
 	defer thumbs_end(app)
 	for i in rows.first ..< rows.last {
-		e := &app.store.entries[app.shown[i]]
+		e := &app.list.entries[app.shown[i]]
 		ui.next({height = ui.px(ui.dense(em * ROW_EM))})
 		row := ui.list_row(&app.vl, i, "")
 		if ui.parent(row.box) {
@@ -368,7 +407,7 @@ build_list :: proc(app: ^App, em: f32) {
 		if ui.tags("weak") {
 			ui.next({width = ui.fill(), height = ui.px(em * 5)})
 			if ui.style({text_align = .Center}) {
-				ui.label(len(app.store.entries) == 0 ? "Nothing copied yet: copy something, it shows here.###empty" : "No entry matches.###empty")
+				ui.label(len(app.list.entries) == 0 ? "Nothing copied yet: copy something, it shows here.###empty" : "No entry matches.###empty")
 			}
 		}
 	}
@@ -387,12 +426,9 @@ build_status :: proc(app: ^App, em: f32) {
 				ui.next({width = ui.fill()})
 				msg := app.status
 				if msg == "" || ui.now_ms() > app.status_until {
-					msg = fmt.tprintf("%d of %d entries", len(app.shown), len(app.store.entries))
-					if PINS {
-						pinned := 0
-						for e in app.store.entries { if e.pinned { pinned += 1 } }
-						msg = fmt.tprintf("%s · %d pinned", msg, pinned)
-					}
+					msg = fmt.tprintf("%d of %d entries", len(app.shown), len(app.list.entries))
+					// (counted by the reader with the list, and kept by a pin: not counted here at each frame)
+					if PINS { msg = fmt.tprintf("%s · %d pinned", msg, app.list.pinned) }
 				}
 				ui.label(fmt.tprintf("%s###status", msg))
 				hints := app.edit.active ? EDIT_HINTS[:] : LIST_HINTS[:]
@@ -414,36 +450,40 @@ build_status :: proc(app: ^App, em: f32) {
 view_clear :: proc(app: ^App) {
 	if app.view.has_tex { render.destroy_texture(&app.shared.r, app.view.tex) }
 	delete(app.view.text)
+	delete(app.view.runs)
 	app.view = {}
 }
 
-// Reads the selected entry for the preview, once per selection.
+// Asks for the selected entry's content, once per selection: its picture of the decoder, the rest of the reader.
 @(private = "file")
 view_load :: proc(app: ^App, e: ^history.Entry) {
-	if app.view.loaded && app.view.id == e.id && app.view.key == e.key { return }
+	if app.view.asked && app.view.id == e.id && app.view.key == e.key { return }
 	view_clear(app)
-	app.view.id, app.view.key, app.view.loaded = e.id, e.key, true
-	switch e.kind {
-	case .Image:
-		at := -1
-		for r, i in e.reps { if strings.has_prefix(r.mime, "image/") { at = i; break } }
-		if at < 0 { break }
+	app.view.id, app.view.key, app.view.asked = e.id, e.key, true
+	app.view.asked_at = ui.now_ms()
+	// (an edit waits for the entry it was asked on: another one selected ends the wait)
+	if app.edit.pending != e.id { app.edit.pending = 0 }
+	if e.kind == .Image {
+		at := image_rep(e)
+		if at < 0 { return }
 		app.view.image, app.view.loading = at, true
-		decoder_ask(&app.decoder, e.id, app.store.dir, e.reps[at].hash, e.reps[at].mime)
-	case .Files:
-		app.view.text = strings.clone(e.preview)
-	case .Text, .Html, .Other:
-		main := 0
-		for r, i in e.reps { if r.hash == e.key { main = i } }
-		data := history.blob_read(&app.store, e.reps[main].hash, context.temp_allocator)
-		// rich text reads as its text: the program's own when it gave one, else the markup without its tags
-		if e.kind == .Html && e.reps[main].mime == HTML_MIME { data = transmute([]u8)strip_tags(string(data)) }
-		text := string(data[:min(len(data), VIEW_TEXT_MAX_BYTES)])
-		for len(text) > 0 && !utf8.valid_string(text) { text = text[:len(text) - 1] }   // (cut inside a character)
-		app.view.text = strings.clone(text)
-		// (code: shown in the theme's colours, its language named in the header)
-		if e.kind == .Text { app.view.code, app.view.has_code = syntax.guess(app.view.text) }
+		decoder_ask(&app.decoder, e.id, app.list.dir, e.reps[at].hash, e.reps[at].mime)
+		return
 	}
+	// (an entry's content does not change with the same key: an answer kept from before is still right)
+	if !loaded_for(app, e) { reader_load(&app.reader, e.id, e.key) }
+}
+
+// The reader's answer for the selected entry: kept when it is the one shown, then an edit that waited for it begins.
+// True when it is.
+view_loaded :: proc(app: ^App, l: ^Loaded_Entry) -> bool {
+	if !app.view.asked || l.id != app.view.id || l.key != app.view.key { return false }
+	loaded_free(&app.loaded)
+	app.loaded = l^
+	l^ = {}
+	app.view.runs_for = {}   // (the runs pointed into the answer just freed)
+	if e := selected(app); e != nil && e.id == app.edit.pending { edit_begin(app, e) }
+	return true
 }
 
 // A picture the decoder made: the texture of the entry shown, or nothing when the selection moved on.
@@ -491,7 +531,7 @@ build_view_body :: proc(app: ^App, em: f32) {
 		if ui.tags("weak") {
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			if ui.style({font_size = em * 0.88}) {
-				lang := app.view.has_code ? fmt.tprintf("%s · ", app.view.code.label) : ""
+				lang := loaded_for(app, e) && app.loaded.has_code ? fmt.tprintf("%s · ", app.loaded.code.label) : ""
 				ui.label(fmt.tprintf("%s%s · %d type%s · %s ago###meta", lang, size_text(history.entry_size(e^)), len(e.reps), len(e.reps) == 1 ? "" : "s", age_text(now_ms() - e.time_ms)))
 			}
 		}
@@ -512,6 +552,23 @@ build_view_body :: proc(app: ^App, em: f32) {
 		ui.preview_image("###image", &app.view.preview, app.view.tex, {f32(app.view.size.x), f32(app.view.size.y)}, {buttons = true, radius = 6})
 		return
 	}
+	// (a picture: decoded, or why it is not; anything else: the reader's answer)
+	text := app.view.text
+	code, has_code := syntax.Language{}, false
+	if e.kind != .Image {
+		if loaded_for(app, e) {
+			text, code, has_code = app.loaded.view_text, app.loaded.code, app.loaded.has_code
+		} else {
+			waited := ui.now_ms() - app.view.asked_at
+			if waited < LOADING_SHOWN_AFTER_MS {
+				ui.wake_within(&app.main.state, int(LOADING_SHOWN_AFTER_MS - waited) + 1)
+			} else if ui.tags("weak") {
+				ui.next({width = ui.fill(), height = ui.px(em * 5)})
+				if ui.style({text_align = .Center}) { ui.label("Loading…###loading") }
+			}
+			return
+		}
+	}
 	if app.view.loading {
 		if ui.tags("weak") {
 			ui.next({width = ui.fill(), height = ui.px(em * 5)})
@@ -526,12 +583,16 @@ build_view_body :: proc(app: ^App, em: f32) {
 			ui.spacer(ui.px(em * 0.8))
 			ui.next({width = ui.fill()})
 			if ui.style({font = app.mono, font_size = em * 0.95}) {
-				if app.view.has_code {
-					runs := make([dynamic]ui.Rich_Run, context.temp_allocator)
-					ui.code_runs(shown_text(app.view.text), app.view.code, {}, &runs)
-					ui.rich_paragraph(fmt.tprintf("###code%d", e.id), runs[:])
+				if has_code {
+					// (coloured once per answer and per theme, not at each frame: runs point into app.loaded's text)
+					if app.view.runs_for != {e.id, e.key} {
+						clear(&app.view.runs)
+						ui.code_runs(text, code, {}, &app.view.runs)
+						app.view.runs_for = {e.id, e.key}
+					}
+					ui.rich_paragraph(fmt.tprintf("###code%d", e.id), app.view.runs[:])
 				} else {
-					ui.paragraph(fmt.tprintf("%s###body%d", shown_text(app.view.text), e.id))
+					ui.paragraph(fmt.tprintf("%s###body%d", text, e.id))
 				}
 			}
 			ui.spacer(ui.px(em * 0.8))

@@ -70,7 +70,7 @@ setup_build :: proc(app: ^App, em: f32) {
 setup_choice :: proc(app: ^App, choice: string) {
 	delete(app.place.setup)
 	app.place.setup = strings.clone(choice)
-	state_save(app.place)
+	state_write(app)
 }
 
 // The logo of the dialog, a texture of the window's renderer (made once, freed with the window).

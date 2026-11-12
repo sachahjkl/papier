@@ -48,6 +48,7 @@ App :: struct {
 	decoder:    Decoder,            // the pictures of the preview (decoder.odin)
 	slow:       Slow,               // the text of an image, the thumbnails of files (slow.odin)
 	ocr_offered: bool,              // the slow worker said the system reads text (OCR)
+	markdown_source: bool,          // Markdown is shown as its source, not rendered (the session's choice)
 	ocr_reading: u64,               // the image whose text is being read (0: none; app_ocr_follow)
 	tray:       ^platform.Tray,
 	devtools:   ^devtools.Server,   // TOOLKIT_DEVTOOLS=<port>: driven and captured over the Chrome DevTools Protocol
@@ -122,7 +123,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	h := &app.main
 	win := h.win
 	app.icons, _ = font.load_embedded(&app.shared.fonts, lucide.DATA)
-	app.mono, _ = font.load_embedded(&app.shared.fonts, font.FALLBACK_MONO_DATA)
+	app.mono = mono_font(&app.shared.fonts)
 	// (Lucide: the icons of the palette and of the menus; the widgets' own marks have the toolkit's font)
 	h.state.icon_font = app.icons
 	app.vl.multi = true   // (a Ctrl or Shift click marks entries: actions.odin acts on them)
@@ -227,6 +228,19 @@ app_free :: proc(app: ^App) {
 	delete(app.place.setup)
 	settings_free(&app.settings)
 	config.prefs_destroy(&app.prefs)
+}
+
+// The face of the texts shown as they are (an entry's text, code, a diff): the system's monospace, drawn for its screens
+// (the embedded one is thin at small sizes), the first of MONO_FAMILIES it has, else the embedded one. Found at start,
+// before the window's loop: the system's font lists are read here, the start-up's exception to "no file on this thread".
+@(private = "file")
+mono_font :: proc(fonts: ^font.State) -> font.Font_Id {
+	families := MONO_FAMILIES
+	for family in families {
+		if id, ok := font.load_system(fonts, family); ok { return id }
+	}
+	id, _ := font.load_embedded(fonts, font.FALLBACK_MONO_DATA)
+	return id
 }
 
 // What each build is given: the palette and the base style of the preferences.

@@ -23,5 +23,5 @@ history_dir :: proc(persist: bool, allocator := context.temp_allocator) -> strin
 
 // Where the window's state is (state.odin): %APPDATA%\papier\window, beside the preferences.
 state_path :: proc(allocator := context.temp_allocator) -> string {
-	return strings.concatenate({platform.config_dir(context.temp_allocator), "/", APP_NAME, "/window"}, allocator)
+	return strings.concatenate({platform.user_dir(.Config, APP_NAME, context.temp_allocator), "/window"}, allocator)
 }

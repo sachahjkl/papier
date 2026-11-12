@@ -152,6 +152,56 @@ an_entry_is_loaded_beside_the_window :: proc(t: ^testing.T) {
 	testing.expect(t, !s.loaded.has_code)
 }
 
+// What a text is decides how the preview shows it: Markdown rendered (its doc read), a diff in its lines (its files'
+// language found), code in its language, prose plain.
+@(test)
+the_preview_knows_what_a_text_is :: proc(t: ^testing.T) {
+	store, dir := reader_test_store(t, "form")
+	defer reader_test_store_free(&store, dir)
+	MARKDOWN :: "# Release notes\n\nThe **reader** now shows *Markdown*.\n\n- one item\n- another item\n\n```odin\nx := 1\n```\n\nSee [the docs](https://example.org/docs).\n"
+	PATCH :: "diff --git a/src/app.odin b/src/app.odin\nindex 1111111..2222222 100644\n--- a/src/app.odin\n+++ b/src/app.odin\n@@ -1,3 +1,3 @@\n package papier\n-old :: proc() {}\n+new :: proc() {}\n import \"core:fmt\"\n"
+	CODE :: "package main\n\nimport \"core:fmt\"\n\nmain :: proc() {\n\tfor i in 0 ..< 3 {\n\t\tfmt.println(i)\n\t}\n}\n"
+	PROSE :: "The quick brown fox jumps over the lazy dog, then it rests under a tree until the evening comes."
+	texts := [4]string{MARKDOWN, PATCH, CODE, PROSE}
+	ids: [4]u64
+	for text, i in texts { ids[i], _ = history.add(&store, reader_test_text(text), 0, .Text, text, i64(i + 1)) }
+
+	r: Reader
+	reader_start(&r, nil, dir)
+	defer reader_stop(&r)
+	s: Shown
+	defer shown_free(&s)
+	testing.expect(t, shown_wait_view(&s, &r), "the first view comes")
+	load :: proc(t: ^testing.T, s: ^Shown, r: ^Reader, id: u64) -> bool {
+		e := &s.list.entries[s.list.at[id]]
+		reader_load(r, e.id, e.key)
+		ok := shown_wait_loaded(s, r, e.id)
+		testing.expect(t, ok, "the text comes")
+		return ok
+	}
+
+	if load(t, &s, &r, ids[0]) {
+		testing.expect_value(t, s.loaded.form, Preview_Form.Markdown)
+		testing.expect(t, s.loaded.markdown != nil && s.loaded.markdown.read, "its doc is read with the answer")
+		testing.expect_value(t, s.loaded.source, MARKDOWN)
+	}
+	if load(t, &s, &r, ids[1]) {
+		testing.expect_value(t, s.loaded.form, Preview_Form.Diff)
+		testing.expect(t, s.loaded.diff != nil && s.loaded.diff.added == 1 && s.loaded.diff.removed == 1, "its doc is read with the answer")
+		testing.expect(t, s.loaded.has_code, "its files' language is found")
+		testing.expect_value(t, language_name(s.loaded.code), "odin")
+	}
+	if load(t, &s, &r, ids[2]) {
+		testing.expect_value(t, s.loaded.form, Preview_Form.Code)
+		testing.expect(t, s.loaded.has_code)
+		testing.expect_value(t, language_name(s.loaded.code), "odin")
+	}
+	if load(t, &s, &r, ids[3]) {
+		testing.expect_value(t, s.loaded.form, Preview_Form.Plain)
+		testing.expect(t, !s.loaded.has_code)
+	}
+}
+
 ////////////////////////////////
 // What the tests share
 

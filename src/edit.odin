@@ -94,9 +94,9 @@ edit_build :: proc(app: ^App, e: ^history.Entry, em: f32) {
 	if ui.row() {
 		ui.spacer(ui.px(em * 0.5))
 		ui.next({width = ui.fill(), height = ui.fill(), font = app.mono, font_size = em * 0.95})
-		// (code keeps its colours while it is edited)
+		// (code keeps its language's colours while it is edited; Markdown, a diff and prose are not code: plain)
 		hl: ^ui.Text_Highlight
-		if loaded_for(app, e) && app.loaded.has_code { hl = ui.code_highlight(app.loaded.code) }
+		if loaded_for(app, e) && app.loaded.form == .Code && app.loaded.has_code { hl = ui.code_highlight(app.loaded.code) }
 		res := ui.text_edit("###editor", &app.edit.area, "The entry's text", wrap = true, highlight = hl)
 		if app.edit.fresh { ui.set_focus(res.box.key); app.edit.fresh = false }
 		if res.cancelled { edit_end(app) }

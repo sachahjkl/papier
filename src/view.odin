@@ -18,7 +18,9 @@ package papier
 import "base:runtime"
 import "core:fmt"
 import "core:strings"
+import diff "gt:diff"
 import "gt:draw"
+import "gt:markdown"
 import "gt:host"
 import "gt:platform"
 import "gt:render"
@@ -552,7 +554,8 @@ build_view_body :: proc(app: ^App, em: f32) {
 		if ui.tags("weak") {
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			if ui.style({font_size = em * 0.88}) {
-				lang := loaded_for(app, e) && app.loaded.has_code ? fmt.tprintf("%s · ", app.loaded.code.label) : ""
+				lang := loaded_for(app, e) ? form_label(app.loaded) : ""
+				if lang != "" { lang = fmt.tprintf("%s · ", lang) }
 				ui.label(fmt.tprintf("%s%s · %d type%s · %s ago###meta", lang, size_text(history.entry_size(e^)), len(e.reps), len(e.reps) == 1 ? "" : "s", age_text(now_ms() - e.time_ms)))
 			}
 		}
@@ -561,6 +564,13 @@ build_view_body :: proc(app: ^App, em: f32) {
 			if icon_action(app, "edit", lucide.EDIT, action_tip(.Edit), em) { edit_begin(app, e) }
 		}
 		if qr_text(app, e) != "" && icon_action(app, "qr", lucide.QR_CODE, action_tip(.Show_QR), em) { qr_open(app, e) }
+		// (Markdown: rendered or its source, the choice kept for the session)
+		if loaded_for(app, e) && app.loaded.form == .Markdown {
+			tip := app.markdown_source ? "Show it rendered" : "Show the source"
+			if icon_action(app, "mdsource", app.markdown_source ? lucide.EYE : lucide.FILE_CODE, fmt.tprintf("%s (%s)", tip, ui.command_shortcut(ACTIONS[.Toggle_Markdown_Source])), em) {
+				action_run(app, .Toggle_Markdown_Source)
+			}
+		}
 		// (an image: the code it holds, its text; images have no "Show as a QR code", so the icon is free)
 		if image_qr(app, e) != "" && icon_action(app, "qrcontent", lucide.QR_CODE, action_tip(.Copy_Qr_Content), em) { action_run(app, .Copy_Qr_Content) }
 		if e.kind == .Image && ocr_offered(app) && icon_action(app, "ocr", lucide.FILE_TEXT, action_tip(.Copy_Image_Text), em) { action_run(app, .Copy_Image_Text) }
@@ -581,7 +591,17 @@ build_view_body :: proc(app: ^App, em: f32) {
 	code, has_code := syntax.Language{}, false
 	if e.kind != .Image {
 		if loaded_for(app, e) {
-			text, code, has_code = app.loaded.view_text, app.loaded.code, app.loaded.has_code
+			l := &app.loaded
+			text = l.view_text
+			switch l.form {
+			case .Plain:
+			case .Code:
+				code, has_code = l.code, l.has_code
+			case .Markdown:
+				if !app.markdown_source && l.markdown != nil { build_markdown(app, l, em); return }
+			case .Diff:
+				if l.diff != nil { build_diff(app, l, em); return }
+			}
 		} else {
 			waited := ui.now_ms() - app.view.asked_at
 			if waited < LOADING_SHOWN_AFTER_MS {
@@ -622,6 +642,60 @@ build_view_body :: proc(app: ^App, em: f32) {
 			ui.spacer(ui.px(em * 0.8))
 		}
 	}
+}
+
+// What the header calls the text's form: its language, "Markdown", "Diff" ("" plain).
+@(private = "file")
+form_label :: proc(l: Loaded_Entry) -> string {
+	switch l.form {
+	case .Plain:    return ""
+	case .Code:     return l.has_code ? l.code.label : ""
+	case .Markdown: return "Markdown"
+	case .Diff:     return "Diff"
+	}
+	return ""
+}
+
+// Markdown, rendered: the doc the reader read with the answer (nothing is parsed here; the doc makes its runs once).
+@(private = "file")
+build_markdown :: proc(app: ^App, l: ^Loaded_Entry, em: f32) {
+	if ui.scroll_y("###markdown") {
+		ui.spacer(ui.px(em * 0.5))
+		ui.next({width = ui.fill()})
+		if ui.row() {
+			ui.spacer(ui.px(em * 0.8))
+			ui.next({width = ui.fill()})
+			if ui.column() {
+				cfg := markdown.Config{prose = app.shared.font, mono = app.mono, user = app, link = markdown_link}
+				markdown.view(l.markdown, fmt.tprintf("md%d", l.id), l.source, cfg)
+			}
+			ui.spacer(ui.px(em * 0.8))
+		}
+		ui.spacer(ui.px(em * 0.5))
+	}
+}
+
+// A link of the Markdown shown: a web or mail address goes to the browser through the reader (it starts a program);
+// anything else is not handed to the system (a copied text's link is the text's author's).
+@(private = "file")
+markdown_link :: proc(user: rawptr, url: string) {
+	app := (^App)(user)
+	target := strings.trim_space(url)
+	if !is_address(target) && !strings.has_prefix(target, "mailto:") {
+		say(app, "Only web and mail addresses open: %s", one_line(target, 60))
+		return
+	}
+	reader_job(&app.reader, {kind = .Open_Url, text = target})
+}
+
+// A diff: its lines as the patch has them, in its files' colours when the reader found their language. Only the rows in
+// view are built; the doc was read with the answer.
+@(private = "file")
+build_diff :: proc(app: ^App, l: ^Loaded_Entry, em: f32) {
+	o := diff.Options{font = app.mono, size = em * 0.95, selectable = true}
+	if l.has_code { o.language = l.code }
+	ui.next({width = ui.fill(), height = ui.fill()})
+	diff.view(fmt.tprintf("###diff%d", l.id), l.diff, .Stacked, o)
 }
 
 size_text :: proc(n: int, allocator := context.temp_allocator) -> string {

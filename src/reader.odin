@@ -25,7 +25,9 @@ import "core:thread"
 import "core:unicode/utf8"
 import config "gt:config"
 import desktop "gt:desktop"
+import diff "gt:diff"
 import "gt:fsx"
+import "gt:markdown"
 import "gt:platform"
 import syntax "gt:syntax"
 import "history"
@@ -54,15 +56,23 @@ History_View :: struct {
 // The selected entry, read in full (heap; loaded_free).
 Loaded_Entry :: struct {
 	id, key:   u64,
-	view_text: string,            // what the preview shows (VIEW_TEXT_MAX_BYTES at most)
-	code:      syntax.Language,   // the language of a text (has_code: syntax.guess found one)
+	view_text: string,            // what the preview shows as plain text (VIEW_TEXT_MAX_BYTES at most, "##" escaped)
+	form:      Preview_Form,      // how the preview shows it, decided once with the content
+	code:      syntax.Language,   // Code: its language; Diff: its files' (has_code: one is known)
 	has_code:  bool,
+	source:    string,            // Markdown: the text as it is (the doc reads it in place: it must not move)
+	markdown:  ^markdown.Doc,     // Markdown: `source` read into its blocks (heap)
+	diff:      ^diff.Doc,         // Diff: the patch read into its lines (heap)
 	text:      string,            // the whole text (what the edit view and the drag take)
 	qr:        string,            // what its QR code holds ("" none: no text, or too long)
 	ok:        bool,              // the entry was there, with this key
 }
 
+// How the preview shows a text: plain, as code in its language's colours, Markdown rendered, a diff's lines.
+Preview_Form :: enum u8 { Plain, Code, Markdown, Diff }
+
 Job_Kind :: enum u8 {
+	Open_Url,      // text: an address (a Markdown link) in the browser
 	Save_As,       // id, path: the entry's bytes into the file the user chose
 	Open,          // id: an address in the browser, else the entry as a file, with its program
 	Open_With,     // id, handler: the entry as a file, with that program
@@ -307,6 +317,16 @@ loaded_free :: proc(l: ^Loaded_Entry) {
 	delete(l.view_text, heap)
 	delete(l.text, heap)
 	delete(l.qr, heap)
+	if l.markdown != nil {
+		markdown.doc_destroy(l.markdown)   // (its memory is its `alloc`: the heap)
+		free(l.markdown, heap)
+	}
+	delete(l.source, heap)   // (after the doc: it read this text)
+	if l.diff != nil {
+		context.allocator = heap   // (diff.Doc frees with the context's allocator; it was made on the reader's heap)
+		diff.doc_destroy(l.diff)
+		free(l.diff, heap)
+	}
 	l^ = {}
 }
 
@@ -560,14 +580,70 @@ reader_load_entry :: proc(r: ^Reader, id, key: u64) -> (out: Loaded_Entry) {
 		if e.kind == .Html && e.reps[main].mime == HTML_MIME { data = transmute([]u8)strip_tags(string(data)) }
 		text := string(data[:min(len(data), VIEW_TEXT_MAX_BYTES)])
 		for len(text) > 0 && !utf8.valid_string(text) { text = text[:len(text) - 1] }   // (cut inside a character)
-		// (code: shown in the theme's colours, its language named in the header; guessed on the text as it is)
-		if e.kind == .Text { out.code, out.has_code = syntax.guess(text) }
 		// (as the window shows it: a "##" would end a box's shown text, so it is escaped here, once)
 		out.view_text = strings.clone(shown_text(text))
+		// (what the text is, guessed on it as it is: rich text stays plain, its markup is gone)
+		if e.kind == .Text { preview_form(&out, text) }
 		if e.kind != .Other { out.text = strings.clone(entry_whole_text(r, e)) }
 	}
 	out.qr = strings.clone(qr_content(e.kind, out.text))
 	return
+}
+
+// The preview's form of a text, from syntax.guess's answer, and what it needs made here, once, off the window's thread:
+// a Markdown doc read from its own copy of the text, a diff read into its lines with its files' language.
+@(private = "file")
+preview_form :: proc(out: ^Loaded_Entry, text: string) {
+	lang, found := syntax.guess(text)
+	if !found { return }
+	switch language_name(lang) {
+	case "markdown":
+		out.form = .Markdown
+		out.source = strings.clone(text)
+		out.markdown = new(markdown.Doc)
+		out.markdown.alloc = context.allocator   // (the reader's heap: the window frees it, and fills its caches, there too)
+		markdown.read(out.markdown, out.source)
+	case "diff":
+		out.form = .Diff
+		out.diff = new(diff.Doc)
+		diff.doc_set(out.diff, text)
+		out.code, out.has_code = diff_language(text)
+	case:
+		out.form = .Code
+		out.code, out.has_code = lang, true
+	}
+}
+
+// A language's first name ("markdown", "diff", "odin"): what tells two languages apart.
+language_name :: proc(l: syntax.Language) -> string { return len(l.names) > 0 ? l.names[0] : "" }
+
+// The language of a diff's code: of the first file it names ("+++ b/src/x.odin", else "--- a/...").
+@(private = "file")
+diff_language :: proc(patch: string) -> (lang: syntax.Language, ok: bool) {
+	old := ""
+	rest := patch
+	for line in strings.split_lines_iterator(&rest) {
+		if strings.has_prefix(line, "@@") { break }   // (the headers are before the first hunk)
+		path: string
+		switch {
+		case strings.has_prefix(line, "+++ "): path = line[4:]
+		case strings.has_prefix(line, "--- "): old = line[4:]; continue
+		case: continue
+		}
+		if l, found := diff_file_language(path); found { return l, true }
+	}
+	if old != "" { return diff_file_language(old) }
+	return
+}
+
+// The language of a file named in a diff's header: "b/src/x.odin", "x.odin\t2024-01-01 ..." ("/dev/null": none).
+@(private = "file")
+diff_file_language :: proc(header: string) -> (syntax.Language, bool) {
+	path := header
+	if i := strings.index_byte(path, '\t'); i >= 0 { path = path[:i] }
+	path = strings.trim_space(path)
+	if path == "/dev/null" { return {}, false }
+	return syntax.language_of_file(path)
 }
 
 // The whole text of an entry: its text, unless that is its markup (a program may offer HTML as text too); else its
@@ -615,6 +691,9 @@ reader_run_job :: proc(r: ^Reader, j: ^Job) -> (d: Job_Done) {
 		// (the type is in the name: the file need not be written for its applications to be found)
 		d.handlers = desktop.handlers_for_file(j.path)
 		d.ok = true
+	case .Open_Url:
+		d.ok = platform.open_url(j.text)
+		if !d.ok { d.message = strings.clone("No program opens addresses") }
 	case .Reveal:
 		d.ok = platform.reveal_in_folder(j.path)
 		if !d.ok { d.message = strings.clone("The file manager does not start") }

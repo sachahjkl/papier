@@ -40,6 +40,7 @@ full beside the list.
 | Ctrl+S | saves the entry into a file |
 | Ctrl+Shift+Q | shows the entry as a QR code, for a phone's camera |
 | Ctrl+Shift+T | an image: copies the text in it, as a new entry ([The text in an image](#the-text-in-an-image)) |
+| Ctrl+Shift+M | Markdown: shows its source, or shows it rendered again |
 | Ctrl+click, Shift+click | marks entries: Enter copies their texts as one, Ctrl+P pins them, Shift+Delete removes them |
 | Ctrl+Shift+A | marks every entry shown |
 | Ctrl+K, Ctrl+Shift+P | the command palette: every action, searched as you type |
@@ -51,9 +52,20 @@ full beside the list.
 An image fits the preview first: the wheel zooms around the pointer, a drag moves it, a double click shows its pixels
 and fits it again, and the bar in its corner zooms out, in, to its pixels or to what fits.
 
-Code (the shell, Python, SQL, Odin, Go, Rust, C, JavaScript, PowerShell, JSON) is shown in colours, its language named
-in the entry's header. Papier finds the language from the text itself (gui_toolkit's `syntax.guess`); the edit view keeps
-the colours.
+The preview shows what a text is. Papier finds it from the text itself (gui_toolkit's `syntax.guess`) and names it in
+the entry's header:
+
+- **Code** (the shell, Python, SQL, Odin, Go, Rust, C, JavaScript, PowerShell, JSON and more) is shown in colours, its
+  language named. The edit view keeps the colours.
+- **Markdown** is shown rendered: headings, lists, quotes, tables, code blocks in colours, links. A click on a link opens
+  a web or mail address in the browser. The icon beside the entry, or Ctrl+Shift+M, shows the source instead, and back;
+  papier keeps the choice until it quits.
+- **A diff** (git's, `diff -u`'s) is shown as its lines: the added ones on green, the removed ones on red, what changed in
+  a line marked, the numbers of the lines, and the code in the colours of its files' language.
+- Any other text is shown as it is.
+
+Texts as they are, code, diffs and the edit view use the system's monospace font: fontconfig's `monospace` on Linux,
+Cascadia Mono or Consolas on Windows. Papier's own falls in when the system has none.
 
 An image's row shows a small picture of it, and a copied file's row the system's thumbnail of its first file (a PDF's
 first page, a video's frame, a picture), where the system has one.

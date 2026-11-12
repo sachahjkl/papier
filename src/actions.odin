@@ -15,7 +15,7 @@ import lucide "gt:lucide"
 import "history"
 
 Action :: enum u8 {
-	Copy, Copy_Plain, Edit, Open, Save_As, Pin, Remove, Show_QR, Copy_Qr_Content, Copy_Image_Text,
+	Copy, Copy_Plain, Edit, Open, Save_As, Pin, Remove, Show_QR, Copy_Qr_Content, Copy_Image_Text, Toggle_Markdown_Source,
 	Mark_All, Clear_Marks,
 	Filter_All, Filter_Text, Filter_Images, Filter_Files, Filter_Pinned, Filter_Next, Filter_Previous,
 	Clear_History, Settings, Check_Updates, Setup, Palette, Shortcuts, Hide, Restart, Quit,
@@ -31,6 +31,7 @@ ACTIONS := [Action]ui.Command{
 	.Remove          = {label = "Remove", group = "Entry", keys = {{.Delete, {.Shift}}, {}}, icon = lucide.TRASH_2, tags = {"delete", "erase", "forget"}},
 	.Show_QR         = {label = "Show as a QR code", group = "Entry", keys = {{.Q, {.Ctrl, .Shift}}, {}}, icon = lucide.QR_CODE, tags = {"phone", "scan", "share"}},
 	.Copy_Qr_Content = {label = "Copy the QR code's content", group = "Entry", icon = lucide.QR_CODE, tags = {"scan", "read", "link"}},
+	.Toggle_Markdown_Source = {label = "Show the Markdown source or rendered", group = "Entry", keys = {{.M, {.Ctrl, .Shift}}, {}}, icon = lucide.FILE_CODE, tags = {"markdown", "source", "raw", "render"}},
 	.Copy_Image_Text = {label = "Copy the text of the image", group = "Entry", keys = {{.T, {.Ctrl, .Shift}}, {}}, icon = lucide.FILE_TEXT, tags = {"ocr", "recognize", "read", "screenshot", "scan"}},
 	.Mark_All        = {label = "Mark every entry shown", group = "Selection", keys = {{.A, {.Ctrl, .Shift}}, {}}, icon = lucide.LIST_CHECKS, tags = {"select all", "selection"}},
 	.Clear_Marks     = {label = "Clear the marks", group = "Selection", icon = lucide.X},
@@ -96,6 +97,7 @@ action_enabled :: proc(app: ^App, a: Action) -> bool {
 	case .Remove:        return n > 0
 	case .Show_QR:       return one != nil && qr_text(app, one) != ""
 	case .Copy_Qr_Content: return one != nil && image_qr(app, one) != ""
+	case .Toggle_Markdown_Source: return one != nil && loaded_for(app, one) && app.loaded.form == .Markdown
 	// (one reading at a time: a second ask while one runs is not taken)
 	case .Copy_Image_Text: return one != nil && one.kind == .Image && image_rep(one) >= 0 && ocr_offered(app) && app.ocr_reading == 0
 	case .Mark_All:      return len(app.shown) > 0
@@ -137,6 +139,7 @@ action_run :: proc(app: ^App, a: Action) {
 		ui.list_marks_clear(&app.vl)
 		if len(ids) > 1 { say(app, "Removed %d entries", len(ids)) }
 	case .Show_QR:       qr_open(app, on[0])
+	case .Toggle_Markdown_Source: app.markdown_source = !app.markdown_source
 	case .Copy_Qr_Content: copy_new_text(app, image_qr(app, on[0]), "Copied the QR code's content")
 	case .Copy_Image_Text:
 		e := on[0]

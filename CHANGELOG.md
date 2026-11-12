@@ -3,6 +3,11 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.17.6] - 2026-11-12
+
+### Changed
+- **Images are faster, and the palette's field follows its corners**: copied images and their thumbnails are read and written in half the time or less, and the command palette's darker field no longer shows a second, rounder corner inside the dialog's (gui_toolkit 0.196.2).
+
 ## [0.17.5] - 2026-11-11
 
 ### Changed
@@ -315,6 +320,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.17.6]: https://github.com/sachahjkl/papier/releases/tag/v0.17.6
 [0.17.5]: https://github.com/sachahjkl/papier/releases/tag/v0.17.5
 [0.17.4]: https://github.com/sachahjkl/papier/releases/tag/v0.17.4
 [0.1.0]: https://github.com/sachahjkl/papier/releases/tag/v0.1.0

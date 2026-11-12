@@ -13,6 +13,7 @@ import "gt:devtools"
 import "gt:font"
 import "gt:host"
 import instance "gt:instance"
+import ocr "gt:ocr"
 import "gt:platform"
 import prefs_page "gt:prefs_page"
 import "gt:render"
@@ -45,6 +46,9 @@ App :: struct {
 	settings:   Settings,
 	watcher:    Watcher,
 	decoder:    Decoder,            // the pictures of the preview (decoder.odin)
+	slow:       Slow,               // the text of an image, the thumbnails of files (slow.odin)
+	ocr_offered: bool,              // the slow worker said the system reads text (OCR)
+	ocr_reading: u64,               // the image whose text is being read (0: none; app_ocr_follow)
 	tray:       ^platform.Tray,
 	devtools:   ^devtools.Server,   // TOOLKIT_DEVTOOLS=<port>: driven and captured over the Chrome DevTools Protocol
 	theme_shown: ui.Theme_Shown,    // the theme, mode and finish shown (ui.theme_show)
@@ -141,6 +145,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 		return 1
 	}
 	decoder_start(&app.decoder, win)
+	slow_start(&app.slow, win)
 	app_shortcut(app)
 	app_updates_start(app)
 	app.tray = platform.tray_create(win, LOGO_PNG, "Papier")
@@ -169,6 +174,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 		app_updates_follow(app)
 		if app_follow_reader(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if view_decoded(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
+		if app_ocr_follow(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if thumbs_take(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if app.visible && !app.hide_due && !app.quit && !platform.is_closed(win) { host.host_frame(h) }
 		drag_run(app)
@@ -179,6 +185,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	update.updater_stop(app.updater)
 	watcher_stop(&app.watcher)   // (the instance is let go: the installed copy, started below, is the running papier)
 	decoder_stop(&app.decoder)
+	slow_stop(&app.slow)
 	reader_stop(&app.reader)     // (after app_remember: the state it asked to write is written first)
 	devtools.stop(app.devtools)
 	view_clear(app)
@@ -419,6 +426,34 @@ app_follow_reader :: proc(app: ^App) -> bool {
 	return changed
 }
 
+// What the slow worker said of OCR: whether the system reads text (once, at its start), and the text of an image read.
+// The reading's states: idle (ocr_reading = 0), reading (the image's id: Copy_Image_Text asked it), idle again when its
+// result comes. The text is copied whatever is selected then: the user asked for it. True when something shown changed.
+@(private = "file")
+app_ocr_follow :: proc(app: ^App) -> bool {
+	changed := false
+	if !app.ocr_offered {
+		if known, available := slow_ocr_state(&app.slow); known && available {
+			app.ocr_offered = true
+			changed = true
+		}
+	}
+	d, ok := slow_take_ocr(&app.slow)
+	if !ok { return changed }
+	defer ocr_done_free(&d)
+	app.ocr_reading = 0
+	switch {
+	case d.unreadable:     say(app, "The image cannot be read")
+	case d.err != .None:   say(app, "%s", ocr.error_text(d.err))
+	case d.lines == 0:     say(app, "No text in the image")
+	case:                  copy_new_text(app, d.text, fmt.tprintf("Copied the text of the image (%d line%s)", d.lines, d.lines == 1 ? "" : "s"))
+	}
+	return true
+}
+
+// Whether the action that reads the text of an image is offered: the system said it can read.
+ocr_offered :: proc(app: ^App) -> bool { return app.ocr_offered }
+
 // A job of the reader done: its message in the status bar, and what follows from it.
 @(private = "file")
 app_job_done :: proc(app: ^App, d: ^Job_Done) {
@@ -440,11 +475,7 @@ app_job_done :: proc(app: ^App, d: ^Job_Done) {
 		}
 	case .Join:
 		// (several entries' texts as one new entry)
-		if d.ok {
-			paste := app.settings.paste_on_select
-			watcher_send(&app.watcher, {verb = .Add_Text, text = d.text, paste = paste})
-			if app.settings.close_on_copy || paste { app_hide(app); return }
-		}
+		if d.ok { copy_new_text(app, d.text, d.message); return }
 	}
 	if d.message != "" { say(app, "%s", d.message) }
 }

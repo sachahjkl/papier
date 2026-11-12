@@ -45,6 +45,10 @@
       '';
     };
 
+    # The text of an image (gt:ocr opens libtesseract.so.5 with dlopen), with the English and French data only: the
+    # package's default carries every language, about 1 GB.
+    tesseract = pkgs.tesseract.override {enableLanguages = ["eng" "fra"];};
+
     runtime = with pkgs; [
       vulkan-loader
       mesa
@@ -56,7 +60,11 @@
       fontconfig
       freetype
       dbus
+      tesseract
     ];
+
+    # tesseract's language data: gt:ocr reads $TESSDATA_PREFIX first
+    tessdata = "${tesseract}/share/tessdata";
 
     # APP_VERSION of src/main.odin
     version = let
@@ -75,7 +83,7 @@
       # the crates of the toolkit's text library, vendored: cargo makes no request
       cargoDeps = pkgs.rustPlatform.importCargoLock {lockFile = ./ext/gui_toolkit/native/text/Cargo.lock;};
 
-      nativeBuildInputs = [odin pkgs.cargo pkgs.rustc pkgs.clang pkgs.lld pkgs.autoPatchelfHook pkgs.copyDesktopItems];
+      nativeBuildInputs = [odin pkgs.cargo pkgs.rustc pkgs.clang pkgs.lld pkgs.autoPatchelfHook pkgs.copyDesktopItems pkgs.makeWrapper];
       buildInputs = [pkgs.fontconfig pkgs.freetype pkgs.stdenv.cc.cc.lib];
       # what it opens with dlopen goes in its RUNPATH; the Vulkan driver is the system's (/run/opengl-driver)
       runtimeDependencies = runtime;
@@ -120,6 +128,8 @@
       installPhase = ''
         runHook preInstall
         install -Dm755 build/papier $out/bin/papier
+        # (a default: a TESSDATA_PREFIX of the user's own wins)
+        wrapProgram $out/bin/papier --set-default TESSDATA_PREFIX ${tessdata}
         for size in 16 32 64 128 256; do
           install -Dm644 assets/logo_$size.png "$out/share/icons/hicolor/''${size}x''${size}/apps/papier.png"
         done
@@ -164,12 +174,14 @@
     devShells.${system}.default = pkgs.mkShell {
       # (sway and wl-clipboard: papiertool live)
       # (dbus: sway starts its session bus with dbus-run-session; the one of the system would load the shell's libdbus)
-      packages = [odin] ++ (with pkgs; [cargo rustc sway wl-clipboard dbus]) ++ preCommitCheck.enabledPackages;
+      # (tesseract: papiertool live reads the text of an image, through the library in LD_LIBRARY_PATH and its data)
+      packages = [odin] ++ (with pkgs; [cargo rustc sway wl-clipboard dbus]) ++ [tesseract] ++ preCommitCheck.enabledPackages;
       buildInputs = [pkgs.fontconfig];
       shellHook =
         preCommitCheck.shellHook
         + ''
           export LD_LIBRARY_PATH=${lib.makeLibraryPath runtime}
+          export TESSDATA_PREFIX=${tessdata}
         '';
     };
   };

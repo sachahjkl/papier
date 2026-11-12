@@ -6,13 +6,17 @@ package papier
 //
 // The list's thumbnails come after it: the window says at each build which rows in view still want one, in place of what
 // it said before (a list scrolled fast decodes only what stays in view), and each is shrunk here to THUMB_PX.
+//
+// The preview's picture is also read for a QR code (a screenshot of a code, a ticket): its text comes with the picture.
 
 import "base:runtime"
 import "core:strings"
 import "core:sync"
 import "core:thread"
+import "core:unicode/utf8"
 import paint "gt:paint"
 import "gt:platform"
+import "gt:qr"
 import "history"
 
 Decoder :: struct {
@@ -25,6 +29,8 @@ Decoder :: struct {
 	asked:   bool,
 	done:    Decoded,            // the newest picture, while `ready`
 	ready:   bool,
+	qr:      Picture_Qr,         // the text of a QR code in the newest picture, while `qr_ready`
+	qr_ready: bool,
 	thumbs_wanted: [dynamic]Thumb_Ask,   // the rows in view without a thumbnail, first first (heap)
 	thumbs_done:   [dynamic]Thumb,       // thumbnails made, not yet taken (heap)
 	thumb_making:  u64,                  // the image being shrunk (0: none)
@@ -81,7 +87,8 @@ decoder_stop :: proc(d: ^Decoder) {
 	heap := runtime.heap_allocator()
 	if d.asked { delete(d.ask.dir, heap); delete(d.ask.mime, heap) }
 	if d.ready { decoded_free(&d.done) }
-	d.asked, d.ready = false, false
+	if d.qr_ready { picture_qr_free(&d.qr) }
+	d.asked, d.ready, d.qr_ready = false, false, false
 	thumb_asks_clear(d)
 	delete(d.thumbs_wanted)
 	for &t in d.thumbs_done { thumb_free(&t) }
@@ -121,7 +128,7 @@ decoder_take_thumbs :: proc(d: ^Decoder) -> []Thumb {
 	return out
 }
 
-// A thumbnail of the image: decoded, then shrunk so its shorter side is THUMB_PX (a smaller one is kept as it is).
+// A thumbnail of the image: decoded, then shrunk (thumb_of).
 @(private = "file")
 thumb_make :: proc(ask: Thumb_Ask) -> (t: Thumb) {
 	t.hash = ask.hash
@@ -130,15 +137,22 @@ thumb_make :: proc(ask: Thumb_Ask) -> (t: Thumb) {
 	defer delete(bytes)
 	img, ok := platform.clipboard_image_decode(ask.mime, bytes, context.allocator)
 	if !ok { return }
-	defer delete(img.rgba)
-	w, h := img.size.x, img.size.y
+	return thumb_of(ask.hash, img.rgba, img.size)
+}
+
+// The thumbnail `key` names of a picture (heap; taken: it is kept or freed), shrunk so its shorter side is THUMB_PX (a
+// smaller one is kept as it is). On a worker's thread, whose allocator is the heap.
+thumb_of :: proc(key: u64, rgba: []u8, size: [2]int) -> (t: Thumb) {
+	t.hash = key
+	w, h := size.x, size.y
 	short := min(w, h)
+	if short <= 0 || len(rgba) < w * h * 4 { delete(rgba); return }
 	if short <= THUMB_PX {
-		t.rgba, t.size = img.rgba, img.size
-		img.rgba = nil
+		t.rgba, t.size = rgba, size
 	} else {
 		dw, dh := max(w * THUMB_PX / short, 1), max(h * THUMB_PX / short, 1)
-		t.rgba, t.size = paint.rgba_shrink(img.rgba, w, h, dw, dh), {dw, dh}
+		t.rgba, t.size = paint.rgba_shrink(rgba, w, h, dw, dh), {dw, dh}
+		delete(rgba)
 	}
 	t.ok = t.rgba != nil
 	return
@@ -168,6 +182,49 @@ decoder_take :: proc(d: ^Decoder) -> (out: Decoded, ok: bool) {
 decoded_free :: proc(p: ^Decoded) {
 	delete(p.rgba, runtime.heap_allocator())
 	p^ = {}
+}
+
+// The text of a QR code in the preview's picture ("" none, or data that is not UTF-8 text: a code of raw bytes is not
+// copied as text), for entry `id` (heap; picture_qr_free).
+Picture_Qr :: struct {
+	id:   u64,
+	text: string,
+}
+
+picture_qr_free :: proc(q: ^Picture_Qr) {
+	delete(q.text, runtime.heap_allocator())
+	q^ = {}
+}
+
+// The QR text of the newest picture, once it was looked for. The caller owns it.
+decoder_take_qr :: proc(d: ^Decoder) -> (out: Picture_Qr, ok: bool) {
+	sync.mutex_lock(&d.mutex)
+	defer sync.mutex_unlock(&d.mutex)
+	if !d.qr_ready { return }
+	out, ok = d.qr, true
+	d.qr, d.qr_ready = {}, false
+	return
+}
+
+// A picture in grey, 0 black (what the QR reader reads), so that the RGBA can go to the window before the search.
+@(private = "file")
+picture_gray :: proc(rgba: []u8, size: [2]int) -> []u8 {
+	n := size.x * size.y
+	gray := make([]u8, n)
+	for i in 0 ..< n {
+		p := rgba[i * 4:]
+		gray[i] = u8((u32(p[0]) * 299 + u32(p[1]) * 587 + u32(p[2]) * 114) / 1000)
+	}
+	return gray
+}
+
+@(private = "file")
+gray_qr :: proc(gray: []u8, size: [2]int) -> string {
+	// (not the temp allocator: decode_gray gives its temp memory back as it returns, the result's data with it)
+	d, err := qr.decode_gray(gray, size.x, size.y, size.x)
+	defer qr.decoded_destroy(&d)
+	if err != .None || len(d.data) == 0 || !utf8.valid_string(string(d.data)) { return "" }
+	return strings.clone(string(d.data))
 }
 
 @(private = "file")
@@ -200,9 +257,12 @@ decoder_run :: proc(data: rawptr) {
 		sync.mutex_unlock(&d.mutex)
 
 		out := Decoded{id = ask.id}
+		gray: []u8
 		if bytes := history.blob_read_in(ask.dir, ask.hash); bytes != nil {
 			if img, ok := platform.clipboard_image_decode(ask.mime, bytes, context.allocator); ok {
 				out.rgba, out.size, out.ok = img.rgba, img.size, true
+				// (the preview's picture only: a thumbnail is too small to hold a readable code)
+				gray = picture_gray(img.rgba, img.size)
 			}
 			delete(bytes)
 		}
@@ -212,8 +272,20 @@ decoder_run :: proc(data: rawptr) {
 		sync.mutex_lock(&d.mutex)
 		if d.ready { decoded_free(&d.done) }   // (a picture the window never took: a newer one replaces it)
 		d.done, d.ready = out, true
+		// (the search for a code comes after: on a 4K screenshot it takes about 100 ms, which the picture does not wait
+		// for; a newer picture asked meanwhile makes it pointless)
+		search := gray != nil && !d.asked && !d.stop
 		sync.mutex_unlock(&d.mutex)
 		if d.window != nil { platform.wake(d.window) }   // (nil: a test reads the picture itself)
+		if search {
+			found := Picture_Qr{ask.id, gray_qr(gray, out.size)}
+			sync.mutex_lock(&d.mutex)
+			if d.qr_ready { picture_qr_free(&d.qr) }
+			d.qr, d.qr_ready = found, true
+			sync.mutex_unlock(&d.mutex)
+			if d.window != nil { platform.wake(d.window) }
+		}
+		delete(gray)
 		free_all(context.temp_allocator)
 	}
 }

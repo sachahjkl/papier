@@ -15,6 +15,7 @@ package papier
 //   a right click, Menu, Shift+F10    the entry's menu (entry_menu.odin)
 //   Escape                  clear the search, else hide
 
+import "base:runtime"
 import "core:fmt"
 import "core:strings"
 import "gt:draw"
@@ -68,6 +69,7 @@ View :: struct {
 	loading: bool,              // its picture is being decoded (decoder.odin)
 	preview: ui.Preview,        // its picture's zoom and pan (fits again with each entry: view_clear)
 	image:   int,               // the representation of the picture, in the entry's reps
+	qr:      string,            // the text of a QR code in its picture ("" none; the decoder's heap)
 	asked_at: f64,              // when its content was asked (ui clock, ms): "Loading…" only for a slow answer
 	runs:    [dynamic]ui.Rich_Run,   // its code in the theme's colours, made once per answer (runs_for) and per theme
 	runs_for: [2]u64,           // the id and key `runs` were made for ({}: none)
@@ -138,6 +140,12 @@ list_entry :: proc(app: ^App, id: u64) -> ^history.Entry {
 // Whether app.loaded is the reader's answer for `e` as it is now.
 loaded_for :: proc(app: ^App, e: ^history.Entry) -> bool {
 	return app.loaded.id != 0 && app.loaded.id == e.id && app.loaded.key == e.key
+}
+
+// The text of a QR code in the picture of `e`, once the decoder read it for the preview ("" none, or not yet).
+image_qr :: proc(app: ^App, e: ^history.Entry) -> string {
+	if e.kind != .Image || !app.view.has_tex || app.view.id != e.id || app.view.key != e.key { return "" }
+	return app.view.qr
 }
 
 selected_id :: proc(app: ^App) -> u64 {
@@ -375,8 +383,8 @@ build_list :: proc(app: ^App, em: f32) {
 		row := ui.list_row(&app.vl, i, "")
 		if ui.parent(row.box) {
 			ui.spacer(ui.px(em * 0.35))
-			// (an image: its thumbnail once made, its kind's mark until then)
-			if e.kind != .Image || !thumb_mark(app, e, em * MARK_EM) {
+			// (an image, a copied file: its thumbnail once made, its kind's mark until then)
+			if !has_thumb(e) || !thumb_mark(app, e, em * MARK_EM) {
 				if ui.tags("weak") { glyph(app, KIND_ICONS[e.kind], em * MARK_EM) }
 			}
 			// (the search's words lit in the line)
@@ -425,7 +433,9 @@ build_status :: proc(app: ^App, em: f32) {
 			if ui.tags("weak") {
 				ui.next({width = ui.fill()})
 				msg := app.status
-				if msg == "" || ui.now_ms() > app.status_until {
+				if (msg == "" || ui.now_ms() > app.status_until) && app.ocr_reading != 0 {
+					msg = "Reading the text of the image…"
+				} else if msg == "" || ui.now_ms() > app.status_until {
 					msg = fmt.tprintf("%d of %d entries", len(app.shown), len(app.list.entries))
 					// (counted by the reader with the list, and kept by a pin: not counted here at each frame)
 					if PINS { msg = fmt.tprintf("%s · %d pinned", msg, app.list.pinned) }
@@ -451,6 +461,7 @@ view_clear :: proc(app: ^App) {
 	if app.view.has_tex { render.destroy_texture(&app.shared.r, app.view.tex) }
 	delete(app.view.text)
 	delete(app.view.runs)
+	delete(app.view.qr, runtime.heap_allocator())
 	app.view = {}
 }
 
@@ -488,8 +499,18 @@ view_loaded :: proc(app: ^App, l: ^Loaded_Entry) -> bool {
 
 // A picture the decoder made: the texture of the entry shown, or nothing when the selection moved on.
 view_decoded :: proc(app: ^App) -> bool {
+	changed := false
+	// (the code's text comes after its picture, for the same entry: kept while that entry is shown)
+	defer if q, ok := decoder_take_qr(&app.decoder); ok {
+		if app.view.has_tex && q.id == app.view.id {
+			delete(app.view.qr, runtime.heap_allocator())
+			app.view.qr, q.text = q.text, ""
+			changed = true
+		}
+		picture_qr_free(&q)
+	}
 	p, ok := decoder_take(&app.decoder)
-	if !ok { return false }
+	if !ok { return changed }
 	defer decoded_free(&p)
 	if !app.view.loading || p.id != app.view.id { return false }
 	app.view.loading = false
@@ -540,6 +561,9 @@ build_view_body :: proc(app: ^App, em: f32) {
 			if icon_action(app, "edit", lucide.EDIT, action_tip(.Edit), em) { edit_begin(app, e) }
 		}
 		if qr_text(app, e) != "" && icon_action(app, "qr", lucide.QR_CODE, action_tip(.Show_QR), em) { qr_open(app, e) }
+		// (an image: the code it holds, its text; images have no "Show as a QR code", so the icon is free)
+		if image_qr(app, e) != "" && icon_action(app, "qrcontent", lucide.QR_CODE, action_tip(.Copy_Qr_Content), em) { action_run(app, .Copy_Qr_Content) }
+		if e.kind == .Image && ocr_offered(app) && icon_action(app, "ocr", lucide.FILE_TEXT, action_tip(.Copy_Image_Text), em) { action_run(app, .Copy_Image_Text) }
 		if PINS && icon_action(app, "pin", e.pinned ? lucide.PIN_OFF : lucide.PIN, fmt.tprintf("%s (%s)", e.pinned ? "Unpin" : "Pin", ui.command_shortcut(ACTIONS[.Pin])), em) { toggle_pin(app, e) }
 		if icon_action(app, "delete", lucide.TRASH_2, action_tip(.Remove), em) { remove_entry(app, e.id); return }
 		ui.spacer(ui.px(em * 0.4))

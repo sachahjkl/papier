@@ -39,6 +39,7 @@ full beside the list.
 | Ctrl+O | opens the entry |
 | Ctrl+S | saves the entry into a file |
 | Ctrl+Shift+Q | shows the entry as a QR code, for a phone's camera |
+| Ctrl+Shift+T | an image: copies the text in it, as a new entry ([The text in an image](#the-text-in-an-image)) |
 | Ctrl+click, Shift+click | marks entries: Enter copies their texts as one, Ctrl+P pins them, Shift+Delete removes them |
 | Ctrl+Shift+A | marks every entry shown |
 | Ctrl+K, Ctrl+Shift+P | the command palette: every action, searched as you type |
@@ -54,7 +55,11 @@ Code (the shell, Python, SQL, Odin, Go, Rust, C, JavaScript, PowerShell, JSON) i
 in the entry's header. Papier finds the language from the text itself (gui_toolkit's `syntax.guess`); the edit view keeps
 the colours.
 
-The buttons beside the entry copy, edit, show as a QR code, pin and remove it. The splitter between the list and the entry sets the width of the
+An image's row shows a small picture of it, and a copied file's row the system's thumbnail of its first file (a PDF's
+first page, a video's frame, a picture), where the system has one.
+
+The buttons beside the entry copy, edit, show as a QR code, pin and remove it. Beside an image, they also copy the
+content of a QR code that the picture holds, and the text in the picture. The splitter between the list and the entry sets the width of the
 list. Papier remembers the size of the window, its place (X11 only: on Wayland the compositor places windows) and the
 width of the list.
 
@@ -71,6 +76,8 @@ width of the list.
 | Open with | the applications that your system knows for the type of the entry; the default is marked |
 | Show in folder | a copied file: opens its folder |
 | Show as a QR code | text, an address or a path: a QR code in a dialog |
+| Copy the QR code's content | an image that holds a QR code: its content, as a new entry |
+| Copy the text of the image | an image, when the system can read text: the text in it, as a new entry |
 | Save as… | writes the bytes of the entry into a file that you name |
 | Pin, Unpin | pins or unpins the entry |
 | Remove | removes the entry |
@@ -93,6 +100,30 @@ one table (`src/actions.odin`).
 
 To open an entry that is not a file, papier writes it to `$XDG_RUNTIME_DIR/papier/open/papier-<id>.<extension>`: a
 program needs a file. The session's runtime folder is yours alone and empty at the next session.
+
+## A QR code in an image
+
+When the selected image holds a QR code (a screenshot of a code, a ticket, a page with a link), papier reads it when it
+shows the picture. A QR code icon then comes beside the entry, and the entry's menu and the palette offer "Copy the QR
+code's content". The content becomes a new entry, on the clipboard (pasted and the window hidden as for any copy). A code
+whose content is not text is not offered.
+
+## The text in an image
+
+"Copy the text of the image" (Ctrl+Shift+T, the icon beside an image, the entry's menu, the palette) reads the text in the
+picture with the system's text recognition (OCR) and copies it as a new entry. A reading takes a second or more: the
+status bar says "Reading the text of the image…" until it ends, then how many lines it copied. A table keeps its rows,
+its cells parted by tabs.
+
+The action is there only when the system can read text:
+
+- **Linux**: Tesseract 5 and its data for each language to read: `tesseract-ocr` on Debian and Ubuntu (English included,
+  `tesseract-ocr-fra` and others for more), `tesseract` and `tesseract-langpack-*` on Fedora, `tesseract` and
+  `tesseract-data-*` on Arch. The papier of the Nix flake carries Tesseract and its languages.
+- **Windows**: the "Optical character recognition" part of a language pack: Settings → Time & language → Language & region
+  → a language → Language options.
+
+Papier reads with the user's languages (`LANG`, and English) where they are installed.
 
 ## The edit view
 

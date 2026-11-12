@@ -1,8 +1,10 @@
 package papier
 
 // The thumbnails of the list: an image's row shows a small picture of it in place of its kind's mark, so a scroll tells
-// the images apart. The decoder makes them (decoder.odin) for the rows in view; the window keeps their textures by the
-// image's hash, at most THUMBS_KEPT, the ones least lately shown going first.
+// the images apart; a copied file's row shows the system's thumbnail of its first file. The decoder makes the images'
+// (decoder.odin), the slow worker the files' (slow.odin: a thumbnailer may take seconds), for the rows in view; the
+// window keeps their textures by their key (an image's hash, a path's hash), at most THUMBS_KEPT, the ones least lately
+// shown going first.
 
 import "core:strings"
 import "gt:draw"
@@ -13,9 +15,10 @@ import "history"
 THUMBS_KEPT :: 300
 
 Thumbs :: struct {
-	kept:   map[u64]Thumb_Texture,   // by the image's hash
-	failed: map[u64]bool,            // images that cannot be read: asked no more
-	asks:   [dynamic]Thumb_Ask,      // this build's (strings borrowed from the list shown)
+	kept:   map[u64]Thumb_Texture,   // by their key
+	failed: map[u64]bool,            // pictures and files that have none: asked no more
+	asks:   [dynamic]Thumb_Ask,      // this build's images (strings borrowed from the list shown)
+	file_asks: [dynamic]File_Thumb_Ask,   // this build's files (the same)
 	build:  u64,                     // builds counted, for "least lately shown"
 }
 
@@ -31,6 +34,7 @@ thumbs_destroy :: proc(app: ^App) {
 	delete(t.kept)
 	delete(t.failed)
 	delete(t.asks)
+	delete(t.file_asks)
 	t^ = {}
 }
 
@@ -44,15 +48,32 @@ image_rep :: proc(e: ^history.Entry) -> int {
 thumbs_begin :: proc(app: ^App) {
 	app.thumbs.build += 1
 	clear(&app.thumbs.asks)
+	clear(&app.thumbs.file_asks)
 }
 
-// The mark of an image's row: its thumbnail, `width` wide; false when there is none yet (it is asked).
+// Whether an entry's row can show a thumbnail: an image, a copied file.
+has_thumb :: proc(e: ^history.Entry) -> bool { return e.kind == .Image || e.kind == .Files }
+
+// The mark of an image's or a copied file's row: its thumbnail, `width` wide; false when there is none yet (it is asked,
+// unless it is known to have none).
 thumb_mark :: proc(app: ^App, e: ^history.Entry, width: f32) -> bool {
-	at := image_rep(e)
-	if at < 0 { return false }
-	hash := e.reps[at].hash
+	key: u64
+	path: string
+	at := -1
+	#partial switch e.kind {
+	case .Image:
+		at = image_rep(e)
+		if at < 0 { return false }
+		key = e.reps[at].hash
+	case .Files:
+		path = entry_file_name(e)   // (the first file; a row in view: one hash of a path per build)
+		if path == "" { return false }
+		key = file_thumb_key(path)
+	case:
+		return false
+	}
 	t := &app.thumbs
-	if k, ok := &t.kept[hash]; ok {
+	if k, ok := &t.kept[key]; ok {
 		k.shown = t.build
 		d := new(Thumb_Draw, context.temp_allocator)
 		d^ = {k.tex, k.size}
@@ -60,18 +81,29 @@ thumb_mark :: proc(app: ^App, e: ^history.Entry, width: f32) -> bool {
 		ui.custom("thumb", thumb_draw, d)
 		return true
 	}
-	if !t.failed[hash] { append(&t.asks, Thumb_Ask{hash, app.list.dir, e.reps[at].mime}) }
+	if t.failed[key] { return false }
+	if e.kind == .Image {
+		append(&t.asks, Thumb_Ask{key, app.list.dir, e.reps[at].mime})
+	} else {
+		append(&t.file_asks, File_Thumb_Ask{key, path})
+	}
 	return false
 }
 
-// At the end of the list's build: the rows in view that want a thumbnail, to the decoder.
+// At the end of the list's build: the rows in view that want a thumbnail, to the decoder and to the slow worker.
 thumbs_end :: proc(app: ^App) {
 	decoder_want_thumbs(&app.decoder, app.thumbs.asks[:])
+	slow_want_file_thumbs(&app.slow, app.thumbs.file_asks[:])
 }
 
-// What the decoder made: textures, the least lately shown let go past THUMBS_KEPT. True when one came.
+// What the decoder and the slow worker made: textures, the least lately shown let go past THUMBS_KEPT. True when one
+// came.
 thumbs_take :: proc(app: ^App) -> bool {
-	made := decoder_take_thumbs(&app.decoder)
+	images := decoder_take_thumbs(&app.decoder)
+	files := slow_take_file_thumbs(&app.slow)
+	made := make([dynamic]Thumb, 0, len(images) + len(files), context.temp_allocator)
+	append(&made, ..images)
+	append(&made, ..files)
 	t := &app.thumbs
 	for &m in made {
 		defer thumb_free(&m)

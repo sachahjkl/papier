@@ -6,7 +6,72 @@ import "core:os"
 import "core:testing"
 import "core:time"
 import "gt:fsx"
+import png "gt:png"
+import "gt:qr"
 import "history"
+
+// The preview's picture is read for a QR code: a picture of one gives its text, a picture without one gives "".
+@(test)
+a_qr_code_in_a_picture_is_read :: proc(t: ^testing.T) {
+	dir := fmt.tprintf("%s/papier_test_decoder_qr_%d", fsx.temp_dir(context.temp_allocator), os.get_pid())
+	fsx.remove_tree(dir)
+	defer fsx.remove_tree(dir)
+	store: history.Store
+	testing.expect(t, history.open(&store, dir))
+	defer history.close(&store)
+
+	TEXT :: "https://papier.example/qr?é"
+	// (not the temp allocator: encode gives its temp memory back as it returns, the modules with it)
+	code, err := qr.encode(TEXT)
+	defer qr.destroy(&code)
+	testing.expect_value(t, err, qr.Error.None)
+	// (dark modules on white, 4 pixels each, the quiet zone around: as a screenshot of a code shows it)
+	SCALE :: 4
+	side := (code.size + 2 * qr.QUIET_ZONE) * SCALE
+	rgba := make([]u8, side * side * 4, context.temp_allocator)
+	for y in 0 ..< side {
+		for x in 0 ..< side {
+			dark := qr.module(code, x / SCALE - qr.QUIET_ZONE, y / SCALE - qr.QUIET_ZONE)
+			v := u8(dark ? 0 : 255)
+			rgba[(y * side + x) * 4 + 0], rgba[(y * side + x) * 4 + 1], rgba[(y * side + x) * 4 + 2], rgba[(y * side + x) * 4 + 3] = v, v, v, 255
+		}
+	}
+	picture := png.encode(rgba, side, side, allocator = context.temp_allocator)
+	_, added := history.add(&store, {{"image/png", picture}}, 0, .Image, "", 1)
+	testing.expect(t, added, "the picture is stored")
+	plain, _ := os.read_entire_file("assets/logo_64.png", context.temp_allocator)
+	history.add(&store, {{"image/png", plain}}, 0, .Image, "", 2)
+
+	d: Decoder
+	decoder_start(&d, nil)
+	defer decoder_stop(&d)
+	decoder_ask(&d, 1, dir, history.hash_bytes(picture), "image/png")
+	p, ok := decoder_wait(&d)
+	defer decoded_free(&p)
+	testing.expect(t, ok && p.ok, "the picture comes")
+	c, cok := decoder_wait_qr(&d)
+	defer picture_qr_free(&c)
+	testing.expect(t, cok && c.id == 1, "its code is looked for after it")
+	testing.expect_value(t, c.text, TEXT)
+
+	decoder_ask(&d, 2, dir, history.hash_bytes(plain), "image/png")
+	q, qok := decoder_wait(&d)
+	defer decoded_free(&q)
+	testing.expect(t, qok && q.ok, "the other picture comes")
+	n, nok := decoder_wait_qr(&d)
+	defer picture_qr_free(&n)
+	testing.expect(t, nok && n.id == 2, "it is looked for too")
+	testing.expect_value(t, n.text, "")
+}
+
+@(private = "file")
+decoder_wait_qr :: proc(d: ^Decoder) -> (q: Picture_Qr, ok: bool) {
+	for _ in 0 ..< 500 {
+		if q, ok = decoder_take_qr(d); ok { return }
+		time.sleep(5 * time.Millisecond)
+	}
+	return
+}
 
 // A picture is decoded on the decoder's thread, from the history's bytes; bytes that are not there give a picture
 // that is not ok.

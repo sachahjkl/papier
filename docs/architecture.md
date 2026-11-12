@@ -3,7 +3,7 @@
 Papier is one program in [Odin](https://odin-lang.org) on [gui_toolkit](https://github.com/sachahjkl/gui_toolkit) (the
 `ext/gui_toolkit` submodule, the collection `gt`). This page says how its parts fit, and why.
 
-## One process, four threads
+## One process, five threads
 
 ```
 papier --hidden ─┬─ the window's thread (app.odin, view.odin)
@@ -15,8 +15,11 @@ papier --hidden ─┬─ the window's thread (app.odin, view.odin)
                  ├─ the reader thread (reader.odin)
                  │     the history as the window reads it, the search, the selected entry's text, the window's files
                  │
-                 └─ the decoder thread (decoder.odin)
-                       the picture of the selected image and the list's thumbnails, decoded
+                 ├─ the decoder thread (decoder.odin)
+                 │     the picture of the selected image (and the QR code in it), the images' thumbnails
+                 │
+                 └─ the slow worker (slow.odin)
+                       the text of an image (OCR), the system's thumbnails of copied files
 ```
 
 - **The watcher** sleeps in one `poll` on three descriptors: the Wayland connection of the data-control protocol, the
@@ -29,7 +32,12 @@ papier --hidden ─┬─ the window's thread (app.odin, view.odin)
   written. It puts each answer in a mailbox and wakes the window. A new list comes with its view, in one hold of the
   mailbox: the window never shows the view of one list with another. An entry the user removes leaves the reader's list
   at once, and the view comes again without it.
-- **The decoder** decodes pictures, through a connection of its own to the store.
+- **The decoder** decodes pictures, through a connection of its own to the store. It reads the preview's picture for a
+  QR code too, and gives its text with the picture.
+- **The slow worker** does what takes seconds, so that it never waits behind the decoder or the reader: the text of an
+  image (OCR, a second or more; one reading at a time, the newest ask first) and the thumbnails of copied files (a
+  system's thumbnailer may run 30 seconds; the rows in view, as the decoder's). At its start it asks whether the system
+  can read text (`ocr.available` loads a library), and the window offers the action once it says so.
 - **The window** sleeps in the toolkit's wait: its own Wayland connection, its wake, the session bus (the tray). It asks
   the watcher by a queue (copy, pin, delete, clear) and the watcher asks it by another (show, hide, toggle, reload, quit),
   in order: a hide then a show that come between two steps of the loop end shown. It empties the reader's mailbox once

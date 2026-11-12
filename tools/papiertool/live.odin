@@ -15,6 +15,7 @@ import "core:os"
 import "core:strings"
 import "core:time"
 import cdp "gt:cdp"
+import ocr "gt:ocr"
 
 LIVE_DIR  :: "build/live"
 LIVE_PORT :: 9361
@@ -141,6 +142,27 @@ live_clipboard :: proc(l: ^Live) {
 	check(l, strings.trim_space(types) != "", "an emptied clipboard gets the last entry back")
 }
 
+// The menu of an image offers to read its text when the system can (OCR: libtesseract and a language; papier asks on a
+// worker, this process asks too). Starts and ends with "bold" in the search, as live_window has it.
+@(private = "file")
+live_image_menu :: proc(l: ^Live, c: ^cdp.Client) {
+	check(l, cdp.key(c, "Escape"), "Escape clears the search")
+	check(l, cdp.type_text(c, "image/png"), "search the image")
+	check(l, cdp.wait_for(c, "rich bold live", SESSION_WAIT, gone = true), "the image alone is listed")
+	if _, available := ocr.available(); available {
+		check(l, cdp.key(c, "ContextMenu"), "the Menu key on the image")
+		check(l, cdp.wait_for(c, "Copy the text of the image", SESSION_WAIT), "the image's menu offers to read its text")
+		check(l, cdp.key(c, "Escape"), "Escape closes the menu")
+		check(l, cdp.wait_for(c, "Copy the text of the image", SESSION_WAIT, gone = true), "and it closes")
+	} else {
+		fmt.println("  skip  the image's menu and OCR: this system has no OCR engine or language (tesseract)")
+	}
+	check(l, cdp.key(c, "Escape"), "Escape clears the search")
+	check(l, cdp.type_text(c, "bold"), "type in the search again")
+	check(l, cdp.wait_for(c, "hello from papier live", SESSION_WAIT, gone = true), "the search leaves the other entries out again")
+	check(l, cdp.wait_for(c, "rich bold live", SESSION_WAIT), "and keeps the match")
+}
+
 // The window: shown, read, searched, hidden and shown again; each time a frame comes, and the DevTools server takes a
 // new connection.
 @(private = "file")
@@ -160,6 +182,7 @@ live_window :: proc(l: ^Live) {
 	check(l, cdp.wait_for(&c, "Open with", SESSION_WAIT), "the entry's menu opens")
 	check(l, cdp.key(&c, "Escape"), "Escape")
 	check(l, cdp.wait_for(&c, "Open with", SESSION_WAIT, gone = true), "and closes")
+	live_image_menu(l, &c)
 	// the edit view: the rich text edited as text, saved in place of its entry
 	EDITED :: "rich bold live, edited"
 	check(l, cdp.key(&c, "ctrl+e"), "Ctrl+E")

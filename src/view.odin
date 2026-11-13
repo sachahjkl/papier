@@ -204,7 +204,7 @@ remove_entry :: proc(app: ^App, id: u64) {
 // The keys of the window, taken before the search field sees them.
 @(private = "file")
 view_keys :: proc(app: ^App) {
-	if app.setup.open || app.palette.open || app.sheet_open || app.qr.open { return }   // (a dialog has the keyboard)
+	if app.setup.open || app.palette.open || app.sheet.open || app.qr.open { return }   // (a dialog has the keyboard)
 	if app.settings_open { settings_keys(app); return }
 	if app.edit.active { edit_keys(app); return }
 	// (the moves of the selection: a move clears the marks, as the list's own keys do)
@@ -245,7 +245,7 @@ view_build :: proc(h: ^host.Host, size: host.Vec2) {
 	// (the user's themes file: a task looks at it now and then, and reads it when it changed; app_params shows it)
 	if prefs_page.themes_file_poll(&app.themes_file, &app.main.state) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 	// the keyboard is the search's, unless the edit view or the settings have it
-	dialog := app.palette.open || app.sheet_open || app.qr.open || app.setup.open
+	dialog := app.palette.open || app.sheet.open || app.qr.open || app.setup.open
 	if !app.edit.active && !app.settings_open && !dialog && app.search_key != 0 && ui.focus_key() != app.search_key { ui.set_focus(app.search_key) }
 	view_keys(app)
 	ui.next({width = ui.fill(), height = ui.fill(), axis = .Y})
@@ -694,7 +694,7 @@ build_markdown :: proc(app: ^App, l: ^Loaded_Entry, em: f32) {
 				// and the scroll bar)
 				u := ui.frame_new(Markdown_User)
 				u^ = {app = app, loaded = l, width = (app.room - app.place.split) * ui.scale() - em * 2.6}
-				u.cfg = markdown.Config{prose = app.shared.font, mono = app.mono, user = u, link = markdown_link}
+				u.cfg = markdown.View_Options{prose = app.shared.font, mono = app.mono, user = u, link = markdown_link}
 				cfg := u.cfg
 				cfg.code = markdown_code
 				markdown.view(l.markdown, fmt.tprintf("md%d", l.id), l.source, cfg)
@@ -722,7 +722,7 @@ markdown_link :: proc(user: rawptr, url: string) {
 // view are built; the doc was read with the answer.
 @(private = "file")
 build_diff :: proc(app: ^App, l: ^Loaded_Entry, em: f32) {
-	o := diff.Options{font = app.mono, size = em * 0.95, selectable = true}
+	o := diff.View_Options{font = app.mono, size = em * 0.95, selectable = true}
 	if l.has_code { o.language = l.code }
 	ui.next({width = ui.fill(), height = ui.fill()})
 	diff.view(fmt.tprintf("###diff%d", l.id), l.diff, .Stacked, o)

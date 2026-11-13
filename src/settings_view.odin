@@ -68,7 +68,7 @@ settings_build :: proc(app: ^App) {
 
 // What the page is given: its pages, papier's themes and the user's, the updater, the file; the palette lists its
 // settings by them.
-settings_options :: proc(app: ^App) -> prefs_page.Options {
+settings_options :: proc(app: ^App) -> prefs_page.Page_Options {
 	return {
 		user = app, changed = settings_changed,
 		hotkeys = HOTKEY_PREFS[:], problem = settings_problem,

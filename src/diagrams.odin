@@ -85,7 +85,7 @@ Markdown_User :: struct {
 	app:   ^App,
 	loaded: ^Loaded_Entry,
 	width: f32,   // the column's width in pixels
-	cfg:   markdown.Config,
+	cfg:   markdown.View_Options,
 }
 
 // A fenced block of the Markdown shown: a diagram, or (not a diagram, too many of them, another language) its code.

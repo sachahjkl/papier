@@ -97,7 +97,8 @@ App :: struct {
 	drag:       Drag_Out,           // an entry dragged out of the list (drag.odin)
 	thumbs:     Thumbs,             // the list's thumbnails (thumbs.odin)
 	palette:    ui.Command_Palette, // Ctrl+K: every action (actions.odin)
-	sheet_open: bool,               // F1: the sheet of the keys
+	palette_table: Palette_Table,   // what it lists
+	sheet:      ui.Shortcuts_Sheet, // F1: the sheet of the keys
 	qr:         Qr_View,            // an entry as a QR code (qr.odin)
 	menu:       Entry_Menu,         // the entry's menu (entry_menu.odin)
 	edit:       Edit,               // the edit view (edit.odin)
@@ -272,7 +273,9 @@ app_free :: proc(app: ^App) {
 	licence_destroy(app)
 	ui.line_edit_destroy(&app.search)
 	ui.vlist_destroy(&app.vl)
-	ui.line_edit_destroy(&app.palette.field)
+	ui.palette_destroy(&app.palette)
+	palette_table_destroy(&app.palette_table)
+	ui.shortcuts_sheet_destroy(&app.sheet)
 	qr_destroy(app)
 	entry_menu_free(&app.menu)
 	ui.text_edit_destroy(&app.edit.area)

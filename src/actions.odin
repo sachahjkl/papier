@@ -8,6 +8,7 @@ package papier
 // An action on entries acts on the marked rows (a Ctrl or Shift click, Ctrl+Shift+A), or on the selected one when none is
 // marked.
 
+import "core:mem/virtual"
 import "core:slice"
 import prefs_page "gt:prefs_page"
 import i18n "gt:i18n"
@@ -23,35 +24,35 @@ Action :: enum u8 {
 }
 
 ACTIONS := [Action]ui.Command{
-	.Copy            = {label = i18n.later("Copy"), group = i18n.later("Entry"), keys = {{.Return, {}}, {}}, icon = lucide.COPY, tags = {"paste", "clipboard"}},
+	.Copy            = {label = i18n.later("Copy"), group = i18n.later("Entry"), keys = {{.Return, {}}}, icon = lucide.COPY, tags = {"paste", "clipboard"}},
 	.Copy_Plain      = {label = i18n.later("Copy as plain text"), group = i18n.later("Entry"), icon = lucide.TYPE, tags = {"text", "unformatted"}},
-	.Edit            = {label = i18n.later("Edit…"), group = i18n.later("Entry"), keys = {{.E, {.Ctrl}}, {}}, icon = lucide.EDIT, tags = {"change", "modify"}},
-	.Open            = {label = i18n.later("Open"), group = i18n.later("Entry"), keys = {{.O, {.Ctrl}}, {}}, icon = lucide.EXTERNAL_LINK, tags = {"launch", "browser"}},
-	.Save_As         = {label = i18n.later("Save as…"), group = i18n.later("Entry"), keys = {{.S, {.Ctrl}}, {}}, icon = lucide.SAVE, tags = {"export", "file", "write"}},
-	.Pin             = {label = i18n.later("Pin or unpin"), group = i18n.later("Entry"), keys = {{.P, {.Ctrl}}, {}}, icon = lucide.PIN, tags = {"favourite", "keep", "star"}},
-	.Remove          = {label = i18n.later("Remove"), group = i18n.later("Entry"), keys = {{.Delete, {.Shift}}, {}}, icon = lucide.TRASH_2, tags = {"delete", "erase", "forget"}},
-	.Show_QR         = {label = i18n.later("Show as a QR code"), group = i18n.later("Entry"), keys = {{.Q, {.Ctrl, .Shift}}, {}}, icon = lucide.QR_CODE, tags = {"phone", "scan", "share"}},
+	.Edit            = {label = i18n.later("Edit…"), group = i18n.later("Entry"), keys = {{.E, {.Ctrl}}}, icon = lucide.EDIT, tags = {"change", "modify"}},
+	.Open            = {label = i18n.later("Open"), group = i18n.later("Entry"), keys = {{.O, {.Ctrl}}}, icon = lucide.EXTERNAL_LINK, tags = {"launch", "browser"}},
+	.Save_As         = {label = i18n.later("Save as…"), group = i18n.later("Entry"), keys = {{.S, {.Ctrl}}}, icon = lucide.SAVE, tags = {"export", "file", "write"}},
+	.Pin             = {label = i18n.later("Pin or unpin"), group = i18n.later("Entry"), keys = {{.P, {.Ctrl}}}, icon = lucide.PIN, tags = {"favourite", "keep", "star"}},
+	.Remove          = {label = i18n.later("Remove"), group = i18n.later("Entry"), keys = {{.Delete, {.Shift}}}, icon = lucide.TRASH_2, tags = {"delete", "erase", "forget"}},
+	.Show_QR         = {label = i18n.later("Show as a QR code"), group = i18n.later("Entry"), keys = {{.Q, {.Ctrl, .Shift}}}, icon = lucide.QR_CODE, tags = {"phone", "scan", "share"}},
 	.Copy_Qr_Content = {label = i18n.later("Copy the QR code's content"), group = i18n.later("Entry"), icon = lucide.QR_CODE, tags = {"scan", "read", "link"}},
-	.Toggle_Markdown_Source = {label = i18n.later("Show the Markdown source or rendered"), group = i18n.later("Entry"), keys = {{.M, {.Ctrl, .Shift}}, {}}, icon = lucide.FILE_CODE, tags = {"markdown", "source", "raw", "render"}},
-	.Copy_Image_Text = {label = i18n.later("Copy the text of the image"), group = i18n.later("Entry"), keys = {{.T, {.Ctrl, .Shift}}, {}}, icon = lucide.FILE_TEXT, tags = {"ocr", "recognize", "read", "screenshot", "scan"}},
-	.Mark_All        = {label = i18n.later("Mark every entry shown"), group = i18n.later("Selection"), keys = {{.A, {.Ctrl, .Shift}}, {}}, icon = lucide.LIST_CHECKS, tags = {"select all", "selection"}},
+	.Toggle_Markdown_Source = {label = i18n.later("Show the Markdown source or rendered"), group = i18n.later("Entry"), keys = {{.M, {.Ctrl, .Shift}}}, icon = lucide.FILE_CODE, tags = {"markdown", "source", "raw", "render"}},
+	.Copy_Image_Text = {label = i18n.later("Copy the text of the image"), group = i18n.later("Entry"), keys = {{.T, {.Ctrl, .Shift}}}, icon = lucide.FILE_TEXT, tags = {"ocr", "recognize", "read", "screenshot", "scan"}},
+	.Mark_All        = {label = i18n.later("Mark every entry shown"), group = i18n.later("Selection"), keys = {{.A, {.Ctrl, .Shift}}}, icon = lucide.LIST_CHECKS, tags = {"select all", "selection"}},
 	.Clear_Marks     = {label = i18n.later("Clear the marks"), group = i18n.later("Selection"), icon = lucide.X},
 	.Filter_All      = {label = i18n.later("Show every entry"), group = i18n.later("Filter"), icon = lucide.LIST},
 	.Filter_Text     = {label = i18n.later("Show text"), group = i18n.later("Filter"), icon = lucide.ALIGN_LEFT},
 	.Filter_Images   = {label = i18n.later("Show images"), group = i18n.later("Filter"), icon = lucide.IMAGE},
 	.Filter_Files    = {label = i18n.later("Show files"), group = i18n.later("Filter"), icon = lucide.FILES},
 	.Filter_Pinned   = {label = i18n.later("Show pinned entries"), group = i18n.later("Filter"), icon = lucide.PIN},
-	.Filter_Next     = {label = i18n.later("Next filter"), group = i18n.later("Filter"), keys = {{.Tab, {}}, {}}, icon = lucide.FILTER},
-	.Filter_Previous = {label = i18n.later("Previous filter"), group = i18n.later("Filter"), keys = {{.Tab, {.Shift}}, {}}, icon = lucide.FILTER},
+	.Filter_Next     = {label = i18n.later("Next filter"), group = i18n.later("Filter"), keys = {{.Tab, {}}}, icon = lucide.FILTER},
+	.Filter_Previous = {label = i18n.later("Previous filter"), group = i18n.later("Filter"), keys = {{.Tab, {.Shift}}}, icon = lucide.FILTER},
 	.Clear_History   = {label = i18n.later("Clear the history (pinned entries stay)"), group = i18n.later("Papier"), icon = lucide.TRASH_2, tags = {"wipe", "erase", "empty"}},
-	.Settings        = {label = i18n.later("Settings"), group = i18n.later("Papier"), keys = {{.Comma, {.Ctrl}}, {}}, icon = lucide.SETTINGS, tags = {"preferences", "options", "configure"}},
+	.Settings        = {label = i18n.later("Settings"), group = i18n.later("Papier"), keys = {{.Comma, {.Ctrl}}}, icon = lucide.SETTINGS, tags = {"preferences", "options", "configure"}},
 	.Check_Updates   = {label = i18n.later("Check for updates"), group = i18n.later("Papier"), icon = lucide.REFRESH_CW, tags = {"upgrade", "version", "new"}},
 	.Setup           = {label = i18n.later("Setup…"), group = i18n.later("Papier"), icon = lucide.PACKAGE, tags = {"install", "uninstall", "start menu"}},
 	.Palette         = {label = i18n.later("Command palette"), group = i18n.later("Papier"), keys = {{.K, {.Ctrl}}, {.P, {.Ctrl, .Shift}}}, icon = lucide.COMMAND},
-	.Shortcuts       = {label = i18n.later("Keyboard shortcuts"), group = i18n.later("Papier"), keys = {{.F1, {}}, {}}, icon = lucide.KEYBOARD, tags = {"help", "keys", "hotkeys"}},
+	.Shortcuts       = {label = i18n.later("Keyboard shortcuts"), group = i18n.later("Papier"), keys = {{.F1, {}}}, icon = lucide.KEYBOARD, tags = {"help", "keys", "hotkeys"}},
 	.Hide            = {label = i18n.later("Hide the window"), group = i18n.later("Papier"), icon = lucide.X, tags = {"close", "dismiss"}},
 	.Restart         = {label = i18n.later("Restart Papier"), group = i18n.later("Papier"), icon = lucide.ROTATE_CCW, tags = {"reload", "relaunch"}},
-	.Quit            = {label = i18n.later("Quit Papier"), group = i18n.later("Papier"), keys = {{.Q, {.Ctrl}}, {}}, icon = lucide.POWER, tags = {"exit", "close", "stop"}},
+	.Quit            = {label = i18n.later("Quit Papier"), group = i18n.later("Papier"), keys = {{.Q, {.Ctrl}}}, icon = lucide.POWER, tags = {"exit", "close", "stop"}},
 }
 
 // The entries an action acts on: the marked ones in the list's order, else the selected one (temp memory). Run when an
@@ -161,7 +162,7 @@ action_run :: proc(app: ^App, a: Action) {
 	case .Check_Updates: update_check_asked(app)
 	case .Setup:         setup_open(app)
 	case .Palette:       ui.palette_open(&app.palette)
-	case .Shortcuts:     app.sheet_open = true
+	case .Shortcuts:     app.sheet.open = true
 	case .Hide:          app_hide(app)
 	case .Restart:       app_restart(app, hidden = false)
 	case .Quit:          app.quit = true
@@ -175,20 +176,47 @@ actions_keys :: proc(app: ^App) {
 	}
 }
 
-// The palette and the sheet of the keys, when they are open (at the end of the window's build). The palette holds the
-// actions, then every setting: one chosen opens the settings on it alone.
+// The palette's table: the actions, then every setting (one chosen opens the settings on it alone). Made when the
+// preferences or the language change, not at each frame: the settings' titles are translated when it is made.
+Palette_Table :: struct {
+	arena:    virtual.Arena,
+	commands: []ui.Command,
+	names:    []string,      // the setting each command after the actions names
+	prefs:    u64,           // the preferences' version it was made for (0: not made)
+	language: ^i18n.Language,
+	version:  u64,           // bumped at each making (Palette_Options.version)
+}
+
+palette_table_destroy :: proc(t: ^Palette_Table) {
+	virtual.arena_destroy(&t.arena)
+	t^ = {}
+}
+
+@(private = "file")
+palette_table_keep :: proc(app: ^App) {
+	t := &app.palette_table
+	if t.prefs == app.prefs.version + 1 && t.language == i18n.current() { return }
+	virtual.arena_free_all(&t.arena)
+	a := virtual.arena_allocator(&t.arena)
+	settings, names := prefs_page.palette_commands(&app.prefs, settings_options(app), a)
+	t.commands = slice.concatenate([][]ui.Command{slice.enumerated_array(&ACTIONS), settings}, a)
+	t.names = names
+	t.prefs, t.language = app.prefs.version + 1, i18n.current()
+	t.version += 1
+}
+
+// The palette and the sheet of the keys, when they are open (at the end of the window's build).
 actions_build :: proc(app: ^App) {
-	actions := slice.enumerated_array(&ACTIONS)
 	if app.palette.open {
-		settings, names := prefs_page.palette_commands(&app.prefs, settings_options(app))
-		all := slice.concatenate([][]ui.Command{actions, settings}, context.temp_allocator)
-		disabled := make([]bool, len(all), context.temp_allocator)
+		palette_table_keep(app)
+		t := &app.palette_table
+		disabled := make([]bool, len(t.commands), context.temp_allocator)
 		for a in Action { disabled[int(a)] = !action_enabled(app, a) }
-		if i, _ := ui.palette(&app.palette, all, disabled); i >= 0 {
-			if i < len(actions) { action_run(app, Action(i)) } else { settings_show(app, names[i - len(actions)]) }
+		if i, _ := ui.palette(&app.palette, t.commands, disabled, {version = t.version}); i >= 0 {
+			if i < len(Action) { action_run(app, Action(i)) } else { settings_show(app, t.names[i - len(Action)]) }
 		}
 	}
-	ui.shortcuts_sheet("keys", actions, &app.sheet_open, i18n.tr("Papier's keys"))
+	ui.shortcuts_sheet(&app.sheet, "keys", slice.enumerated_array(&ACTIONS), i18n.tr("Papier's keys"))
 }
 
 // A tooltip: the action's label and its key.

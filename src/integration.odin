@@ -37,7 +37,7 @@ papier_identity :: proc() -> desktop.Identity {
 
 // papier's own parts of an integration: the start with the session (hidden, in the notification area), papier on the
 // PATH, and on Windows papier.com beside it. `papier install` and the Setup's Install write the same.
-papier_parts :: proc(o: ^desktop.Options) {
+papier_parts :: proc(o: ^desktop.Integration_Options) {
 	o.add_to_path = true
 	when ODIN_OS == .Windows { o.launcher = CONSOLE_LAUNCHER }
 	o.autostart = true
@@ -45,7 +45,7 @@ papier_parts :: proc(o: ^desktop.Options) {
 }
 
 @(private = "file")
-integration_options :: proc(args: []string) -> desktop.Options {
+integration_options :: proc(args: []string) -> desktop.Integration_Options {
 	o := desktop.options_make(papier_identity())
 	o.exe = process.executable_path()
 	o.icons = ICON_PNGS[:]

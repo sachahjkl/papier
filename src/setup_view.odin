@@ -16,11 +16,11 @@ import setup "gt:setup"
 import "core:strings"
 
 // What the setup knows of papier.
-setup_config :: proc() -> setup.Config {
-	return setup.Config{
+setup_config :: proc() -> setup.Setup_Options {
+	return setup.Setup_Options{
 		identity = papier_identity(), version = APP_VERSION, install_folder = APP_NAME, icons = ICON_PNGS[:],
 		choices = SETUP_CHOICES[:],
-		prepare = proc(o: ^desktop.Options, choices: []bool, user: rawptr) {
+		prepare = proc(o: ^desktop.Integration_Options, choices: []bool, user: rawptr) {
 			papier_parts(o)
 			if len(choices) == len(SETUP_CHOICES) { o.autostart, o.add_to_path = choices[0], choices[1] }
 		},

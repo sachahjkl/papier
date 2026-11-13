@@ -52,6 +52,10 @@ RELEASE_FILES := [?][2]string{
 	{"ext/gui_toolkit/src/lucide/LICENSE.txt", "LUCIDE-LICENSE.txt"},
 }
 
+// papier's texts, from its code, into i18n/<language>.txt (the program embeds them: src/app.odin).
+// (a variable: a constant's slice would be made again where it is used, on a stack the command outlives)
+I18N := toolbox.I18n_Catalogues{dirs = {"src"}, folder = "i18n"}
+
 commands :: proc() -> []toolbox.Command {
 	p := project()
 	r := release.commands({project = p, dist = "build/dist", files = RELEASE_FILES[:], check = proc() -> int { return run_check(nil) }, update = papier_update.PRODUCT})
@@ -59,11 +63,12 @@ commands :: proc() -> []toolbox.Command {
 	append(&list,
 		toolbox.Command{name = "build", usage = "[release]: the toolkit's text library and SQLite when their sources changed, then build/papier", run = run_build},
 		toolbox.Command{name = "test", usage = ": the tests of the program and of its packages", run = run_test},
-		toolbox.Command{name = "check", usage = ": the changelog, the scopes, odin check of the program for this system and for Windows and of this tool (-vet), the tests, then a release build", run = run_check},
+		toolbox.Command{name = "check", usage = ": the changelog, the scopes, the French catalogue, odin check of the program for this system and for Windows and of this tool (-vet), the tests, then a release build", run = run_check},
 		toolbox.logo_command(logo()),
 		r[0], r[1], r[2],
 		toolbox.Command{name = "update", usage = "keygen <file> | pubkey | manifest <program> <version> - <out> | verify <manifest> -: papier's update key and manifests", run = proc(args: []string) -> int { return toolbox.update_command(papier_update.PRODUCT, args) }},
 		changelog.command(p),
+		toolbox.i18n_command(I18N),
 		site_command(),
 	)
 	l := toolbox.licence_commands(LICENCE_TOOL)

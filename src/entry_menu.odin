@@ -25,6 +25,7 @@ import "core:os"
 import "core:strings"
 import desktop "gt:desktop"
 import "gt:fsx"
+import i18n "gt:i18n"
 import "gt:platform"
 import "gt:ui"
 import "history"
@@ -73,10 +74,10 @@ entry_menu_build :: proc(app: ^App, em: f32) {
 		if e == nil || e.id != m.id { ui.ctx_menu_close(); return }
 		// (several marked: what acts on all of them; else the entry's own items)
 		if n := ui.list_mark_count(&app.vl); n > 1 {
-			item(app, .Copy, fmt.tprintf("Copy the %d texts as one", n))
+			item(app, .Copy, fmt.tprintf(i18n.tr(n, "Copy the %d text as one", "Copy the %d texts as one"), n))
 			ui.menu_separator()
-			if PINS { item(app, .Pin, fmt.tprintf("Pin or unpin the %d entries", n)) }
-			item(app, .Remove, fmt.tprintf("Remove the %d entries", n))
+			if PINS { item(app, .Pin, fmt.tprintf(i18n.tr(n, "Pin or unpin the %d entry", "Pin or unpin the %d entries"), n)) }
+			item(app, .Remove, fmt.tprintf(i18n.tr(n, "Remove the %d entry", "Remove the %d entries"), n))
 			item(app, .Clear_Marks)
 			return
 		}
@@ -90,18 +91,18 @@ entry_menu_build :: proc(app: ^App, em: f32) {
 		if action_enabled(app, .Toggle_Markdown_Source) { item(app, .Toggle_Markdown_Source) }
 		ui.menu_separator()
 		item(app, .Open)
-		if ui.menu_submenu("Open with", enabled = len(m.handlers) > 0) {
+		if ui.menu_submenu(i18n.tr("Open with"), enabled = len(m.handlers) > 0) {
 			for h in m.handlers {
-				label := h.default ? fmt.tprintf("%s (default)", h.name) : h.name
+				label := h.default ? fmt.tprintf(i18n.tr("%s (default)"), h.name) : h.name
 				if ui.menu_item(label).clicked { entry_open_with(app, e, h.id) }
 			}
 		}
 		if e.kind == .Files {
-			if ui.menu_item("Show in folder").clicked { reader_job(&app.reader, {kind = .Reveal, path = entry_file_name(e)}) }
+			if ui.menu_item(i18n.tr("Show in folder")).clicked { reader_job(&app.reader, {kind = .Reveal, path = entry_file_name(e)}) }
 		}
 		item(app, .Save_As)
 		ui.menu_separator()
-		if PINS { item(app, .Pin, e.pinned ? "Unpin" : "Pin") }
+		if PINS { item(app, .Pin, e.pinned ? i18n.tr("Unpin") : i18n.tr("Pin")) }
 		item(app, .Remove)
 	}
 }
@@ -132,7 +133,7 @@ entry_copy :: proc(app: ^App, id: u64, plain := false) {
 	paste := app.settings.paste_on_select
 	watcher_send(&app.watcher, {verb = plain ? .Copy_Plain : .Copy, id = id, paste = paste})
 	// (a paste goes to the program papier was called from: the window goes first)
-	if app.settings.close_on_copy || paste { app_hide(app) } else { announce(app, "Copied") }
+	if app.settings.close_on_copy || paste { app_hide(app) } else { announce(app, i18n.tr("Copied")) }
 }
 
 // An address in the browser, a copied file with its program, anything else as a file of its type with the system's
@@ -150,7 +151,7 @@ entry_open_with :: proc(app: ^App, e: ^history.Entry, handler: string) {
 entry_save_as :: proc(app: ^App, e: ^history.Entry) {
 	if entry_open_rep(e) < 0 { return }
 	app.save_id = e.id
-	ui.file_dialog(&app.main.state, .Save, {owner = app.main.win, title = "Save the entry", suggested_name = entry_file_name(e), overwrite_prompt = true}, entry_save_chosen, app)
+	ui.file_dialog(&app.main.state, .Save, {owner = app.main.win, title = i18n.tr("Save the entry"), suggested_name = entry_file_name(e), overwrite_prompt = true}, entry_save_chosen, app)
 }
 
 @(private = "file")

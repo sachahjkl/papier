@@ -22,6 +22,7 @@ import diff "gt:diff"
 import "gt:draw"
 import "gt:markdown"
 import "gt:host"
+import i18n "gt:i18n"
 import "gt:platform"
 import "gt:render"
 import syntax "gt:syntax"
@@ -56,7 +57,8 @@ GRIP_GAP_PX :: 3
 GRIP_ALPHA  :: 0.45
 
 KIND_ICONS := [history.Kind]string{.Text = lucide.ALIGN_LEFT, .Html = lucide.CODE, .Image = lucide.IMAGE, .Files = lucide.FILES, .Other = lucide.FILE}
-KIND_LABELS := [history.Kind]string{.Text = "Text", .Html = "Rich text", .Image = "Image", .Files = "Files", .Other = "Data"}
+// (in English: i18n.tr where shown)
+KIND_LABELS := [history.Kind]string{.Text = i18n.later("Text"), .Html = i18n.later("Rich text"), .Image = i18n.later("Image"), .Files = i18n.later("Files"), .Other = i18n.later("Data")}
 
 // The selected entry, shown in full. Its states: nothing asked (asked = false); its content asked (of the reader, or of
 // the decoder for a picture: loading); shown (app.loaded is the reader's answer for this id and key, or the texture
@@ -293,10 +295,10 @@ build_title :: proc(app: ^App, em: f32) {
 			// the page has its own search: the title says where one is, its empty part moves the window
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			ui.label("Papier###apptitle")
-			if icon_action(app, "back", lucide.ARROW_LEFT, "Back to the history (Escape)", em) { app.settings_open = false }
+			if icon_action(app, "back", lucide.ARROW_LEFT, i18n.tr("Back to the history (Escape)"), em) { app.settings_open = false }
 			ui.spacer(ui.px(em * 0.3))
 			// (the system's title bar has its own close button)
-		if !app.settings.system_title && icon_action(app, "close", lucide.X, "Hide (Escape)", em) { app_hide(app) }
+		if !app.settings.system_title && icon_action(app, "close", lucide.X, i18n.tr("Hide (Escape)"), em) { app_hide(app) }
 			ui.spacer(ui.px(em * 0.4))
 			return
 		}
@@ -307,7 +309,7 @@ build_title :: proc(app: ^App, em: f32) {
 			if ui.tags("weak") { glyph(app, lucide.SEARCH, em * 1.9) }
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			if ui.tags("bare") {
-				res := ui.line_edit("###search", &app.search, "Search the history")
+				res := ui.line_edit("###search", &app.search, i18n.tr("Search the history"))
 				app.search_key = res.box.key
 			}
 		}
@@ -324,11 +326,13 @@ build_title :: proc(app: ^App, em: f32) {
 		ui.custom("###grip", grip_draw, d)
 		ui.next({width = ui.px(em * FILTER_EM), height = ui.px(ui.dense(em * FIELD_EM))})
 		sel := int(app.filter)
-		if ui.segmented("###filter", filter_labels[:FILTER_COUNT], &sel) { set_filter(app, Filter(sel)) }
+		labels: [len(Filter)]string
+		for l, i in filter_labels { labels[i] = i18n.tr(l) }
+		if ui.segmented("###filter", labels[:FILTER_COUNT], &sel) { set_filter(app, Filter(sel)) }
 		ui.spacer(ui.px(em * 0.3))
-		if icon_action(app, "settings", lucide.SETTINGS, "Settings (Ctrl+,)", em) { settings_toggle(app) }
+		if icon_action(app, "settings", lucide.SETTINGS, i18n.tr("Settings (Ctrl+,)"), em) { settings_toggle(app) }
 		// (the system's title bar has its own close button)
-		if !app.settings.system_title && icon_action(app, "close", lucide.X, "Hide (Escape)", em) { app_hide(app) }
+		if !app.settings.system_title && icon_action(app, "close", lucide.X, i18n.tr("Hide (Escape)"), em) { app_hide(app) }
 		ui.spacer(ui.px(em * 0.4))
 	}
 }
@@ -413,7 +417,7 @@ build_list :: proc(app: ^App, em: f32) {
 		if ui.tags("weak") {
 			ui.next({width = ui.fill(), height = ui.px(em * 5)})
 			if ui.style({text_align = .Center}) {
-				ui.label(len(app.list.entries) == 0 ? "Nothing copied yet: copy something, it shows here.###empty" : "No entry matches.###empty")
+				ui.label(fmt.tprintf("%s###empty", len(app.list.entries) == 0 ? i18n.tr("Nothing copied yet: copy something, it shows here.") : i18n.tr("No entry matches.")))
 			}
 		}
 	}
@@ -432,18 +436,20 @@ build_status :: proc(app: ^App, em: f32) {
 				ui.next({width = ui.fill()})
 				msg := app.status
 				if (msg == "" || ui.now_ms() > app.status_until) && app.ocr_reading != 0 {
-					msg = "Reading the text of the image…"
+					msg = i18n.tr("Reading the text of the image…")
 				} else if msg == "" || ui.now_ms() > app.status_until {
-					msg = fmt.tprintf("%d of %d entries", len(app.shown), len(app.list.entries))
+					// (the English says "1 of 1 entries", "1 pinned" either way: its two forms are one)
+					total := len(app.list.entries)
+					msg = fmt.tprintf(i18n.tr(total, "%d of %d entries", "%d of %d entries"), len(app.shown), total)
 					// (counted by the reader with the list, and kept by a pin: not counted here at each frame)
-					if PINS { msg = fmt.tprintf("%s · %d pinned", msg, app.list.pinned) }
+					if PINS { msg = fmt.tprintf(i18n.tr(app.list.pinned, "%s · %d pinned", "%s · %d pinned"), msg, app.list.pinned) }
 				}
 				ui.label(fmt.tprintf("%s###status", msg))
 				hints := app.edit.active ? EDIT_HINTS[:] : LIST_HINTS[:]
 			for hint in hints {
 					ui.kbd(hint[0])
 					ui.next({width = ui.text_size(em * 0.3)})
-					ui.label(fmt.tprintf("%s###h%s", hint[1], hint[0]))
+					ui.label(fmt.tprintf("%s###h%s", i18n.tr(hint[1]), hint[0]))
 					ui.spacer(ui.px(em * 0.4))
 				}
 			}
@@ -516,7 +522,7 @@ view_decoded :: proc(app: ^App) -> bool {
 	if !p.ok {
 		if e != nil && e.id == p.id && app.view.image < len(e.reps) {
 			r := e.reps[app.view.image]
-			app.view.text = fmt.aprintf("%s, %s: no preview for this format", r.mime, size_text(r.size))
+			app.view.text = fmt.aprintf(i18n.tr("%s, %s: no preview for this format"), r.mime, size_text(r.size))
 		}
 		return true
 	}
@@ -546,15 +552,16 @@ build_view_body :: proc(app: ^App, em: f32) {
 		ui.spacer(ui.px(em * 0.6))
 		glyph(app, KIND_ICONS[e.kind], em * 1.6, ui.color("accent"))
 		ui.next({width = ui.text_size(em * 0.3), height = ui.pct(1)})
-		ui.label(fmt.tprintf("%s###kind", KIND_LABELS[e.kind]))
+		ui.label(fmt.tprintf("%s###kind", i18n.tr(KIND_LABELS[e.kind])))
 		if ui.tags("weak") {
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			if ui.style({font_size = em * 0.88}) {
 				lang := loaded_for(app, e) ? form_label(app.loaded) : ""
 				if lang != "" { lang = fmt.tprintf("%s · ", lang) }
 				age := timefmt.age(f64(now_ms() - e.time_ms))
-				if age != "now" { age = fmt.tprintf("%s ago", age) }   // ("now": less than a minute)
-				ui.label(fmt.tprintf("%s%s · %d type%s · %s###meta", lang, size_text(history.entry_size(e^)), len(e.reps), len(e.reps) == 1 ? "" : "s", age))
+				if age != "now" { age = fmt.tprintf(i18n.tr("%s ago"), age) }   // ("now": less than a minute)
+				types := fmt.tprintf(i18n.tr(len(e.reps), "%d type", "%d types"), len(e.reps))
+				ui.label(fmt.tprintf("%s%s · %s · %s###meta", lang, size_text(history.entry_size(e^)), types, age))
 			}
 		}
 		if icon_action(app, "copy", lucide.COPY, action_tip(.Copy), em) { entry_copy(app, e.id) }
@@ -564,7 +571,7 @@ build_view_body :: proc(app: ^App, em: f32) {
 		if qr_text(app, e) != "" && icon_action(app, "qr", lucide.QR_CODE, action_tip(.Show_QR), em) { qr_open(app, e) }
 		// (Markdown: rendered or its source, the choice kept for the session)
 		if loaded_for(app, e) && app.loaded.form == .Markdown {
-			tip := app.markdown_source ? "Show it rendered" : "Show the source"
+			tip := app.markdown_source ? i18n.tr("Show it rendered") : i18n.tr("Show the source")
 			if icon_action(app, "mdsource", app.markdown_source ? lucide.EYE : lucide.FILE_CODE, fmt.tprintf("%s (%s)", tip, ui.command_shortcut(ACTIONS[.Toggle_Markdown_Source])), em) {
 				action_run(app, .Toggle_Markdown_Source)
 			}
@@ -572,7 +579,7 @@ build_view_body :: proc(app: ^App, em: f32) {
 		// (an image: the code it holds, its text; images have no "Show as a QR code", so the icon is free)
 		if image_qr(app, e) != "" && icon_action(app, "qrcontent", lucide.QR_CODE, action_tip(.Copy_Qr_Content), em) { action_run(app, .Copy_Qr_Content) }
 		if e.kind == .Image && ocr_offered(app) && icon_action(app, "ocr", lucide.FILE_TEXT, action_tip(.Copy_Image_Text), em) { action_run(app, .Copy_Image_Text) }
-		if PINS && icon_action(app, "pin", e.pinned ? lucide.PIN_OFF : lucide.PIN, fmt.tprintf("%s (%s)", e.pinned ? "Unpin" : "Pin", ui.command_shortcut(ACTIONS[.Pin])), em) { toggle_pin(app, e) }
+		if PINS && icon_action(app, "pin", e.pinned ? lucide.PIN_OFF : lucide.PIN, fmt.tprintf("%s (%s)", e.pinned ? i18n.tr("Unpin") : i18n.tr("Pin"), ui.command_shortcut(ACTIONS[.Pin])), em) { toggle_pin(app, e) }
 		if icon_action(app, "delete", lucide.TRASH_2, action_tip(.Remove), em) { remove_entry(app, e.id); return }
 		ui.spacer(ui.px(em * 0.4))
 	}
@@ -584,7 +591,7 @@ build_view_body :: proc(app: ^App, em: f32) {
 			ui.spacer(ui.px(em * 0.8))
 			if ui.tags("weak") {
 				ui.next({width = ui.text_size(), height = ui.pct(1)})
-				ui.label("Reading the text of the image…###ocr_label")
+				ui.label(fmt.tprintf("%s###ocr_label", i18n.tr("Reading the text of the image…")))
 			}
 			ui.spacer(ui.px(em * 0.8))
 			ui.next({width = ui.fill(), height = ui.px(max(f32(3), f32(int(em * 0.3))))})
@@ -625,7 +632,7 @@ build_view_body :: proc(app: ^App, em: f32) {
 				ui.wake_within(&app.main.state, int(LOADING_SHOWN_AFTER_MS - waited) + 1)
 			} else if ui.tags("weak") {
 				ui.next({width = ui.fill(), height = ui.px(em * 5)})
-				if ui.style({text_align = .Center}) { ui.label("Loading…###loading") }
+				if ui.style({text_align = .Center}) { ui.label(fmt.tprintf("%s###loading", i18n.tr("Loading…"))) }
 			}
 			return
 		}
@@ -633,7 +640,7 @@ build_view_body :: proc(app: ^App, em: f32) {
 	if app.view.loading {
 		if ui.tags("weak") {
 			ui.next({width = ui.fill(), height = ui.px(em * 5)})
-			if ui.style({text_align = .Center}) { ui.label("Loading the image…###loading") }
+			if ui.style({text_align = .Center}) { ui.label(fmt.tprintf("%s###loading", i18n.tr("Loading the image…"))) }
 		}
 		return
 	}
@@ -699,7 +706,7 @@ markdown_link :: proc(user: rawptr, url: string) {
 	app := (^App)(user)
 	target := strings.trim_space(url)
 	if !is_address(target) && !strings.has_prefix(target, "mailto:") {
-		say(app, "Only web and mail addresses open: %s", one_line(target, 60))
+		say(app, i18n.tr("Only web and mail addresses open: %s"), one_line(target, 60))
 		return
 	}
 	reader_job(&app.reader, {kind = .Open_Url, text = target})
@@ -717,16 +724,17 @@ build_diff :: proc(app: ^App, l: ^Loaded_Entry, em: f32) {
 
 size_text :: proc(n: int, allocator := context.temp_allocator) -> string {
 	switch {
-	case n < 1024:        return fmt.aprintf("%d B", n, allocator = allocator)
-	case n < 1024 * 1024: return fmt.aprintf("%.1f KB", f64(n) / 1024, allocator = allocator)
+	case n < 1024:        return fmt.aprintf(i18n.tr("%d B"), n, allocator = allocator)
+	case n < 1024 * 1024: return fmt.aprintf(i18n.tr("%.1f KB"), f64(n) / 1024, allocator = allocator)
 	}
-	return fmt.aprintf("%.1f MB", f64(n) / (1024 * 1024), allocator = allocator)
+	return fmt.aprintf(i18n.tr("%.1f MB"), f64(n) / (1024 * 1024), allocator = allocator)
 }
 
+// (their words in English, a key's name and what it does: i18n.tr where shown)
 when PINS {
-	@(private = "file", rodata) LIST_HINTS := [?][2]string{{"Enter", "copy"}, {"Ctrl+E", "edit"}, {"Menu", "more"}, {"Ctrl+P", "pin"}, {"Tab", "filter"}, {"Esc", "hide"}}
+	@(private = "file") LIST_HINTS := [?][2]string{{"Enter", i18n.later("copy")}, {"Ctrl+E", i18n.later("edit")}, {"Menu", i18n.later("more")}, {"Ctrl+P", i18n.later("pin")}, {"Tab", i18n.later("filter")}, {"Esc", i18n.later("hide")}}
 } else {
-	@(private = "file", rodata) LIST_HINTS := [?][2]string{{"Enter", "copy"}, {"Ctrl+E", "edit"}, {"Menu", "more"}, {"Tab", "filter"}, {"Esc", "hide"}}
+	@(private = "file") LIST_HINTS := [?][2]string{{"Enter", i18n.later("copy")}, {"Ctrl+E", i18n.later("edit")}, {"Menu", i18n.later("more")}, {"Tab", i18n.later("filter")}, {"Esc", i18n.later("hide")}}
 }
-@(private = "file", rodata) EDIT_HINTS := [?][2]string{{"Ctrl+Enter", "copy"}, {"Ctrl+S", "save"}, {"Esc", "cancel"}}
-@(private = "file", rodata) filter_labels := [len(Filter)]string{"All", "Text", "Images", "Files", "Pinned"}
+@(private = "file") EDIT_HINTS := [?][2]string{{"Ctrl+Enter", i18n.later("copy")}, {"Ctrl+S", i18n.later("save")}, {"Esc", i18n.later("cancel")}}
+@(private = "file") filter_labels := [len(Filter)]string{i18n.later("All"), i18n.later("Text"), i18n.later("Images"), i18n.later("Files"), i18n.later("Pinned")}

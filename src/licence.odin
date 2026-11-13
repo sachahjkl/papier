@@ -12,6 +12,7 @@ import "base:runtime"
 import "core:fmt"
 import "core:math"
 import "core:strings"
+import i18n "gt:i18n"
 import licence "gt:licence"
 import "gt:platform"
 import "gt:ui"
@@ -91,9 +92,9 @@ licence_run :: proc(app: ^App, act: Licence_Do, text: string) {
 			#partial switch j.act {
 			case .Install, .Install_File:
 				ui.field_wipe(&l.key)
-				announce(app, "Licence registered: thank you")
+				announce(app, i18n.tr("Licence registered: thank you"))
 			case .Remove:
-				announce(app, "Licence removed")
+				announce(app, i18n.tr("Licence removed"))
 			}
 		}
 		licence_job_free(d)
@@ -114,11 +115,11 @@ licence_job_free :: proc(d: rawptr) {
 @(private = "file")
 licence_error_words :: proc(e: licence.Error) -> string {
 	#partial switch e {
-	case .Wrong_Product: return "This licence is not papier's."
-	case .Bad_Signature: return "This key is not a valid licence of papier: check that it was copied whole."
-	case .No_Public_Key: return "This build of papier accepts no licence yet."
-	case .Not_Read:      return "The licence file cannot be read."
-	case .Not_Written:   return "The licence cannot be saved."
+	case .Wrong_Product: return i18n.tr("This licence is not papier's.")
+	case .Bad_Signature: return i18n.tr("This key is not a valid licence of papier: check that it was copied whole.")
+	case .No_Public_Key: return i18n.tr("This build of papier accepts no licence yet.")
+	case .Not_Read:      return i18n.tr("The licence file cannot be read.")
+	case .Not_Written:   return i18n.tr("The licence cannot be saved.")
 	}
 	return licence.error_text(e)
 }
@@ -128,49 +129,49 @@ licence_section :: proc(app: ^App, em: f32) {
 	l := &app.licence
 	ui.spacer(ui.px(em * 1.2))
 	ui.next({width = ui.fill(), height = ui.px(em * 1.6), font_size = math.round(em * 1.02), text_pad = 0})
-	ui.label("Licence###licence_title")
+	ui.label(fmt.tprintf("%s###licence_title", i18n.tr("Licence")))
 	ui.spacer(ui.px(em * 0.3))
 	switch {
 	case !l.read:
 		if ui.tags("weak") {
 			ui.next({width = ui.fill(), text_pad = 0})
-			ui.paragraph("Reading the licence…###licence_state")
+			ui.paragraph(fmt.tprintf("%s###licence_state", i18n.tr("Reading the licence…")))
 		}
 	case l.status.registered:
 		lic := l.status.licence
 		ui.next({width = ui.fill(), text_pad = 0})
-		ui.paragraph(fmt.tprintf("Registered to %s (%s). Thank you for supporting papier.###licence_state", lic.name, licence.edition_title(papier_licence.PRODUCT, lic.edition)))
+		ui.paragraph(fmt.tprintf("%s###licence_state", fmt.tprintf(i18n.tr("Registered to %s (%s). Thank you for supporting papier."), lic.name, licence.edition_title(papier_licence.PRODUCT, lic.edition))))
 		ui.spacer(ui.px(em * 0.5))
 		ui.next({width = ui.text_size(em * 0.6), height = ui.px(math.round(em * 1.9))})
-		if ui.button("Remove the licence###licence_remove", intent = .Danger, face = .Ghost, disabled = l.busy).clicked {
+		if ui.button(fmt.tprintf("%s###licence_remove", i18n.tr("Remove the licence")), intent = .Danger, face = .Ghost, disabled = l.busy).clicked {
 			licence_run(app, .Remove, "")
 		}
 	case:
 		ui.next({width = ui.fill(), text_pad = 0})
-		ui.paragraph("Unregistered. Papier is free; a licence supports its work.###licence_state")
+		ui.paragraph(fmt.tprintf("%s###licence_state", i18n.tr("Unregistered. Papier is free; a licence supports its work.")))
 		if l.status.stored {
 			// (a key is there, but it does not check out: said, not hidden)
 			if ui.tags("bad") {
 				ui.next({width = ui.fill(), text_pad = 0})
-				ui.paragraph(fmt.tprintf("The licence stored here is not valid: %s###licence_stored", licence_error_words(l.status.err)))
+				ui.paragraph(fmt.tprintf("%s###licence_stored", fmt.tprintf(i18n.tr("The licence stored here is not valid: %s"), licence_error_words(l.status.err))))
 			}
 		}
 		ui.spacer(ui.px(em * 0.3))
-		if ui.hint_action("###licence_buy", "Support papier: buy a licence", intent = .Primary).clicked { ui.open(PRICING_URL, .Url) }
+		if ui.hint_action("###licence_buy", i18n.tr("Support papier: buy a licence"), intent = .Primary).clicked { ui.open(PRICING_URL, .Url) }
 		ui.spacer(ui.px(em * 0.6))
 		h := ui.px(math.round(em * 1.9))
 		ui.next({width = ui.fill(), height = ui.children_sum(), axis = .X, cross = .Center})
 		if ui.row(id = "###licence_row") {
 			ui.next({width = ui.fill(), height = h})
-			res := ui.line_edit("###licence_key", &l.key, "Paste a licence key")
+			res := ui.line_edit("###licence_key", &l.key, i18n.tr("Paste a licence key"))
 			key := strings.trim_space(ui.field_string(&l.key))
 			ui.spacer(ui.px(em * 0.4))
 			ui.next({width = ui.text_size(em * 0.6), height = h})
-			register := ui.button("Register###licence_register", intent = .Primary, disabled = l.busy || key == "")
+			register := ui.button(fmt.tprintf("%s###licence_register", i18n.tr("Register")), intent = .Primary, disabled = l.busy || key == "")
 			if (register.clicked || res.committed) && key != "" && !l.busy { licence_run(app, .Install, key) }
 			ui.spacer(ui.px(em * 0.4))
 			ui.next({width = ui.text_size(em * 0.6), height = h})
-			if ui.button("Choose a file…###licence_file", disabled = l.busy).clicked { licence_choose_file(app) }
+			if ui.button(fmt.tprintf("%s###licence_file", i18n.tr("Choose a file…")), disabled = l.busy).clicked { licence_choose_file(app) }
 		}
 	}
 	if l.problem != "" {
@@ -185,7 +186,7 @@ licence_section :: proc(app: ^App, em: f32) {
 // The system's Open dialog, then the file installed: both off the window's thread.
 @(private = "file")
 licence_choose_file :: proc(app: ^App) {
-	d := licence.file_dialog(papier_licence.PRODUCT, "Choose a licence file", "Papier licence")
+	d := licence.file_dialog(papier_licence.PRODUCT, i18n.tr("Choose a licence file"), i18n.tr("Papier licence"))
 	d.owner = app.main.win
 	ui.file_dialog(&app.main.state, .Open, d, proc(r: platform.Dialog_Result, user: rawptr) {
 		if r.status != .Chosen || len(r.paths) == 0 { return }

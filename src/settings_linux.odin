@@ -6,21 +6,22 @@ package papier
 import "core:os"
 import "core:strings"
 import config "gt:config"
+import i18n "gt:i18n"
 import "gt:platform"
 
 PREF_DEFS_SYSTEM := [?]config.Def{
-	{name = "history.max_entries", description = "How many entries the history keeps, pinned ones aside. 0: no limit.", kind = .Int, default = {i = 1000}, min = 0, max = 1_000_000, bounded = true, tags = {"limit", "count", "size"}},
-	{name = "history.max_age_days", description = "Entries older than this many days go, pinned ones aside. 0: no limit.", kind = .Int, default = {i = 0}, min = 0, max = 36500, bounded = true, unit = "days", tags = {"expire", "age", "old"}},
-	{name = "history.persist", description = "Keep the history on the disk across sessions. Off: it lives in $XDG_RUNTIME_DIR and goes at logout.", kind = .Bool, default = {b = true}, restart = true, tags = {"disk", "save", "keep", "reboot"}},
-	{name = "capture.text", description = "Record text.", kind = .Bool, default = {b = true}},
-	{name = "capture.html", description = "Record the HTML that comes with a copy from a browser or an editor.", kind = .Bool, default = {b = true}},
-	{name = "capture.image", description = "Record images.", kind = .Bool, default = {b = true}},
-	{name = "capture.files", description = "Record files copied in a file manager.", kind = .Bool, default = {b = true}},
-	{name = "capture.primary", description = "Also record the primary selection (the text selected with the mouse).", kind = .Bool, default = {b = false}, tags = {"selection", "middle click"}},
-	{name = "capture.size_limit", description = "A representation larger than this is not recorded.", kind = .Int, default = {i = 64 << 20}, min = 1024, max = 2 << 30, bounded = true, bytes = true, unit = "bytes", tags = {"large", "limit", "bytes"}},
-	{name = "capture.ignore_secrets", description = "Do not record what a password manager marks as secret (x-kde-passwordManagerHint).", kind = .Bool, default = {b = true}, tags = {"password", "private", "keepass"}},
-	{name = "capture.ignore_mimes", description = "MIME types, separated by commas: a copy that offers one of them is not recorded.", kind = .String, default = {s = ""}},
-	{name = "clipboard.keep", description = "When the program that owned the clipboard quits and empties it, put the last entry back.", kind = .Bool, default = {b = true}, tags = {"restore", "persist"}},
+	{name = "history.max_entries", title = i18n.later("Max entries"), description = i18n.later("How many entries the history keeps, pinned ones aside. 0: no limit."), kind = .Int, default = {i = 1000}, min = 0, max = 1_000_000, bounded = true, tags = {"limit", "count", "size"}},
+	{name = "history.max_age_days", title = i18n.later("Max age"), description = i18n.later("Entries older than this many days go, pinned ones aside. 0: no limit."), kind = .Int, default = {i = 0}, min = 0, max = 36500, bounded = true, unit = i18n.later("days"), tags = {"expire", "age", "old"}},
+	{name = "history.persist", title = i18n.later("Persist"), description = i18n.later("Keep the history on the disk across sessions. Off: it lives in $XDG_RUNTIME_DIR and goes at logout."), kind = .Bool, default = {b = true}, restart = true, tags = {"disk", "save", "keep", "reboot"}},
+	{name = "capture.text", title = i18n.later("Text"), description = i18n.later("Record text."), kind = .Bool, default = {b = true}},
+	{name = "capture.html", title = i18n.later("HTML"), description = i18n.later("Record the HTML that comes with a copy from a browser or an editor."), kind = .Bool, default = {b = true}},
+	{name = "capture.image", title = i18n.later("Image"), description = i18n.later("Record images."), kind = .Bool, default = {b = true}},
+	{name = "capture.files", title = i18n.later("Files"), description = i18n.later("Record files copied in a file manager."), kind = .Bool, default = {b = true}},
+	{name = "capture.primary", title = i18n.later("Primary"), description = i18n.later("Also record the primary selection (the text selected with the mouse)."), kind = .Bool, default = {b = false}, tags = {"selection", "middle click"}},
+	{name = "capture.size_limit", title = i18n.later("Size limit"), description = i18n.later("A representation larger than this is not recorded."), kind = .Int, default = {i = 64 << 20}, min = 1024, max = 2 << 30, bounded = true, bytes = true, unit = i18n.later("bytes"), tags = {"large", "limit", "bytes"}},
+	{name = "capture.ignore_secrets", title = i18n.later("Ignore secrets"), description = i18n.later("Do not record what a password manager marks as secret (x-kde-passwordManagerHint)."), kind = .Bool, default = {b = true}, tags = {"password", "private", "keepass"}},
+	{name = "capture.ignore_mimes", title = i18n.later("Ignore mimes"), description = i18n.later("MIME types, separated by commas: a copy that offers one of them is not recorded."), kind = .String, default = {s = ""}},
+	{name = "clipboard.keep", title = i18n.later("Keep"), description = i18n.later("When the program that owned the clipboard quits and empties it, put the last entry back."), kind = .Bool, default = {b = true}, tags = {"restore", "persist"}},
 }
 
 prefs_read_system :: proc(p: ^config.Prefs, s: ^Settings, allocator := context.allocator) {

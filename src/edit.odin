@@ -12,6 +12,7 @@ package papier
 import "core:fmt"
 import "core:strings"
 import "core:unicode/utf8"
+import i18n "gt:i18n"
 import "gt:ui"
 import "history"
 import lucide "gt:lucide"
@@ -47,19 +48,19 @@ edit_end :: proc(app: ^App) {
 
 edit_copy :: proc(app: ^App) {
 	text := ui.area_string(&app.edit.area)
-	if strings.trim_space(text) == "" { say(app, "Nothing to copy"); return }
+	if strings.trim_space(text) == "" { say(app, i18n.tr("Nothing to copy")); return }
 	paste := app.settings.paste_on_select
 	watcher_send(&app.watcher, {verb = .Add_Text, text = text, paste = paste})
 	edit_end(app)
-	if app.settings.close_on_copy || paste { app_hide(app) } else { announce(app, "Copied") }
+	if app.settings.close_on_copy || paste { app_hide(app) } else { announce(app, i18n.tr("Copied")) }
 }
 
 edit_save :: proc(app: ^App) {
 	text := ui.area_string(&app.edit.area)
-	if strings.trim_space(text) == "" { say(app, "An empty entry is not saved: remove it instead"); return }
+	if strings.trim_space(text) == "" { say(app, i18n.tr("An empty entry is not saved: remove it instead")); return }
 	watcher_send(&app.watcher, {verb = .Replace_Text, id = app.edit.id, text = text})
 	edit_end(app)
-	announce(app, "Saved")
+	announce(app, i18n.tr("Saved"))
 }
 
 // The keys of the edit view, taken before the editor sees them.
@@ -75,18 +76,22 @@ edit_build :: proc(app: ^App, e: ^history.Entry, em: f32) {
 		ui.spacer(ui.px(em * 0.6))
 		glyph(app, lucide.EDIT, em * 1.6, ui.color("accent"))
 		ui.next({width = ui.text_size(em * 0.3), height = ui.pct(1)})
-		ui.label("Editing###editing")
+		ui.label(fmt.tprintf("%s###editing", i18n.tr("Editing")))
 		if ui.tags("weak") {
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			if ui.style({font_size = em * 0.88}) {
 				text := ui.area_string(&app.edit.area)
-				ui.label(fmt.tprintf("%d characters · %d lines%s###editmeta", utf8.rune_count_in_string(text), ui.area_line_count(&app.edit.area),
-					e.kind == .Html ? " · saved as text" : ""))
+				chars, lines := utf8.rune_count_in_string(text), ui.area_line_count(&app.edit.area)
+				// (the English says "1 characters", "1 lines": its two forms are one; a language with its own forms has them)
+				ui.label(fmt.tprintf("%s · %s%s###editmeta",
+					fmt.tprintf(i18n.tr(chars, "%d characters", "%d characters"), chars),
+					fmt.tprintf(i18n.tr(lines, "%d lines", "%d lines"), lines),
+					e.kind == .Html ? i18n.tr(" · saved as text") : ""))
 			}
 		}
-		if icon_action(app, "editcopy", lucide.COPY, "Copy (Ctrl+Enter)", em) { edit_copy(app); return }
-		if icon_action(app, "editsave", lucide.SAVE, "Save in place (Ctrl+S)", em) { edit_save(app); return }
-		if icon_action(app, "editcancel", lucide.X, "Cancel (Escape)", em) { edit_end(app); return }
+		if icon_action(app, "editcopy", lucide.COPY, i18n.tr("Copy (Ctrl+Enter)"), em) { edit_copy(app); return }
+		if icon_action(app, "editsave", lucide.SAVE, i18n.tr("Save in place (Ctrl+S)"), em) { edit_save(app); return }
+		if icon_action(app, "editcancel", lucide.X, i18n.tr("Cancel (Escape)"), em) { edit_end(app); return }
 		ui.spacer(ui.px(em * 0.4))
 	}
 	ui.hline(ui.fill())
@@ -97,7 +102,7 @@ edit_build :: proc(app: ^App, e: ^history.Entry, em: f32) {
 		// (code keeps its language's colours while it is edited; Markdown, a diff and prose are not code: plain)
 		hl: ^ui.Text_Highlight
 		if loaded_for(app, e) && app.loaded.form == .Code && app.loaded.has_code { hl = ui.code_highlight(app.loaded.code) }
-		res := ui.text_edit("###editor", &app.edit.area, "The entry's text", wrap = true, highlight = hl)
+		res := ui.text_edit("###editor", &app.edit.area, i18n.tr("The entry's text"), wrap = true, highlight = hl)
 		if app.edit.fresh { ui.set_focus(res.box.key); app.edit.fresh = false }
 		if res.cancelled { edit_end(app) }
 		ui.spacer(ui.px(em * 0.5))

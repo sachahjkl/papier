@@ -5,6 +5,7 @@ package papier
 // standard settings by prefs_page.standard_watch, papier's by settings_changed (the window reads its settings again and
 // hands them to the watcher). The preferences' writer saves the file off this thread.
 
+import i18n "gt:i18n"
 import prefs_page "gt:prefs_page"
 import "gt:platform"
 import "gt:ui"
@@ -30,21 +31,22 @@ settings_keys :: proc(app: ^App) {
 // preference on this system is left out (history and capture on Windows).
 @(private = "file")
 settings_pages :: proc() -> []prefs_page.Page_Info {
+	// (made once, at the first show of the settings: the language is in use by then)
 	@(static) pages: [12]prefs_page.Page_Info
 	if pages[0].category == "" {
 		pages = {
-			{category = "general",    title = "General",          icon = lucide.SETTINGS, names = GENERAL_NAMES[:]},
-			{category = "appearance", title = "Appearance",       icon = lucide.PALETTE},
-			{category = "window",     title = "Window",           icon = lucide.APP_WINDOW},
-			{category = "paste",      title = "Paste",            icon = lucide.CLIPBOARD_PASTE},
-			{category = "history",    title = "History",          icon = lucide.HISTORY},
-			{category = "capture",    title = "Capture",          icon = lucide.CLIPBOARD},
-			{category = "clipboard",  title = "Clipboard",        icon = lucide.CLIPBOARD_CHECK},
-			{category = "scrolling",  title = "Scrolling",        icon = lucide.MOUSE},
-			{category = "input",      title = "Input",            icon = lucide.KEYBOARD},
-			{category = "timing",     title = "Delays and menus", icon = lucide.TIMER},
-			{category = "update",     title = "Updates",          icon = lucide.DOWNLOAD},
-			{category = "rendering",  title = "Rendering",        icon = lucide.MONITOR},
+			{category = "general",    title = i18n.tr("General"),          icon = lucide.SETTINGS, names = GENERAL_NAMES[:]},
+			{category = "appearance", title = i18n.tr("Appearance"),       icon = lucide.PALETTE},
+			{category = "window",     title = i18n.tr("Window"),           icon = lucide.APP_WINDOW},
+			{category = "paste",      title = i18n.tr("Paste"),            icon = lucide.CLIPBOARD_PASTE},
+			{category = "history",    title = i18n.tr("History"),          icon = lucide.HISTORY},
+			{category = "capture",    title = i18n.tr("Capture"),          icon = lucide.CLIPBOARD},
+			{category = "clipboard",  title = i18n.tr("Clipboard"),        icon = lucide.CLIPBOARD_CHECK},
+			{category = "scrolling",  title = i18n.tr("Scrolling"),        icon = lucide.MOUSE},
+			{category = "input",      title = i18n.tr("Input"),            icon = lucide.KEYBOARD},
+			{category = "timing",     title = i18n.tr("Delays and menus"), icon = lucide.TIMER},
+			{category = "update",     title = i18n.tr("Updates"),          icon = lucide.DOWNLOAD},
+			{category = "rendering",  title = i18n.tr("Rendering"),        icon = lucide.MONITOR},
 		}
 	}
 	return pages[:]
@@ -59,7 +61,7 @@ HOTKEY_PREFS := [?]string{"window.shortcut"}
 settings_problem :: proc(user: rawptr, name: string) -> string {
 	app := (^App)(user)
 	if name == prefs_page.SYSTEM_TITLE_PREF && app.settings.system_title && !platform.system_title_available(app.main.win) {
-		return "This desktop draws no title bar for papier's window (GNOME): papier keeps its own."
+		return i18n.tr("This desktop draws no title bar for papier's window (GNOME): papier keeps its own.")
 	}
 	return name == "window.shortcut" ? app.shortcut_problem : ""
 }

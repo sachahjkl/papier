@@ -92,6 +92,8 @@ run_check :: proc(args: []string) -> int {
 	p := project()
 	if !changelog_check(p) { return 1 }
 	if !toolbox.check_scopes("src") { return 1 }
+	// (a text of the code not in the catalogue, or not translated, shows in English to a French user)
+	if problem := toolbox.i18n_catalogue(I18N.dirs, "i18n/fr.txt", "fr", true); problem != "" { fmt.eprintln(problem); return 1 }
 	if !toolbox.build_launcher(p) { return 1 }   // (papier embeds it: odin check reads it)
 	if !toolbox.run(toolbox.odin_command(p, "check"), {echo = true}) { return 1 }
 	// (the whole program for Windows too, from any system: Windows code that does not compile fails the Linux job)

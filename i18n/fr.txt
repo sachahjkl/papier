@@ -1,0 +1,582 @@
+# The texts in fr (docs/i18n.md). Written by the i18n command: a translation left empty is the English.
+language fr
+
+en Copy
+fr Copier
+
+en Entry
+fr Élément
+
+en Copy as plain text
+fr Copier en texte brut
+
+en Edit…
+fr Modifier…
+
+en Open
+fr Ouvrir
+
+en Save as…
+fr Enregistrer sous…
+
+en Pin or unpin
+fr Épingler ou désépingler
+
+en Remove
+fr Supprimer
+
+en Show as a QR code
+fr Afficher en code QR
+
+en Copy the QR code's content
+fr Copier le contenu du code QR
+
+en Show the Markdown source or rendered
+fr Afficher le Markdown en source ou en rendu
+
+en Copy the text of the image
+fr Copier le texte de l'image
+
+en Mark every entry shown
+fr Marquer tous les éléments affichés
+
+en Selection
+fr Sélection
+
+en Clear the marks
+fr Retirer les marques
+
+en Show every entry
+fr Afficher tous les éléments
+
+en Filter
+fr Filtre
+
+en Show text
+fr Afficher le texte
+
+en Show images
+fr Afficher les images
+
+en Show files
+fr Afficher les fichiers
+
+en Show pinned entries
+fr Afficher les éléments épinglés
+
+en Next filter
+fr Filtre suivant
+
+en Previous filter
+fr Filtre précédent
+
+en Clear the history (pinned entries stay)
+fr Vider l'historique (les éléments épinglés restent)
+
+en Papier
+fr Papier
+
+en Settings
+fr Réglages
+
+en Check for updates
+fr Rechercher des mises à jour
+
+en Setup…
+fr Installation…
+
+en Command palette
+fr Palette de commandes
+
+en Keyboard shortcuts
+fr Raccourcis clavier
+
+en Hide the window
+fr Masquer la fenêtre
+
+en Restart Papier
+fr Redémarrer Papier
+
+en Quit Papier
+fr Quitter Papier
+
+en Removed %d entry
+en+ Removed %d entries
+fr %d élément supprimé
+fr+ %d éléments supprimés
+
+en Copied the QR code's content
+fr Contenu du code QR copié
+
+en Papier's keys
+fr Les touches de Papier
+
+en Show the history
+fr Afficher l'historique
+
+en The preferences cannot be written
+fr Les réglages ne peuvent pas être enregistrés
+
+en %q is not a shortcut: click the field and press the keys.
+fr %q n'est pas un raccourci : cliquez dans le champ et appuyez sur les touches.
+
+en %s cannot be used: Windows or another program holds it, or this keyboard has no such key. Choose other keys.
+fr %s est indisponible : Windows ou un autre programme l'utilise, ou ce clavier n'a pas cette touche. Choisissez d'autres touches.
+
+en The shortcut does not work: %s
+fr Le raccourci ne fonctionne pas : %s
+
+en The image cannot be read
+fr L'image ne peut pas être lue
+
+en No text in the image
+fr Aucun texte dans l'image
+
+en Copied the text of the image (%d line)
+en+ Copied the text of the image (%d lines)
+fr Texte de l'image copié (%d ligne)
+fr+ Texte de l'image copié (%d lignes)
+
+en Papier stopped unexpectedly last time
+fr Papier s'est arrêté de façon inattendue la dernière fois
+
+en The entry cannot be dragged here
+fr L'élément ne peut pas être déposé ici
+
+en Nothing to copy
+fr Rien à copier
+
+en Copied
+fr Copié
+
+en An empty entry is not saved: remove it instead
+fr Un élément vide n'est pas enregistré : supprimez-le plutôt
+
+en Saved
+fr Enregistré
+
+en Editing
+fr Modification
+
+en %d characters
+en+ %d characters
+fr %d caractère
+fr+ %d caractères
+
+en %d lines
+en+ %d lines
+fr %d ligne
+fr+ %d lignes
+
+en  · saved as text
+fr  · enregistré en texte
+
+en Copy (Ctrl+Enter)
+fr Copier (Ctrl+Enter)
+
+en Save in place (Ctrl+S)
+fr Enregistrer à la place (Ctrl+S)
+
+en Cancel (Escape)
+fr Annuler (Escape)
+
+en The entry's text
+fr Le texte de l'élément
+
+en Copy the %d text as one
+en+ Copy the %d texts as one
+fr Copier le %d texte en un seul
+fr+ Copier les %d textes en un seul
+
+en Pin or unpin the %d entry
+en+ Pin or unpin the %d entries
+fr Épingler ou désépingler le %d élément
+fr+ Épingler ou désépingler les %d éléments
+
+en Remove the %d entry
+en+ Remove the %d entries
+fr Supprimer le %d élément
+fr+ Supprimer les %d éléments
+
+en Open with
+fr Ouvrir avec
+
+en %s (default)
+fr %s (par défaut)
+
+en Show in folder
+fr Afficher dans le dossier
+
+en Unpin
+fr Désépingler
+
+en Pin
+fr Épingler
+
+en Save the entry
+fr Enregistrer l'élément
+
+en Licence registered: thank you
+fr Licence enregistrée : merci
+
+en Licence removed
+fr Licence retirée
+
+en This licence is not papier's.
+fr Cette licence n'est pas celle de papier.
+
+en This key is not a valid licence of papier: check that it was copied whole.
+fr Cette clé n'est pas une licence valide de papier : vérifiez qu'elle a été copiée en entier.
+
+en This build of papier accepts no licence yet.
+fr Cette version de papier n'accepte pas encore de licence.
+
+en The licence file cannot be read.
+fr Le fichier de licence ne peut pas être lu.
+
+en The licence cannot be saved.
+fr La licence ne peut pas être enregistrée.
+
+en Licence
+fr Licence
+
+en Reading the licence…
+fr Lecture de la licence…
+
+en Registered to %s (%s). Thank you for supporting papier.
+fr Enregistrée au nom de %s (%s). Merci de soutenir papier.
+
+en Remove the licence
+fr Retirer la licence
+
+en Unregistered. Papier is free; a licence supports its work.
+fr Non enregistré. Papier est gratuit ; une licence soutient son développement.
+
+en The licence stored here is not valid: %s
+fr La licence enregistrée ici n'est pas valide : %s
+
+en Support papier: buy a licence
+fr Soutenir papier : acheter une licence
+
+en Paste a licence key
+fr Collez une clé de licence
+
+en Register
+fr Enregistrer
+
+en Choose a file…
+fr Choisir un fichier…
+
+en Choose a licence file
+fr Choisir un fichier de licence
+
+en Papier licence
+fr Licence Papier
+
+en No program opens addresses
+fr Aucun programme n'ouvre les adresses
+
+en The file manager does not start
+fr Le gestionnaire de fichiers ne démarre pas
+
+en The history cannot be read
+fr L'historique ne peut pas être lu
+
+en The entry is gone
+fr L'élément n'existe plus
+
+en Copied %d entry
+en+ Copied %d entries
+fr %d élément copié
+fr+ %d éléments copiés
+
+en Saved %s
+fr %s enregistré
+
+en %s cannot be written
+fr %s ne peut pas être écrit
+
+en The entry cannot be written to a file
+fr L'élément ne peut pas être écrit dans un fichier
+
+en No program opens %s
+fr Aucun programme n'ouvre %s
+
+en The program does not start
+fr Le programme ne démarre pas
+
+en On select
+fr Au choix
+
+en An entry chosen (Enter, a double click, Alt+1…9) is pasted into the program papier was called from: the window hides and papier presses the paste keys there.
+fr Un élément choisi (Entrée, un double clic, Alt+1…9) est collé dans le programme d'où papier a été appelé : la fenêtre se masque et papier y appuie sur les touches de collage.
+
+en Keys
+fr Touches
+
+en The keys papier presses to paste: Ctrl+V in most programs, Ctrl+Shift+V in a terminal, Shift+Insert in both on many systems.
+fr Les touches sur lesquelles papier appuie pour coller : Ctrl+V dans la plupart des programmes, Ctrl+Shift+V dans un terminal, Shift+Insert dans les deux sur de nombreux systèmes.
+
+en Close on copy
+fr Fermer à la copie
+
+en Close the window when an entry is copied.
+fr Fermer la fenêtre quand un élément est copié.
+
+en Width
+fr Largeur
+
+en The window's width at its first start, in logical pixels.
+fr La largeur de la fenêtre à son premier démarrage, en pixels logiques.
+
+en Height
+fr Hauteur
+
+en The window's height at its first start, in logical pixels.
+fr La hauteur de la fenêtre à son premier démarrage, en pixels logiques.
+
+en Max entries
+fr Nombre maximal d'éléments
+
+en How many entries the history keeps, pinned ones aside. 0: no limit.
+fr Le nombre d'éléments que l'historique garde, hors éléments épinglés. 0 : sans limite.
+
+en Max age
+fr Âge maximal
+
+en Entries older than this many days go, pinned ones aside. 0: no limit.
+fr Les éléments plus anciens que ce nombre de jours sont supprimés, hors éléments épinglés. 0 : sans limite.
+
+en days
+fr jours
+
+en Persist
+fr Conserver
+
+en Keep the history on the disk across sessions. Off: it lives in $XDG_RUNTIME_DIR and goes at logout.
+fr Garder l'historique sur le disque d'une session à l'autre. Désactivé : il reste dans $XDG_RUNTIME_DIR et disparaît à la déconnexion.
+
+en Text
+fr Texte
+
+en Record text.
+fr Enregistrer le texte.
+
+en HTML
+fr HTML
+
+en Record the HTML that comes with a copy from a browser or an editor.
+fr Enregistrer le HTML qui accompagne une copie depuis un navigateur ou un éditeur.
+
+en Image
+fr Image
+
+en Record images.
+fr Enregistrer les images.
+
+en Files
+fr Fichiers
+
+en Record files copied in a file manager.
+fr Enregistrer les fichiers copiés dans un gestionnaire de fichiers.
+
+en Primary
+fr Sélection primaire
+
+en Also record the primary selection (the text selected with the mouse).
+fr Enregistrer aussi la sélection primaire (le texte sélectionné à la souris).
+
+en Size limit
+fr Taille maximale
+
+en A representation larger than this is not recorded.
+fr Une représentation plus grande que cette taille n'est pas enregistrée.
+
+en bytes
+fr octets
+
+en Ignore secrets
+fr Ignorer les secrets
+
+en Do not record what a password manager marks as secret (x-kde-passwordManagerHint).
+fr Ne pas enregistrer ce qu'un gestionnaire de mots de passe marque comme secret (x-kde-passwordManagerHint).
+
+en Ignore mimes
+fr Types MIME ignorés
+
+en MIME types, separated by commas: a copy that offers one of them is not recorded.
+fr Types MIME, séparés par des virgules : une copie qui en propose un n'est pas enregistrée.
+
+en Keep
+fr Garder
+
+en When the program that owned the clipboard quits and empties it, put the last entry back.
+fr Quand le programme qui détenait le presse-papiers se ferme et le vide, y remettre le dernier élément.
+
+en General
+fr Général
+
+en Appearance
+fr Apparence
+
+en Window
+fr Fenêtre
+
+en Paste
+fr Collage
+
+en History
+fr Historique
+
+en Capture
+fr Capture
+
+en Clipboard
+fr Presse-papiers
+
+en Scrolling
+fr Défilement
+
+en Input
+fr Saisie
+
+en Delays and menus
+fr Délais et menus
+
+en Updates
+fr Mises à jour
+
+en Rendering
+fr Rendu
+
+en This desktop draws no title bar for papier's window (GNOME): papier keeps its own.
+fr Ce bureau ne dessine pas de barre de titre pour la fenêtre de papier (GNOME) : papier garde la sienne.
+
+en Shortcut
+fr Raccourci
+
+en The keys that show the history from any program. In the settings, click the field and press them; as text, Ctrl, Shift, Alt, Win and a key joined by + (Ctrl+Shift+ù). Win+V stays the system's.
+fr Les touches qui affichent l'historique depuis n'importe quel programme. Dans les réglages, cliquez dans le champ et appuyez dessus ; en texte, Ctrl, Shift, Alt, Win et une touche reliés par + (Ctrl+Shift+ù). Win+V reste celui du système.
+
+en Follow
+fr Écran suivi
+
+en The screen the window shows on: the one under the mouse pointer, or the one of the window in front.
+fr L'écran où la fenêtre s'affiche : celui sous le pointeur de la souris, ou celui de la fenêtre au premier plan.
+
+en Pointer
+fr Pointeur
+
+en Focus
+fr Fenêtre active
+
+en Start with the session, in the notification area
+fr Démarrer avec la session, dans la zone de notification
+
+en papier in the terminal (on the PATH)
+fr papier dans le terminal (dans le PATH)
+
+en Rich text
+fr Texte enrichi
+
+en Data
+fr Données
+
+en Back to the history (Escape)
+fr Retour à l'historique (Escape)
+
+en Hide (Escape)
+fr Masquer (Escape)
+
+en Search the history
+fr Rechercher dans l'historique
+
+en Settings (Ctrl+,)
+fr Réglages (Ctrl+,)
+
+en Nothing copied yet: copy something, it shows here.
+fr Rien de copié pour l'instant : copiez quelque chose, cela s'affiche ici.
+
+en No entry matches.
+fr Aucun élément ne correspond.
+
+en Reading the text of the image…
+fr Lecture du texte de l'image…
+
+en %d of %d entries
+en+ %d of %d entries
+fr %d sur %d élément
+fr+ %d sur %d éléments
+
+en %s · %d pinned
+en+ %s · %d pinned
+fr %s · %d épinglé
+fr+ %s · %d épinglés
+
+en %s, %s: no preview for this format
+fr %s, %s : pas d'aperçu pour ce format
+
+en %s ago
+fr il y a %s
+
+en %d type
+en+ %d types
+fr %d type
+fr+ %d types
+
+en Show it rendered
+fr Afficher le rendu
+
+en Show the source
+fr Afficher la source
+
+en Loading…
+fr Chargement…
+
+en Loading the image…
+fr Chargement de l'image…
+
+en Only web and mail addresses open: %s
+fr Seules les adresses web et de courriel s'ouvrent : %s
+
+en %d B
+fr %d o
+
+en %.1f KB
+fr %.1f Ko
+
+en %.1f MB
+fr %.1f Mo
+
+en copy
+fr copier
+
+en edit
+fr modifier
+
+en more
+fr plus
+
+en pin
+fr épingler
+
+en filter
+fr filtrer
+
+en hide
+fr masquer
+
+en save
+fr enregistrer
+
+en cancel
+fr annuler
+
+en All
+fr Tout
+
+en Images
+fr Images
+
+en Pinned
+fr Épinglés

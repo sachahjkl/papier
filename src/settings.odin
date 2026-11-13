@@ -7,6 +7,7 @@ package papier
 
 import "core:strings"
 import config "gt:config"
+import i18n "gt:i18n"
 import "gt:platform"
 import prefs_page "gt:prefs_page"
 import "gt:ui"
@@ -19,13 +20,15 @@ STANDARD_DEFAULTS :: prefs_page.Standard_Defaults{
 	menu = true, update_auto = true, app_name = APP_NAME,
 }
 
-// The preferences of every system; each system adds its own (settings_linux.odin, settings_windows.odin).
+// The preferences of every system; each system adds its own (settings_linux.odin, settings_windows.odin). Their words
+// are registered in English, before the language is known: the settings page translates them where it shows them
+// (i18n.later marks them for the catalogue). The titles are the ones the names make, written out to be translated.
 PREF_DEFS := [?]config.Def{
-	{name = "paste.on_select", description = "An entry chosen (Enter, a double click, Alt+1…9) is pasted into the program papier was called from: the window hides and papier presses the paste keys there.", kind = .Bool, default = {b = true}, tags = {"auto paste", "insert", "type"}},
-	{name = "paste.keys", description = "The keys papier presses to paste: Ctrl+V in most programs, Ctrl+Shift+V in a terminal, Shift+Insert in both on many systems.", kind = .String, default = {s = "Ctrl+V"}, tags = {"ctrl+v", "terminal", "shortcut"}},
-	{name = "window.close_on_copy", description = "Close the window when an entry is copied.", kind = .Bool, default = {b = true}, tags = {"hide", "dismiss"}},
-	{name = "window.width", description = "The window's width at its first start, in logical pixels.", kind = .Int, default = {i = 900}, min = 320, max = 4000, bounded = true, unit = "px", tags = {"size", "window"}},
-	{name = "window.height", description = "The window's height at its first start, in logical pixels.", kind = .Int, default = {i = 560}, min = 240, max = 4000, bounded = true, unit = "px", tags = {"size", "window"}},
+	{name = "paste.on_select", title = i18n.later("On select"), description = i18n.later("An entry chosen (Enter, a double click, Alt+1…9) is pasted into the program papier was called from: the window hides and papier presses the paste keys there."), kind = .Bool, default = {b = true}, tags = {"auto paste", "insert", "type"}},
+	{name = "paste.keys", title = i18n.later("Keys"), description = i18n.later("The keys papier presses to paste: Ctrl+V in most programs, Ctrl+Shift+V in a terminal, Shift+Insert in both on many systems."), kind = .String, default = {s = "Ctrl+V"}, tags = {"ctrl+v", "terminal", "shortcut"}},
+	{name = "window.close_on_copy", title = i18n.later("Close on copy"), description = i18n.later("Close the window when an entry is copied."), kind = .Bool, default = {b = true}, tags = {"hide", "dismiss"}},
+	{name = "window.width", title = i18n.later("Width"), description = i18n.later("The window's width at its first start, in logical pixels."), kind = .Int, default = {i = 900}, min = 320, max = 4000, bounded = true, unit = "px", tags = {"size", "window"}},
+	{name = "window.height", title = i18n.later("Height"), description = i18n.later("The window's height at its first start, in logical pixels."), kind = .Int, default = {i = 560}, min = 240, max = 4000, bounded = true, unit = "px", tags = {"size", "window"}},
 }
 
 // The values the program reads, copied out of the registry (prefs_read).

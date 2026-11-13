@@ -27,6 +27,7 @@ import config "gt:config"
 import desktop "gt:desktop"
 import diff "gt:diff"
 import "gt:fsx"
+import i18n "gt:i18n"
 import "gt:markdown"
 import "gt:platform"
 import setup "gt:setup"
@@ -736,14 +737,14 @@ reader_run_job :: proc(r: ^Reader, j: ^Job) -> (d: Job_Done) {
 		d.ok = true
 	case .Open_Url:
 		d.ok = platform.open_url(j.text)
-		if !d.ok { d.message = strings.clone("No program opens addresses") }
+		if !d.ok { d.message = strings.clone(i18n.tr("No program opens addresses")) }
 	case .Reveal:
 		d.ok = platform.reveal_in_folder(j.path)
-		if !d.ok { d.message = strings.clone("The file manager does not start") }
+		if !d.ok { d.message = strings.clone(i18n.tr("The file manager does not start")) }
 	case .Save_As, .Open, .Open_With, .Drag:
-		if !r.opened { d.message = strings.clone("The history cannot be read"); break }
+		if !r.opened { d.message = strings.clone(i18n.tr("The history cannot be read")); break }
 		e := reader_entry(r, j.id)
-		if e == nil { d.message = strings.clone("The entry is gone"); break }
+		if e == nil { d.message = strings.clone(i18n.tr("The entry is gone")); break }
 		reader_entry_job(r, j, e, &d)
 	case .Join:
 		if !r.opened { break }
@@ -755,7 +756,7 @@ reader_run_job :: proc(r: ^Reader, j: ^Job) -> (d: Job_Done) {
 		}
 		d.text = strings.join(parts[:], "\n")
 		d.ok = d.text != ""
-		d.message = d.ok ? fmt.aprintf("Copied %d entries", len(j.ids)) : strings.clone("Nothing to copy")
+		d.message = d.ok ? fmt.aprintf(i18n.tr(len(j.ids), "Copied %d entry", "Copied %d entries"), len(j.ids)) : strings.clone(i18n.tr("Nothing to copy"))
 	}
 	return
 }
@@ -768,24 +769,24 @@ reader_entry_job :: proc(r: ^Reader, j: ^Job, e: ^history.Entry, d: ^Job_Done) {
 		data: []u8
 		if at := entry_open_rep(e); at >= 0 { data = history.blob_read(&r.store, e.reps[at].hash, context.temp_allocator) }
 		d.ok = data != nil && fsx.write_atomic(j.path, data)
-		d.message = d.ok ? fmt.aprintf("Saved %s", file_name(j.path)) : fmt.aprintf("%s cannot be written", file_name(j.path))
+		d.message = d.ok ? fmt.aprintf(i18n.tr("Saved %s"), file_name(j.path)) : fmt.aprintf(i18n.tr("%s cannot be written"), file_name(j.path))
 	case .Open:
 		if e.kind == .Text {
 			if url := strings.trim_space(e.preview); is_address(url) {
 				d.ok = platform.open_url(url)
-				if !d.ok { d.message = strings.clone("No program opens addresses") }
+				if !d.ok { d.message = strings.clone(i18n.tr("No program opens addresses")) }
 				return
 			}
 		}
 		path, ok := entry_file(r, e)
-		if !ok { d.message = strings.clone("The entry cannot be written to a file"); return }
+		if !ok { d.message = strings.clone(i18n.tr("The entry cannot be written to a file")); return }
 		d.ok = platform.open_path(path)
-		if !d.ok { d.message = fmt.aprintf("No program opens %s", file_name(path)) }
+		if !d.ok { d.message = fmt.aprintf(i18n.tr("No program opens %s"), file_name(path)) }
 	case .Open_With:
 		path, ok := entry_file(r, e)
-		if !ok { d.message = strings.clone("The entry cannot be written to a file"); return }
+		if !ok { d.message = strings.clone(i18n.tr("The entry cannot be written to a file")); return }
 		d.ok = desktop.open_with(path, j.handler)
-		if !d.ok { d.message = strings.clone("The program does not start") }
+		if !d.ok { d.message = strings.clone(i18n.tr("The program does not start")) }
 	case .Drag:
 		// what the entry is: its text (and its markup for rich text), an image as a file of its own and as its PNG, copied
 		// files as their paths

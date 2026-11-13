@@ -15,6 +15,7 @@ import crash "gt:crash"
 import "gt:devtools"
 import "gt:font"
 import "gt:host"
+import i18n "gt:i18n"
 import instance "gt:instance"
 import tk_log "gt:log"
 import ocr "gt:ocr"
@@ -25,6 +26,9 @@ import setup "gt:setup"
 import "gt:ui"
 import update "gt:update"
 import lucide "gt:lucide"
+
+// papier's own texts in each language it speaks besides English (the toolkit's are the toolkit's).
+PROGRAM_CATALOGUES :: []i18n.Catalog{{"fr", #load("../i18n/fr.txt", string)}}
 
 Filter :: enum u8 { All, Text, Images, Files, Pinned }   // (Pinned last: a system with no pins shows the others)
 
@@ -136,6 +140,10 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	app.prefs = prefs^
 	prefs^ = {}
 	app.settings = prefs_read(&app.prefs)
+	// (general.language is in the registry now, and nothing is shown yet: every text from here on is in its language,
+	// the tables of commands included)
+	prefs_page.language_start(&app.prefs, PROGRAM_CATALOGUES)
+	texts_translate()
 	config.user_writer_start(&app.prefs_writer, &app.prefs, prefs_file())
 	app.prefs_path = prefs_file(context.allocator)
 	// (no file read here: the user's themes come at the first builds, read by a task)
@@ -190,10 +198,10 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	app.tray = platform.tray_create(win, LOGO_PNG, "Papier")
 	if app.tray != nil {
 		platform.tray_set_menu(app.tray, {
-			{id = int(Tray_Item.Show), text = "Show the history", default = true},
+			{id = int(Tray_Item.Show), text = i18n.tr("Show the history"), default = true},
 			{kind = .Separator},
-			{id = int(Tray_Item.Clear), text = "Clear the history (pinned entries stay)"},
-			{id = int(Tray_Item.Quit), text = "Quit Papier"},
+			{id = int(Tray_Item.Clear), text = i18n.tr("Clear the history (pinned entries stay)")},
+			{id = int(Tray_Item.Quit), text = i18n.tr("Quit Papier")},
 		})
 	}
 
@@ -214,7 +222,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 		app_tray(app)
 		app_updates_follow(app)
 		config.user_writer_save(&app.prefs_writer, &app.prefs)
-		if config.user_writer_failed(&app.prefs_writer) { say(app, "The preferences cannot be written") }
+		if config.user_writer_failed(&app.prefs_writer) { say(app, i18n.tr("The preferences cannot be written")) }
 		if app_follow_reader(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if view_decoded(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if app_ocr_follow(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
@@ -438,15 +446,15 @@ app_shortcut :: proc(app: ^App) {
 		hk, ok := platform.hotkey_parse(app.settings.shortcut)
 		switch {
 		case !ok:
-			app.shortcut_problem = fmt.aprintf("%q is not a shortcut: click the field and press the keys.", app.settings.shortcut)
+			app.shortcut_problem = fmt.aprintf(i18n.tr("%q is not a shortcut: click the field and press the keys."), app.settings.shortcut)
 		case !platform.hotkey_register(win, HOTKEY_ID, hk):
-			app.shortcut_problem = fmt.aprintf("%s cannot be used: Windows or another program holds it, or this keyboard has no such key. Choose other keys.", platform.hotkey_text(hk))
+			app.shortcut_problem = fmt.aprintf(i18n.tr("%s cannot be used: Windows or another program holds it, or this keyboard has no such key. Choose other keys."), platform.hotkey_text(hk))
 		case:
 			app.hotkey_held = true
 		}
 		if app.shortcut_problem != "" {
 			log.errorf("papier: window.shortcut: %s", app.shortcut_problem)
-			say(app, "The shortcut does not work: %s", app.shortcut_problem)
+			say(app, i18n.tr("The shortcut does not work: %s"), app.shortcut_problem)
 		}
 	}
 }
@@ -548,10 +556,10 @@ app_ocr_follow :: proc(app: ^App) -> bool {
 	defer ocr_done_free(&d)
 	app.ocr_reading = 0
 	switch {
-	case d.unreadable:     say(app, "The image cannot be read")
+	case d.unreadable:     say(app, i18n.tr("The image cannot be read"))
 	case d.err != .None:   say(app, "%s", ocr.error_text(d.err))
-	case d.lines == 0:     say(app, "No text in the image")
-	case:                  copy_new_text(app, d.text, fmt.tprintf("Copied the text of the image (%d line%s)", d.lines, d.lines == 1 ? "" : "s"), chosen = false)
+	case d.lines == 0:     say(app, i18n.tr("No text in the image"))
+	case:                  copy_new_text(app, d.text, fmt.tprintf(i18n.tr(d.lines, "Copied the text of the image (%d line)", "Copied the text of the image (%d lines)"), d.lines), chosen = false)
 	}
 	return true
 }
@@ -653,7 +661,7 @@ announce :: proc(app: ^App, format: string, args: ..any) {
 app_crash_said :: proc(app: ^App) {
 	if app.crash_report == "" { return }
 	log.warnf("papier: the last session ended in a crash: %s", app.crash_report)
-	ui.announce(&app.announcer, .Bad, "Papier stopped unexpectedly last time", app.crash_report)
+	ui.announce(&app.announcer, .Bad, i18n.tr("Papier stopped unexpectedly last time"), app.crash_report)
 	delete(app.crash_report)
 	app.crash_report = ""
 }

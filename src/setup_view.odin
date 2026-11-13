@@ -9,6 +9,7 @@ package papier
 //   papier --setup        the dialog (the running papier shows it)
 
 import desktop "gt:desktop"
+import i18n "gt:i18n"
 import "gt:platform"
 import "gt:render"
 import setup "gt:setup"
@@ -26,11 +27,15 @@ setup_config :: proc() -> setup.Config {
 	}
 }
 
-// The boxes of the dialog, in the order prepare reads them.
-@(private = "file", rodata)
+// The boxes of the dialog, in the order prepare reads them (their labels in the language in use: texts_translate).
+@(private = "file")
 SETUP_CHOICES := [?]setup.Choice{
-	{label = "Start with the session, in the notification area", on = true},
-	{label = "papier in the terminal (on the PATH)", on = true},
+	{label = i18n.later("Start with the session, in the notification area"), on = true},
+	{label = i18n.later("papier in the terminal (on the PATH)"), on = true},
+}
+
+setup_choices_translate :: proc() {
+	for &c in SETUP_CHOICES { c.label = i18n.tr(c.label) }
 }
 
 // What the reader found of the install (a Setup_Facts job, asked at the start): the dialog when there is something to do

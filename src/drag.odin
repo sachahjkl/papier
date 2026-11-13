@@ -11,6 +11,7 @@ package papier
 // loop, then idle.
 
 import "gt:platform"
+import i18n "gt:i18n"
 import "gt:ui"
 import "history"
 
@@ -57,7 +58,7 @@ drag_run :: proc(app: ^App) {
 	d.ready, d.has_ready, d.asked = {}, false, 0
 	defer drag_data_free(&data)
 	if platform.drag_data_empty(data) { return }
-	if _, ok := platform.drag_start(app.main.win, data, {.Copy}); !ok { say(app, "The entry cannot be dragged here") }
+	if _, ok := platform.drag_start(app.main.win, data, {.Copy}); !ok { say(app, i18n.tr("The entry cannot be dragged here")) }
 	app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT)
 }
 

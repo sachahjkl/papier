@@ -3,6 +3,11 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.20.2] - 2026-11-13
+
+### Changed
+- **One licence at one price, and a new pricing page**: the papier licence is now one edition at 15 €, paid once, taxes included; the Patron edition is gone. The pricing page shows papier's icon and name, one card with the price, what the licence gives as a list, one button, then "Before you buy". The licence is named "papier licence" on the site, at checkout and in the licence file.
+
 ## [0.20.1] - 2026-11-13
 
 ### Fixed
@@ -386,6 +391,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.20.2]: https://github.com/sachahjkl/papier/releases/tag/v0.20.2
 [0.20.1]: https://github.com/sachahjkl/papier/releases/tag/v0.20.1
 [0.20.0]: https://github.com/sachahjkl/papier/releases/tag/v0.20.0
 [0.19.2]: https://github.com/sachahjkl/papier/releases/tag/v0.19.2

@@ -690,7 +690,13 @@ build_markdown :: proc(app: ^App, l: ^Loaded_Entry, em: f32) {
 			ui.spacer(ui.px(em * 0.8))
 			ui.next({width = ui.fill()})
 			if ui.column() {
-				cfg := markdown.Config{prose = app.shared.font, mono = app.mono, user = app, link = markdown_link}
+				// (this frame's room, from the window: the box's own width is the last frame's; the pane less its sides
+				// and the scroll bar)
+				u := ui.frame_new(Markdown_User)
+				u^ = {app = app, loaded = l, width = (app.room - app.place.split) * ui.scale() - em * 2.6}
+				u.cfg = markdown.Config{prose = app.shared.font, mono = app.mono, user = u, link = markdown_link}
+				cfg := u.cfg
+				cfg.code = markdown_code
 				markdown.view(l.markdown, fmt.tprintf("md%d", l.id), l.source, cfg)
 			}
 			ui.spacer(ui.px(em * 0.8))
@@ -703,7 +709,7 @@ build_markdown :: proc(app: ^App, l: ^Loaded_Entry, em: f32) {
 // anything else is not handed to the system (a copied text's link is the text's author's).
 @(private = "file")
 markdown_link :: proc(user: rawptr, url: string) {
-	app := (^App)(user)
+	app := (^Markdown_User)(user).app
 	target := strings.trim_space(url)
 	if !is_address(target) && !strings.has_prefix(target, "mailto:") {
 		say(app, i18n.tr("Only web and mail addresses open: %s"), one_line(target, 60))

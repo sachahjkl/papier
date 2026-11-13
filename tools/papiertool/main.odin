@@ -30,8 +30,9 @@ project :: proc() -> toolbox.Project {
 		version_file = "src/main.odin", version_line = "APP_VERSION :: ", program = PROGRAM,
 		launcher = {out = LAUNCHER_OUT, mark = "(papier console launcher)", default_rule = "wait",
 		            others = "(none),toggle,--hidden", refuses_exit = 2},
-		// (live and shots drive the release build over CDP: Devtools; only the icons papier names: Lucide_Subset)
-		features = {.Devtools, .Lucide_Subset},
+		// (live and shots drive the release build over CDP: Devtools; only the icons papier names: Lucide_Subset; a
+		// ```mermaid block of a Markdown entry drawn: Mermaid)
+		features = {.Mermaid, .Devtools, .Lucide_Subset},
 	}
 }
 

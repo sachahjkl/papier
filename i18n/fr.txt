@@ -140,6 +140,12 @@ fr+ Texte de l'image copié (%d lignes)
 en Papier stopped unexpectedly last time
 fr Papier s'est arrêté de façon inattendue la dernière fois
 
+en Not a diagram: %s
+fr Pas un diagramme : %s
+
+en A diagram
+fr Un diagramme
+
 en The entry cannot be dragged here
 fr L'élément ne peut pas être déposé ici
 

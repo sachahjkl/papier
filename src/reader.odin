@@ -66,6 +66,7 @@ Loaded_Entry :: struct {
 	has_code:  bool,
 	source:    string,            // Markdown: the text as it is (the doc reads it in place: it must not move)
 	markdown:  ^markdown.Doc,     // Markdown: `source` read into its blocks (heap)
+	diagrams:  []Diagram,         // Markdown: its ```mermaid blocks, laid out (heap)
 	diff:      ^diff.Doc,         // Diff: the patch read into its lines (heap)
 	text:      string,            // the whole text (what the edit view and the drag take)
 	qr:        string,            // what its QR code holds ("" none: no text, or too long)
@@ -335,6 +336,10 @@ loaded_free :: proc(l: ^Loaded_Entry) {
 	delete(l.view_text, heap)
 	delete(l.text, heap)
 	delete(l.qr, heap)
+	if l.diagrams != nil {
+		context.allocator = heap   // (made on the reader's heap)
+		diagrams_free(l.diagrams)
+	}
 	if l.markdown != nil {
 		markdown.doc_destroy(l.markdown)   // (its memory is its `alloc`: the heap)
 		free(l.markdown, heap)
@@ -628,18 +633,26 @@ reader_load_entry :: proc(r: ^Reader, id, key: u64) -> (out: Loaded_Entry) {
 }
 
 // The preview's form of a text, from syntax.guess's answer, and what it needs made here, once, off the window's thread:
-// a Markdown doc read from its own copy of the text, a diff read into its lines with its files' language.
+// a Markdown doc read from its own copy of the text (its diagrams laid out), a diff read into its lines with its files'
+// language.
 @(private = "file")
 preview_form :: proc(out: ^Loaded_Entry, text: string) {
 	lang, found := syntax.guess(text)
-	if !found { return }
-	switch language_name(lang) {
+	name := found ? language_name(lang) : ""
+	// (a table alone has one sign of Markdown, too few for guess; a text that begins with one is no code, and prose with
+	// one is Markdown)
+	if name != "markdown" && name != "diff" {
+		if at, has := markdown_table_at(text); has && (at == 0 || !found) { name = "markdown" }
+	}
+	if name == "" { return }
+	switch name {
 	case "markdown":
 		out.form = .Markdown
 		out.source = strings.clone(text)
 		out.markdown = new(markdown.Doc)
 		out.markdown.alloc = context.allocator   // (the reader's heap: the window frees it, and fills its caches, there too)
 		markdown.read(out.markdown, out.source)
+		out.diagrams = diagrams_make(out.markdown)
 	case "diff":
 		out.form = .Diff
 		out.diff = new(diff.Doc)
@@ -653,6 +666,56 @@ preview_form :: proc(out: ^Loaded_Entry, text: string) {
 
 // A language's first name ("markdown", "diff", "odin"): what tells two languages apart.
 language_name :: proc(l: syntax.Language) -> string { return len(l.names) > 0 ? l.names[0] : "" }
+
+// The first Markdown table of a text: a row of cells ("| a | b |") with, on the next line, its separator ("|---|:-:|") of
+// as many cells. `at`: the header's line among the lines that are not blank (0: the text begins with it). Pipes alone are
+// not enough: a shell's pipeline, a column of a log, an "a | b" in prose have no separator under them.
+markdown_table_at :: proc(text: string) -> (at: int, ok: bool) {
+	rest := text
+	prev := ""          // the line before, when it is a row
+	prev_cells := 0
+	shown := 0          // the lines not blank, so far
+	for raw in strings.split_lines_iterator(&rest) {
+		line := strings.trim_space(raw)
+		if line == "" { prev = ""; continue }
+		shown += 1
+		if !strings.has_prefix(line, "|") { prev = ""; continue }
+		cells := table_cells(line)
+		if prev != "" && cells == prev_cells && table_separator(line) { return shown - 2, true }
+		prev, prev_cells = line, cells
+	}
+	return 0, false
+}
+
+// The cells of a row that begins with "|": its unescaped pipes, the one at its end not counted.
+@(private = "file")
+table_cells :: proc(row: string) -> int {
+	n := 0
+	for i := 1; i < len(row); i += 1 {
+		switch row[i] {
+		case '\\': i += 1
+		case '|':  if i < len(row) - 1 { n += 1 }
+		}
+	}
+	return n + 1
+}
+
+// A separator row: each cell dashes, with a colon at either end or none (":--", ":-:", "--:").
+@(private = "file")
+table_separator :: proc(row: string) -> bool {
+	body := strings.trim_prefix(row, "|")
+	body = strings.trim_suffix(body, "|")
+	if body == "" { return false }
+	parts := body
+	for cell in strings.split_iterator(&parts, "|") {
+		c := strings.trim_space(cell)
+		c = strings.trim_prefix(c, ":")
+		c = strings.trim_suffix(c, ":")
+		if c == "" { return false }
+		for ch in c { if ch != '-' { return false } }
+	}
+	return true
+}
 
 // The language of a diff's code: of the first file it names ("+++ b/src/x.odin", else "--- a/...").
 @(private = "file")

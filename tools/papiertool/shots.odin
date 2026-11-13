@@ -22,6 +22,8 @@ Sample :: struct { text, mime, file, seen: string }
 
 @(private = "file")
 SAMPLES :: [?]Sample{
+	// (the oldest: a Markdown text with a diagram and a table, the "markdown" picture)
+	{text = "# Release plan\n\nWhat goes out with **0.2**.\n\n```mermaid\nflowchart LR\n    A[Fragments] --> B[Changelog]\n    B --> C[Release]\n    C --> D[Site]\n    C --> E[Updates]\n```\n\n| Step | Who | When |\n|---|---|---|\n| Changelog | the tool | at the release |\n| Pictures | shots | before it |\n| Site | site build | after it |\n", seen = "# Release plan"},
 	{text = "SELECT name, email FROM users\nWHERE created_at > now() - interval '7 days'\nORDER BY created_at DESC;", seen = "SELECT name, email"},
 	{text = "Meeting moved to Thursday 10:00, room B. Bring the printed agenda and the budget figures.", seen = "Meeting moved"},
 	{text = "<h2>Release notes</h2><p>Papier <b>0.1.0</b> keeps the clipboard's history: text, rich text, images and files.</p>", mime = "text/html", seen = "Release notes"},
@@ -104,6 +106,12 @@ run_shots :: proc(args: []string) -> int {
 	cdp.key(&c, "Escape")
 	cdp.key(&c, "Escape")   // (the search, cleared)
 	cdp.wait_for(&c, "proc fibonacci", SESSION_WAIT)
+	// a Markdown text: its diagram drawn, its table
+	cdp.type_text(&c, "release plan")
+	cdp.wait_for(&c, "proc fibonacci", SESSION_WAIT, gone = true)
+	shot(&c, out, "markdown", &failed)
+	cdp.key(&c, "Escape")   // (the search, cleared)
+	cdp.wait_for(&c, "proc fibonacci", SESSION_WAIT)
 	// the settings
 	cdp.key(&c, "ctrl+,")
 	cdp.wait_for(&c, "Max entries", SESSION_WAIT, gone = true)   // (the first page: General)
@@ -126,9 +134,10 @@ run_shots :: proc(args: []string) -> int {
 	}
 	if failed { return 1 }
 
-	// the site shows the same pictures
+	// the site shows the same pictures (not pictures written elsewhere: --out leaves the site as it is)
+	if out != SHOTS_OUT { return 0 }
 	_ = os.make_directory_all(SHOTS_SITE)
-	for name in ([]string{"main", "images", "search", "menu", "edit", "palette", "qr", "settings", "light"}) {
+	for name in ([]string{"main", "images", "search", "menu", "edit", "palette", "qr", "markdown", "settings", "light"}) {
 		data, err := os.read_entire_file(fmt.tprintf("%s/%s.png", out, name), context.temp_allocator)
 		if err == nil { _ = os.write_entire_file(fmt.tprintf("%s/%s.png", SHOTS_SITE, name), data) }
 	}

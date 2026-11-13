@@ -80,8 +80,14 @@
         root = ./.;
         fileset = lib.fileset.difference ./. (lib.fileset.unions (map lib.fileset.maybeMissing [./site ./build]));
       };
-      # the crates of the toolkit's text library, vendored: cargo makes no request
-      cargoDeps = pkgs.rustPlatform.importCargoLock {lockFile = ./ext/gui_toolkit/native/text/Cargo.lock;};
+      # the crates of the toolkit's text library and of its Mermaid diagrams, vendored in one folder: cargo makes no request
+      cargoDeps = pkgs.symlinkJoin {
+        name = "papier-cargo-vendor";
+        paths = map (lockFile: pkgs.rustPlatform.importCargoLock {inherit lockFile;}) [
+          ./ext/gui_toolkit/native/text/Cargo.lock
+          ./ext/gui_toolkit/native/mermaid/Cargo.lock
+        ];
+      };
 
       nativeBuildInputs = [odin pkgs.cargo pkgs.rustc pkgs.clang pkgs.lld pkgs.autoPatchelfHook pkgs.copyDesktopItems pkgs.makeWrapper];
       buildInputs = [pkgs.fontconfig pkgs.freetype pkgs.stdenv.cc.cc.lib];

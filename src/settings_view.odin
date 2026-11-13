@@ -28,28 +28,22 @@ settings_keys :: proc(app: ^App) {
 @(private = "file", rodata) GENERAL_NAMES := [?]string{prefs_page.MESSAGES_PREF, prefs_page.LANGUAGE_PREF}
 
 // The pages, their order and their icons: each a group of the registry (the first segment of a name). A page with no
-// preference on this system is left out (history and capture on Windows).
+// preference on this system is left out (history and capture on Windows). The titles are English: the page translates
+// them where it shows them.
 @(private = "file")
-settings_pages :: proc() -> []prefs_page.Page_Info {
-	// (made once, at the first show of the settings: the language is in use by then)
-	@(static) pages: [12]prefs_page.Page_Info
-	if pages[0].category == "" {
-		pages = {
-			{category = "general",    title = i18n.tr("General"),          icon = lucide.SETTINGS, names = GENERAL_NAMES[:]},
-			{category = "appearance", title = i18n.tr("Appearance"),       icon = lucide.PALETTE},
-			{category = "window",     title = i18n.tr("Window"),           icon = lucide.APP_WINDOW},
-			{category = "paste",      title = i18n.tr("Paste"),            icon = lucide.CLIPBOARD_PASTE},
-			{category = "history",    title = i18n.tr("History"),          icon = lucide.HISTORY},
-			{category = "capture",    title = i18n.tr("Capture"),          icon = lucide.CLIPBOARD},
-			{category = "clipboard",  title = i18n.tr("Clipboard"),        icon = lucide.CLIPBOARD_CHECK},
-			{category = "scrolling",  title = i18n.tr("Scrolling"),        icon = lucide.MOUSE},
-			{category = "input",      title = i18n.tr("Input"),            icon = lucide.KEYBOARD},
-			{category = "timing",     title = i18n.tr("Delays and menus"), icon = lucide.TIMER},
-			{category = "update",     title = i18n.tr("Updates"),          icon = lucide.DOWNLOAD},
-			{category = "rendering",  title = i18n.tr("Rendering"),        icon = lucide.MONITOR},
-		}
-	}
-	return pages[:]
+SETTINGS_PAGES := [?]prefs_page.Page_Info{
+	{category = "general",    title = i18n.later("General"),          icon = lucide.SETTINGS, names = GENERAL_NAMES[:]},
+	{category = "appearance", title = i18n.later("Appearance"),       icon = lucide.PALETTE},
+	{category = "window",     title = i18n.later("Window"),           icon = lucide.APP_WINDOW},
+	{category = "paste",      title = i18n.later("Paste"),            icon = lucide.CLIPBOARD_PASTE},
+	{category = "history",    title = i18n.later("History"),          icon = lucide.HISTORY},
+	{category = "capture",    title = i18n.later("Capture"),          icon = lucide.CLIPBOARD},
+	{category = "clipboard",  title = i18n.later("Clipboard"),        icon = lucide.CLIPBOARD_CHECK},
+	{category = "scrolling",  title = i18n.later("Scrolling"),        icon = lucide.MOUSE},
+	{category = "input",      title = i18n.later("Input"),            icon = lucide.KEYBOARD},
+	{category = "timing",     title = i18n.later("Delays and menus"), icon = lucide.TIMER},
+	{category = "update",     title = i18n.later("Updates"),          icon = lucide.DOWNLOAD},
+	{category = "rendering",  title = i18n.later("Rendering"),        icon = lucide.MONITOR},
 }
 
 // The preferences that hold a key combination: recorded from the keys pressed.
@@ -80,7 +74,7 @@ settings_options :: proc(app: ^App) -> prefs_page.Options {
 		hotkeys = HOTKEY_PREFS[:], problem = settings_problem,
 		page_foot = settings_page_foot,
 		updater = app.updater, restart = proc(user: rawptr) { app_restart((^App)(user), hidden = false) },
-		pages = settings_pages(), icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.REFRESH_CW,
+		pages = SETTINGS_PAGES[:], icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.REFRESH_CW,
 		file = app.prefs_path,
 		version = "Papier " + APP_VERSION,
 		themes = app.themes_file.all[:], themes_light = app.theme_shown.light, themes_file = &app.themes_file,

@@ -48,7 +48,7 @@ qr_destroy :: proc(app: ^App) {
 qr_build :: proc(app: ^App, em: f32) {
 	if !app.qr.open { return }
 	side := clamp(min(app.room, f32(app.settings.size.y)) * 0.6, em * 12, em * 26)
-	if ui.modal("###qr", side + em * 3, &app.qr.open) {
+	if ui.modal("qr", &app.qr.open, {width_em = side / em + 3}) {
 		ui.spacer(ui.px(em * 1.2))
 		ui.next({width = ui.fill(), height = ui.children_sum()})
 		if ui.row() {

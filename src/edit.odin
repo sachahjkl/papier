@@ -23,7 +23,7 @@ Edit :: struct {
 	active:  bool,
 	id:      u64,          // the entry edited
 	pending: u64,          // the entry whose edit waits for its text (0: none)
-	area:    ui.Text_Area,
+	area:    ui.Text_Edit,
 	fresh:   bool,         // the editor takes the keyboard at the next build
 }
 
@@ -33,8 +33,8 @@ edit_begin :: proc(app: ^App, e: ^history.Entry) {
 	if e.kind != .Text && e.kind != .Html { return }
 	if !loaded_for(app, e) { app.edit.pending = e.id; return }
 	app.edit.pending = 0
-	ui.area_set(&app.edit.area, app.loaded.text)
-	ui.area_clear_history(&app.edit.area)
+	ui.text_edit_set(&app.edit.area, app.loaded.text)
+	ui.text_edit_clear_history(&app.edit.area)
 	app.edit.active, app.edit.id, app.edit.fresh = true, e.id, true
 }
 
@@ -42,12 +42,12 @@ edit_end :: proc(app: ^App) {
 	app.edit.pending = 0
 	if !app.edit.active { return }
 	app.edit.active = false
-	ui.area_set(&app.edit.area, "")
-	ui.area_clear_history(&app.edit.area)
+	ui.text_edit_set(&app.edit.area, "")
+	ui.text_edit_clear_history(&app.edit.area)
 }
 
 edit_copy :: proc(app: ^App) {
-	text := ui.area_string(&app.edit.area)
+	text := ui.text_edit_string(&app.edit.area)
 	if strings.trim_space(text) == "" { say(app, i18n.tr("Nothing to copy")); return }
 	paste := app.settings.paste_on_select
 	watcher_send(&app.watcher, {verb = .Add_Text, text = text, paste = paste})
@@ -56,7 +56,7 @@ edit_copy :: proc(app: ^App) {
 }
 
 edit_save :: proc(app: ^App) {
-	text := ui.area_string(&app.edit.area)
+	text := ui.text_edit_string(&app.edit.area)
 	if strings.trim_space(text) == "" { say(app, i18n.tr("An empty entry is not saved: remove it instead")); return }
 	watcher_send(&app.watcher, {verb = .Replace_Text, id = app.edit.id, text = text})
 	edit_end(app)
@@ -80,8 +80,8 @@ edit_build :: proc(app: ^App, e: ^history.Entry, em: f32) {
 		if ui.tags("weak") {
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			if ui.style({font_size = em * 0.88}) {
-				text := ui.area_string(&app.edit.area)
-				chars, lines := utf8.rune_count_in_string(text), ui.area_line_count(&app.edit.area)
+				text := ui.text_edit_string(&app.edit.area)
+				chars, lines := utf8.rune_count_in_string(text), ui.text_edit_line_count(&app.edit.area)
 				// (the English says "1 characters", "1 lines": its two forms are one; a language with its own forms has them)
 				ui.label(fmt.tprintf("%s · %s%s###editmeta",
 					fmt.tprintf(i18n.tr(chars, "%d characters", "%d characters"), chars),
@@ -102,7 +102,7 @@ edit_build :: proc(app: ^App, e: ^history.Entry, em: f32) {
 		// (code keeps its language's colours while it is edited; Markdown, a diff and prose are not code: plain)
 		hl: ^ui.Text_Highlight
 		if loaded_for(app, e) && app.loaded.form == .Code && app.loaded.has_code { hl = ui.code_highlight(app.loaded.code) }
-		res := ui.text_edit("###editor", &app.edit.area, i18n.tr("The entry's text"), wrap = true, highlight = hl)
+		res := ui.text_edit("###editor", &app.edit.area, {placeholder = i18n.tr("The entry's text"), wrap = true, highlight = hl})
 		if app.edit.fresh { ui.set_focus(res.box.key); app.edit.fresh = false }
 		if res.cancelled { edit_end(app) }
 		ui.spacer(ui.px(em * 0.5))

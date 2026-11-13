@@ -37,7 +37,7 @@ app_updates_start :: proc(app: ^App, offer: bool) {
 // update.auto, read again when the preferences change.
 app_updates_auto :: proc(app: ^App) {
 	auto := app.settings.update_auto && app.installed_copy
-	update.set_auto(app.updater, check = auto, install = auto)
+	update.set_auto(app.updater, auto ? .Install : .Off)
 }
 
 // At each turn of the loop: what changed is said, and an update in place takes over once the window is hidden.

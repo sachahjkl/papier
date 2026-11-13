@@ -27,15 +27,11 @@ setup_config :: proc() -> setup.Config {
 	}
 }
 
-// The boxes of the dialog, in the order prepare reads them (their labels in the language in use: texts_translate).
+// The boxes of the dialog, in the order prepare reads them (their labels in English: the dialog translates them).
 @(private = "file")
 SETUP_CHOICES := [?]setup.Choice{
 	{label = i18n.later("Start with the session, in the notification area"), on = true},
 	{label = i18n.later("papier in the terminal (on the PATH)"), on = true},
-}
-
-setup_choices_translate :: proc() {
-	for &c in SETUP_CHOICES { c.label = i18n.tr(c.label) }
 }
 
 // What the reader found of the install (a Setup_Facts job, asked at the start): the dialog when there is something to do

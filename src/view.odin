@@ -227,7 +227,7 @@ view_keys :: proc(app: ^App) {
 	if ui.key_press(.Escape) {
 		switch {
 		case ui.list_mark_count(&app.vl) > 0: ui.list_marks_clear(&app.vl)
-		case len(app.search.buf) > 0:         ui.field_clear(&app.search)
+		case len(app.search.buf) > 0:         ui.line_edit_clear(&app.search)
 		case:                                 app_hide(app)
 		}
 	}
@@ -280,7 +280,7 @@ glyph :: proc(app: ^App, g: string, width: f32, fg: Maybe(ui.Color) = nil) {
 // A small button with a Lucide icon; its tooltip says what it does.
 icon_action :: proc(app: ^App, id, g, tip: string, em: f32) -> bool {
 	ui.next({width = ui.px(em * 2.1), height = ui.px(em * 2.1), radius = em * 0.4})
-	return ui.icon_button(id, g, tip = tip, icon_font = app.icons).clicked
+	return ui.button(id, icon = g, o = {tip = tip, icon_font = app.icons}).clicked
 }
 
 @(private = "file")
@@ -305,15 +305,15 @@ build_title :: proc(app: ^App, em: f32) {
 		// the search: a field with its icon, as wide as the title leaves
 		ui.next({width = ui.fill(), height = ui.px(ui.dense(em * FIELD_EM)), radius = em * 0.45})
 		// one surface: the icon and the field, one focus ring around both (the field is bare: no box of its own)
-		if ui.field_frame("###searchbox") {
+		if ui.input_frame("###searchbox") {
 			if ui.tags("weak") { glyph(app, lucide.SEARCH, em * 1.9) }
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			if ui.tags("bare") {
-				res := ui.line_edit("###search", &app.search, i18n.tr("Search the history"))
+				res := ui.line_edit("###search", &app.search, {placeholder = i18n.tr("Search the history")})
 				app.search_key = res.box.key
 			}
 		}
-		if q := ui.field_string(&app.search); q != app.query {
+		if q := ui.line_edit_string(&app.search); q != app.query {
 			delete(app.query)
 			app.query = strings.clone(q)
 			refilter(app, reset = true)

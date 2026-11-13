@@ -81,7 +81,7 @@ decoder_start :: proc(d: ^Decoder, window: ^platform.Window) {
 
 // What was asked is decoded, and what is asked meanwhile in one more run.
 @(private = "file")
-decoder_poke :: proc(d: ^Decoder) { tasks.ask(&d.pool, &d.job) }
+decoder_poke :: proc(d: ^Decoder) { tasks.job_ask(&d.pool, &d.job) }
 
 decoder_stop :: proc(d: ^Decoder) {
 	if !d.up { return }

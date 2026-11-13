@@ -83,7 +83,7 @@ App :: struct {
 	exit_code:  int,
 
 	// the interface
-	search:     ui.Text_Field,
+	search:     ui.Line_Edit,
 	search_key: ui.Key,
 	query:      string,             // what `shown` was filtered with (owned)
 	query_seq:  u64,                // the last query sent to the reader (a view of an older one is not applied)
@@ -140,10 +140,8 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	app.prefs = prefs^
 	prefs^ = {}
 	app.settings = prefs_read(&app.prefs)
-	// (general.language is in the registry now, and nothing is shown yet: every text from here on is in its language,
-	// the tables of commands included)
+	// (general.language is in the registry now, and nothing is shown yet: every text from here on is in its language)
 	prefs_page.language_start(&app.prefs, PROGRAM_CATALOGUES)
-	texts_translate()
 	config.user_writer_start(&app.prefs_writer, &app.prefs, prefs_file())
 	app.prefs_path = prefs_file(context.allocator)
 	// (no file read here: the user's themes come at the first builds, read by a task)
@@ -272,12 +270,12 @@ app_free :: proc(app: ^App) {
 	// (the chores have stopped: no task of theirs is on its way)
 	prefs_page.themes_file_destroy(&app.themes_file)
 	licence_destroy(app)
-	ui.field_destroy(&app.search)
+	ui.line_edit_destroy(&app.search)
 	ui.vlist_destroy(&app.vl)
-	ui.field_destroy(&app.palette.field)
+	ui.line_edit_destroy(&app.palette.field)
 	qr_destroy(app)
 	entry_menu_free(&app.menu)
-	ui.area_destroy(&app.edit.area)
+	ui.text_edit_destroy(&app.edit.area)
 	prefs_page.destroy(&app.settings_page)
 	setup.destroy(&app.setup)
 	delete(app.launch_after)
@@ -360,7 +358,7 @@ app_show :: proc(app: ^App) {
 		edit_end(app)
 		app.settings_open = false   // (a new look is at the history, not at what was open when it hid)
 		app.menu.close_due = true   // (closed at the next build: the interface is only touched from inside one)
-		ui.field_clear(&app.search)
+		ui.line_edit_clear(&app.search)
 		delete(app.query)
 		app.query = ""
 		app.filter = .All

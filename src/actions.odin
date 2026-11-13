@@ -54,13 +54,6 @@ ACTIONS := [Action]ui.Command{
 	.Quit            = {label = i18n.later("Quit Papier"), group = i18n.later("Papier"), keys = {{.Q, {.Ctrl}}, {}}, icon = lucide.POWER, tags = {"exit", "close", "stop"}},
 }
 
-// The texts of the tables read by the toolkit (the palette, the sheet of the keys, the Setup), in the language in use:
-// translated in place once, at the start, as the language holds for the whole run and they are read at every build.
-texts_translate :: proc() {
-	for &c in ACTIONS { c.label, c.group = i18n.tr(c.label), i18n.tr(c.group) }
-	setup_choices_translate()
-}
-
 // The entries an action acts on: the marked ones in the list's order, else the selected one (temp memory). Run when an
 // action runs, not at each build: it goes over the marks.
 acted_on :: proc(app: ^App) -> []^history.Entry {
@@ -178,7 +171,7 @@ action_run :: proc(app: ^App, a: Action) {
 // The keys of the actions, when nothing else has the keyboard.
 actions_keys :: proc(app: ^App) {
 	for a in Action {
-		if ui.command_pressed(ACTIONS[a], action_enabled(app, a)) { action_run(app, a); return }
+		if ui.command_pressed(ACTIONS[a], !action_enabled(app, a)) { action_run(app, a); return }
 	}
 }
 
@@ -189,10 +182,9 @@ actions_build :: proc(app: ^App) {
 	if app.palette.open {
 		settings, names := prefs_page.palette_commands(&app.prefs, settings_options(app))
 		all := slice.concatenate([][]ui.Command{actions, settings}, context.temp_allocator)
-		enabled := make([]bool, len(all), context.temp_allocator)
-		for a in Action { enabled[int(a)] = action_enabled(app, a) }
-		for i in len(actions) ..< len(all) { enabled[i] = true }
-		if i, _ := ui.palette(&app.palette, all, enabled); i >= 0 {
+		disabled := make([]bool, len(all), context.temp_allocator)
+		for a in Action { disabled[int(a)] = !action_enabled(app, a) }
+		if i, _ := ui.palette(&app.palette, all, disabled); i >= 0 {
 			if i < len(actions) { action_run(app, Action(i)) } else { settings_show(app, names[i - len(actions)]) }
 		}
 	}

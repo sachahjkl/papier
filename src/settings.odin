@@ -88,7 +88,7 @@ prefs_read :: proc(p: ^config.Prefs, allocator := context.allocator) -> (s: Sett
 	s.system_title = config.bool_of(p, prefs_page.SYSTEM_TITLE_PREF)
 	s.size = {int(config.int_of(p, "window.width")), int(config.int_of(p, "window.height"))}
 	s.update_auto = config.bool_of(p, prefs_page.UPDATE_AUTO_PREF)
-	s.messages = prefs_page.messages_mode(p)
+	s.messages = prefs_page.announce_mode(p)
 	prefs_read_system(p, &s, allocator)
 	return
 }
@@ -96,7 +96,7 @@ prefs_read :: proc(p: ^config.Prefs, allocator := context.allocator) -> (s: Sett
 settings_free :: proc(s: ^Settings) {
 	for m in s.capture.ignore_mimes { delete(m) }
 	delete(s.capture.ignore_mimes)
-	prefs_page.appearance_free(&s.look)
+	prefs_page.appearance_destroy(&s.look)
 	delete(s.shortcut)
 	delete(s.paste_keys)
 	s^ = {}

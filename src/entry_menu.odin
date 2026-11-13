@@ -33,8 +33,10 @@ import "history"
 // The menu's width, in ems.
 MENU_WIDTH_EM :: 16
 
+// The menu's id (a window's menus are named).
+ENTRY_MENU :: "papier_entry_menu"
+
 Entry_Menu :: struct {
-	key:      ui.Key,
 	id:       u64,                 // the entry it was opened on
 	handlers: []desktop.Handler,   // "Open with": asked of the reader when the menu opened (its heap; nil until they come)
 	close_due: bool,               // a new look at the history (app_show): the menu closes at the next build
@@ -43,12 +45,11 @@ Entry_Menu :: struct {
 // Opens the menu of entry `e` at `pos` (window pixels).
 entry_menu_open :: proc(app: ^App, e: ^history.Entry, pos: ui.Vec2, from_keyboard := false) {
 	m := &app.menu
-	if m.key == 0 { m.key = ui.key_from_string(0, "papier_entry_menu") }
 	entry_menu_free(m)
 	m.id, m.close_due = e.id, false
 	// (the system's lists of applications are files: the reader reads them, the submenu fills when they come)
 	reader_job(&app.reader, {kind = .Handlers, id = e.id, path = entry_file_name(e)})
-	ui.ctx_menu_open(m.key, pos, from_keyboard = from_keyboard)
+	ui.menu_open(ENTRY_MENU, pos, from_keyboard = from_keyboard)
 }
 
 // The applications for the entry the menu is open on, from the reader; let go when the menu moved on.
@@ -66,12 +67,11 @@ entry_menu_free :: proc(m: ^Entry_Menu) {
 // The menu, when it is open (built at the end of the window's build).
 entry_menu_build :: proc(app: ^App, em: f32) {
 	m := &app.menu
-	if m.key == 0 { return }
-	if m.close_due { ui.ctx_menu_close(); m.close_due = false }
-	if ui.ctx_menu(m.key, em * MENU_WIDTH_EM) {
+	if m.close_due { ui.menu_close(); m.close_due = false }
+	if ui.menu(ENTRY_MENU, em * MENU_WIDTH_EM) {
 		// (the menu is the selected entry's: it opens on it, and goes when the entry does)
 		e := selected(app)
-		if e == nil || e.id != m.id { ui.ctx_menu_close(); return }
+		if e == nil || e.id != m.id { ui.menu_close(); return }
 		// (several marked: what acts on all of them; else the entry's own items)
 		if n := ui.list_mark_count(&app.vl); n > 1 {
 			item(app, .Copy, fmt.tprintf(i18n.tr(n, "Copy the %d text as one", "Copy the %d texts as one"), n))
@@ -91,7 +91,7 @@ entry_menu_build :: proc(app: ^App, em: f32) {
 		if action_enabled(app, .Toggle_Markdown_Source) { item(app, .Toggle_Markdown_Source) }
 		ui.menu_separator()
 		item(app, .Open)
-		if ui.menu_submenu(i18n.tr("Open with"), enabled = len(m.handlers) > 0) {
+		if ui.menu_submenu(i18n.tr("Open with"), disabled = len(m.handlers) == 0) {
 			for h in m.handlers {
 				label := h.default ? fmt.tprintf(i18n.tr("%s (default)"), h.name) : h.name
 				if ui.menu_item(label).clicked { entry_open_with(app, e, h.id) }
@@ -111,7 +111,7 @@ entry_menu_build :: proc(app: ^App, em: f32) {
 @(private = "file")
 item :: proc(app: ^App, a: Action, label := "") {
 	c := ACTIONS[a]
-	if ui.menu_item(label != "" ? label : c.label, ui.command_shortcut(c), enabled = action_enabled(app, a), icon = c.icon).clicked { action_run(app, a) }
+	if ui.menu_item(label != "" ? label : i18n.tr(c.label), ui.command_shortcut(c), disabled = !action_enabled(app, a), icon = c.icon).clicked { action_run(app, a) }
 }
 
 ////////////////////////////////

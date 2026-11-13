@@ -73,7 +73,7 @@ slow_start :: proc(s: ^Slow, window: ^platform.Window) {
 
 // What was asked is done, and what is asked meanwhile in one more run.
 @(private = "file")
-slow_poke :: proc(s: ^Slow) { tasks.ask(&s.pool, &s.job) }
+slow_poke :: proc(s: ^Slow) { tasks.job_ask(&s.pool, &s.job) }
 
 // Stops the worker. (A thumbnailer or a reading under way ends first: neither can be cut short.)
 slow_stop :: proc(s: ^Slow) {

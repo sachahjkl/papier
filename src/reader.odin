@@ -202,7 +202,7 @@ reader_start :: proc(r: ^Reader, window: ^platform.Window, dir: string) {
 
 // A run of the job: what was asked is done, and what is asked meanwhile in one more run.
 @(private = "file")
-reader_poke :: proc(r: ^Reader) { tasks.ask(&r.pool, &r.job) }
+reader_poke :: proc(r: ^Reader) { tasks.job_ask(&r.pool, &r.job) }
 
 // Stops the reader once the jobs asked are done (a state written at quit lands), and frees what nobody took.
 reader_stop :: proc(r: ^Reader) {

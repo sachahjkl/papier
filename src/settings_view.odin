@@ -1,10 +1,10 @@
 package papier
 
 // The settings: gui_toolkit's page of the preferences (gt:prefs_page), in place of the history. The gear of the title
-// bar or Ctrl+, opens it; the arrow, Escape or Ctrl+, again goes back. Each change is applied at once (the window reads
-// its settings again), handed to the watcher, and saved to the preferences file by config's writer.
+// bar or Ctrl+, opens it; the arrow, Escape or Ctrl+, again goes back. Each change is applied at once: the toolkit's
+// standard settings by prefs_page.standard_watch, papier's by settings_changed (the window reads its settings again and
+// hands them to the watcher). The preferences' writer saves the file off this thread.
 
-import config "gt:config"
 import prefs_page "gt:prefs_page"
 import "gt:platform"
 import "gt:ui"
@@ -19,51 +19,49 @@ settings_toggle :: proc(app: ^App) {
 // the list first).
 settings_keys :: proc(app: ^App) {
 	if ui.command_pressed(ACTIONS[.Settings]) { settings_toggle(app); return }
-	if ui.key_press(.Escape) && !prefs_page.editing(&app.settings_page) { app.settings_open = false }
+	if prefs_page.escape_leaves(&app.settings_page) { app.settings_open = false }
 }
 
-// The pages, their order and their icons. A preference's group is now the first segment of its name (picker.theme is in
-// "picker"), which mixes the look and the window: each page lists its preferences by name, so the pages stay papier's.
-// A name not registered on this system (picker.shortcut on Linux) is left out by the page.
-@(private = "file", rodata) APPEARANCE_NAMES := [?]string{"picker.theme", "picker.mode", "picker.finish", "picker.glow", "picker.font_size"}
-@(private = "file", rodata) WINDOW_NAMES := [?]string{"picker.close_on_copy", "picker.system_title", "picker.width", "picker.height", "picker.shortcut", "picker.follow", prefs_page.MESSAGES_PREF}
-@(private = "file", rodata) PASTE_NAMES := [?]string{"paste.on_select", "paste.keys"}
-@(private = "file", rodata) HISTORY_NAMES := [?]string{"history.max_entries", "history.max_age_days", "history.persist"}
-@(private = "file", rodata) CAPTURE_NAMES := [?]string{"capture.text", "capture.html", "capture.image", "capture.files", "capture.primary", "capture.size_limit", "capture.ignore_secrets", "capture.ignore_mimes", "clipboard.keep"}
-@(private = "file", rodata) UPDATE_NAMES := [?]string{"update.auto"}
+// The General page shows where papier says what it did and its language: general.menu and general.autostart are papier's
+// Setup's and `papier install`'s, which put the launcher and the start with the session in place.
+@(private = "file", rodata) GENERAL_NAMES := [?]string{prefs_page.MESSAGES_PREF, prefs_page.LANGUAGE_PREF}
 
-// (made at the first call: a page holds slices of the name lists above)
+// The pages, their order and their icons: each a group of the registry (the first segment of a name). A page with no
+// preference on this system is left out (history and capture on Windows).
 @(private = "file")
 settings_pages :: proc() -> []prefs_page.Page_Info {
-	@(static) pages: [6]prefs_page.Page_Info
+	@(static) pages: [12]prefs_page.Page_Info
 	if pages[0].category == "" {
 		pages = {
-			{category = "appearance", title = "Appearance", icon = lucide.PALETTE,    names = APPEARANCE_NAMES[:]},
-			{category = "window",     title = "Window",     icon = lucide.APP_WINDOW, names = WINDOW_NAMES[:]},
-			{category = "paste",      title = "Paste",      icon = lucide.CLIPBOARD,  names = PASTE_NAMES[:]},
-			{category = "history",    title = "History",    icon = lucide.HISTORY,    names = HISTORY_NAMES[:]},
-			{category = "capture",    title = "Capture",    icon = lucide.CLIPBOARD,  names = CAPTURE_NAMES[:]},
-			{category = "updates",    title = "Updates",    icon = lucide.DOWNLOAD,   names = UPDATE_NAMES[:]},
+			{category = "general",    title = "General",          icon = lucide.SETTINGS, names = GENERAL_NAMES[:]},
+			{category = "appearance", title = "Appearance",       icon = lucide.PALETTE},
+			{category = "window",     title = "Window",           icon = lucide.APP_WINDOW},
+			{category = "paste",      title = "Paste",            icon = lucide.CLIPBOARD_PASTE},
+			{category = "history",    title = "History",          icon = lucide.HISTORY},
+			{category = "capture",    title = "Capture",          icon = lucide.CLIPBOARD},
+			{category = "clipboard",  title = "Clipboard",        icon = lucide.CLIPBOARD_CHECK},
+			{category = "scrolling",  title = "Scrolling",        icon = lucide.MOUSE},
+			{category = "input",      title = "Input",            icon = lucide.KEYBOARD},
+			{category = "timing",     title = "Delays and menus", icon = lucide.TIMER},
+			{category = "update",     title = "Updates",          icon = lucide.DOWNLOAD},
+			{category = "rendering",  title = "Rendering",        icon = lucide.MONITOR},
 		}
 	}
 	return pages[:]
 }
 
-@(private = "file", rodata)
-CUSTOM := [?]string{"picker.theme"}
-
 // The preferences that hold a key combination: recorded from the keys pressed.
 @(private = "file", rodata)
-HOTKEY_PREFS := [?]string{"picker.shortcut"}
+HOTKEY_PREFS := [?]string{"window.shortcut"}
 
-// What papier has to say under a line: the shortcut that does not work, and why.
+// What papier has to say under a line: the shortcut that does not work, and why; a title bar the desktop does not draw.
 @(private = "file")
 settings_problem :: proc(user: rawptr, name: string) -> string {
 	app := (^App)(user)
-	if name == "picker.system_title" && app.settings.system_title && !platform.system_title_available(app.main.win) {
+	if name == prefs_page.SYSTEM_TITLE_PREF && app.settings.system_title && !platform.system_title_available(app.main.win) {
 		return "This desktop draws no title bar for papier's window (GNOME): papier keeps its own."
 	}
-	return name == "picker.shortcut" ? app.shortcut_problem : ""
+	return name == "window.shortcut" ? app.shortcut_problem : ""
 }
 
 // The page, as large as the body.
@@ -72,16 +70,18 @@ settings_build :: proc(app: ^App) {
 	prefs_page.build(&app.settings_page, &app.prefs, settings_options(app))
 }
 
-// What the page is given: its pages, its controls of papier's own, the updater; the palette lists its settings by them.
+// What the page is given: its pages, papier's themes and the user's, the updater, the file; the palette lists its
+// settings by them.
 settings_options :: proc(app: ^App) -> prefs_page.Options {
 	return {
-		user = app, changed = settings_changed, choices = settings_choices,
-		custom_names = CUSTOM[:], custom = settings_custom,
+		user = app, changed = settings_changed,
 		hotkeys = HOTKEY_PREFS[:], problem = settings_problem,
-		updater = app.updater, update_pref = "update.auto", restart = proc(user: rawptr) { app_restart((^App)(user), hidden = false) },
+		page_foot = settings_page_foot,
+		updater = app.updater, restart = proc(user: rawptr) { app_restart((^App)(user), hidden = false) },
 		pages = settings_pages(), icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.REFRESH_CW,
-		foot = app.prefs_shown,
+		file = app.prefs_path,
 		version = "Papier " + APP_VERSION,
+		themes = app.themes_file.all[:], themes_light = app.theme_shown.light, themes_file = &app.themes_file,
 	}
 }
 
@@ -91,18 +91,14 @@ settings_show :: proc(app: ^App, name: string) {
 	prefs_page.show(&app.settings_page, &app.prefs, settings_options(app), name)
 }
 
-// The themes as cards, each in its own colours.
+// Under the General page's preferences: the licence.
 @(private = "file")
-settings_custom :: proc(user: rawptr, name: string, em: f32) {
-	app := (^App)(user)
-	list := themes()
-	if at := prefs_page.theme_cards(list, app.settings.theme, app.theme_shown.light, em); at >= 0 {
-		if config.set_from_string(&app.prefs, "picker.theme", list[at].name, .User) == .None { settings_changed(app, "picker.theme") }
-	}
+settings_page_foot :: proc(user: rawptr, category: string, em: f32) {
+	if category == "general" { licence_section((^App)(user), em) }
 }
 
-// A preference was set or reset: applied by the window at once, handed to the watcher, and saved by the preferences'
-// writer at the next turn of the loop (app_run), off this thread.
+// A preference was set or reset: papier's settings read again, handed to the watcher; the standard ones are applied by
+// standard_watch already. The preferences' writer saves the file at the next turn of the loop (app_run), off this thread.
 @(private = "file")
 settings_changed :: proc(user: rawptr, name: string) {
 	app := (^App)(user)
@@ -112,14 +108,4 @@ settings_changed :: proc(user: rawptr, name: string) {
 	app.announcer.mode = app.settings.messages
 	app_updates_auto(app)
 	app_title_follow(app)
-}
-
-// The choices of a preference known at run time: the themes.
-@(private = "file")
-settings_choices :: proc(user: rawptr, name: string) -> (labels, values: []string) {
-	if name != "picker.theme" { return }
-	list := themes()
-	out := make([]string, len(list), context.temp_allocator)
-	for t, i in list { out[i] = t.name }
-	return out, out
 }

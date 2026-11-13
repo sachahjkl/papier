@@ -4,7 +4,11 @@ package papiertool
 // toolkit's (gt:site, its `site` command: build <site> <out>, check, card); this file says what this site is: its address,
 // names and colours. {{version}} in the home page is the last version: its download link names the file of that release.
 
+import "core:fmt"
+import "core:os"
+import "core:strings"
 import tk_site "gt:site"
+import toolbox "gt:toolbox"
 
 VERSION_MARK :: "{{version}}"
 
@@ -45,4 +49,53 @@ site_meta :: proc() -> tk_site.Meta {
 	@(static) ld := SITE_LD
 	m.ld_fields = ld[:]   // (static: the site command keeps the Meta as long as the tool runs)
 	return m
+}
+
+// The shop: papier's licence (src/licence), sold through Paddle by the toolkit's licence Worker. Its pages (pricing,
+// thanks, terms, refunds, privacy, imprint) are the toolkit's templates, filled at each `site build`. What is empty is
+// the maintainer's to give once the shop is set up (docs/licence.md, "What the maintainer does at the end"): until the
+// client token, the price ids and the Worker are there, the buttons say "Coming soon".
+@(rodata)
+SHOP_PRICES := [?]tk_site.Shop_Price{
+	{edition = "supporter", label = "Buy the Supporter licence"},
+	{edition = "patron", label = "Buy the Patron licence"},
+}
+
+SHOP :: tk_site.Shop{
+	name           = "papier",
+	product_title  = "Papier User Licence",
+	price          = "15&nbsp;&euro;",
+	price_note     = "Once. Taxes included. Patron: 45&nbsp;&euro;.",
+	environment    = "sandbox",
+	thanks         = "https://papier.froment.software/thanks/",
+	help           = "https://github.com/sachahjkl/papier/issues",
+	register       = "Open papier's settings (Ctrl+,), the <b>General</b> page, <b>Licence</b>: paste the key, or choose the file.",
+	extension      = ".papierlicence",
+	seller         = "Froment Software",
+	seller_url     = "https://froment.software",
+	code_licence   = "MIT",
+	stylesheet     = "../style.css",
+	home           = "../",
+	updated        = "2026-11-13",
+}
+
+// The site's own command, with the shop's pages written after the toolkit's build.
+site_command :: proc() -> toolbox.Command {
+	inner := tk_site.command({meta = site_meta(), pages = {version_mark = VERSION_MARK, downloads = SITE_DOWNLOADS[:]}})
+	return {name = inner.name, usage = inner.usage, run_with = site_run, user = new_clone(inner)}
+}
+
+@(private = "file")
+site_run :: proc(args: []string, user: rawptr) -> int {
+	inner := (^toolbox.Command)(user)
+	code := inner.run_with(args, inner.user)
+	if code != toolbox.EXIT_DONE || len(args) != 3 || args[0] != "build" { return code }
+	shop := SHOP
+	shop.prices = SHOP_PRICES[:]
+	for page in tk_site.licence_pages(shop) {
+		path := fmt.tprintf("%s/%s", args[2], page.path)
+		_ = os.make_directory_all(path[:strings.last_index_byte(path, '/')])
+		if os.write_entire_file(path, transmute([]u8)page.text) != nil { fmt.eprintfln("papiertool site: %s cannot be written", path); return toolbox.EXIT_FAILED }
+	}
+	return toolbox.EXIT_DONE
 }

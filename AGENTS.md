@@ -11,7 +11,7 @@ Every step is a command of `tools/papiertool` (`help` lists them):
     odin run tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papiertool -keep-executable -- <command>
 
 - `build [release]` builds `build/papier` (`build.sh` / `build.bat` are shortcuts).
-- `check`: the changelog's fragments, the scopes, `odin check -vet` (this system and Windows), the unit tests, a release build. `live`: the real program in a headless sway (62 checks).
+- `check`: the changelog's fragments, the scopes, `odin check -vet` (this system and Windows), the unit tests, a release build. `live`: the real program in a headless sway (64 checks).
 - `shots` makes the pictures, `package` the release archive, `ship <patch|minor|major|x.y.z>` a release, `site build` the site, `changelog new` a fragment.
 - Linux: `nix develop` first (`flake.nix`). `nix build` builds the package.
 

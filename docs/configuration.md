@@ -10,15 +10,36 @@ Change one. Papier saves it in `$XDG_CONFIG_HOME/papier/prefs`, and the running 
 
 ```sh
 papier set history.max_entries 5000
-papier set picker.mode light
+papier set appearance.mode light
 ```
 
-Set one for a single run: `papier --pref picker.font_size=16`.
+Set one for a single run: `papier --pref appearance.font_size=16`.
 
-## The preferences
+The settings page (Ctrl+,) shows them all, and exports them to JSON, TOML or INI, or to papier's own format, which it
+imports back.
+
+## The common settings
+
+The look (`appearance.*`: the theme, light or dark, the finish, the glow, the text size, the zoom, the density...), the
+text and fonts (`appearance.text.*`), the window (`window.system_title`, `window.toast_position`), the scrolling
+(`scrolling.*`), the input (`input.*`), the delays and menus (`timing.*`), the rendering (`rendering.*`), the updates
+(`update.auto`, `update.channel`, `update.base_url`) and the messages (`general.messages`, `general.language`) are the
+settings that every program of gui_toolkit has. Its
+[docs/settings.md](https://github.com/sachahjkl/gui_toolkit/blob/main/docs/settings.md) lists each with its default.
+Papier's defaults: the theme `Papier`, the text size 14 px, its own title bar (`window.system_title` off).
+
+`appearance.theme` is `Papier`, a theme of gui_toolkit by its name (Midnight, Graphite, Nord, Dracula, Gruvbox, Tokyo
+Night, Catppuccin, Rosé Pine, Kanagawa, One Dark, Solarized…), or one of your own: Settings > Appearance links to
+`$XDG_CONFIG_HOME/papier/themes.txt`, made with a commented guide at the first click and read again each time it is saved.
+
+Papier reads `appearance.text.ui_font`, `appearance.text.mono_font` (the text of the entries) and
+`appearance.text.emoji_font` at the start. `general.menu` and `general.autostart` are papier's Setup's and
+`papier install`'s.
+
+## Papier's own
 
 On Windows, the system keeps the history (Settings > System > Clipboard): the `history.*`, `capture.*` and
-`clipboard.*` preferences are Linux's, and `picker.shortcut` is Windows's.
+`clipboard.*` preferences are Linux's, and `window.shortcut` and `window.follow` are Windows's.
 
 | Name | Type | Default | What it does |
 |---|---|---|---|
@@ -36,21 +57,13 @@ On Windows, the system keeps the history (Settings > System > Clipboard): the `h
 | `clipboard.keep` | boolean | true | When the program that owned the clipboard quits and empties it, put the last entry back. |
 | `paste.on_select` | boolean | true | An entry chosen (Enter, a double click, Alt+1…9) is pasted into the program papier was called from: the window hides and papier presses `paste.keys` there. |
 | `paste.keys` | text | Ctrl+V | The keys papier presses to paste: Ctrl+V in most programs, Ctrl+Shift+V in a terminal, Shift+Insert in both on many systems. Ctrl, Shift, Alt, Win and a key, joined by `+`. |
-| `picker.close_on_copy` | boolean | true | Hide the window when an entry is copied. |
-| `picker.theme` | text | Papier | The colours: `Papier`, or a theme of gui_toolkit by its name (Midnight, Graphite, Nord, Dracula, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine, Kanagawa, One Dark, Solarized…). |
-| `picker.mode` | system, dark, light | system | The theme's version. `system` follows the system's light or dark as it changes. |
-| `picker.finish` | machined, edged, flat, gradient, glass | machined | How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines, in the dark and the light versions. Edged: the same reliefs drawn crisp, with square corners. |
-| `picker.system_title` | on/off | off | The window's title bar drawn by the system (its buttons, its snapping) in place of papier's own; the search and the filters go under it. Not on GNOME, which draws none. |
-| `picker.glow` | on/off | on | The halos of the machined finish: the ring of light around a focused field. |
-| `picker.width` | integer, 320 to 4000 | 900 | The width of the window at its first start, in logical pixels. |
-| `picker.height` | integer, 240 to 4000 | 560 | The height of the window at its first start, in logical pixels. |
-| `picker.font_size` | number, 8 to 40 | 14 | The size of the text, in logical pixels. |
-| `picker.follow` | pointer, focus | pointer | Windows: the screen the window shows on. `pointer`: the one under the mouse pointer. `focus`: the one of the window in front. |
-| `update.auto` | boolean | true | The installed papier checks for a newer one once a day and installs it, then gives way to it when its window is hidden. Settings > Updates says the state and checks now (also for a copy that is not installed). A copy installed by a package manager (Nix) is updated by it. |
-| `general.messages` | system, window, off | system | Where papier says what it did (copied, saved, removed). `system`: the system's notifications, or papier's window where the system has none. `window`: only in papier's window. `off`: nowhere; a failure is always said. |
-| `picker.shortcut` | text | Ctrl+Shift+ù | Windows: the keys that show the history from any program. In the settings, click the field and press the keys. As text: Ctrl, Shift, Alt, Win and a key (a letter, a digit, F1 to F12, Space…, or the character a key types: ù), joined by `+`. Win+V stays the system's. |
+| `window.close_on_copy` | boolean | true | Hide the window when an entry is copied. |
+| `window.width` | integer, 320 to 4000 | 900 | The width of the window at its first start, in logical pixels. |
+| `window.height` | integer, 240 to 4000 | 560 | The height of the window at its first start, in logical pixels. |
+| `window.follow` | pointer, focus | pointer | Windows: the screen the window shows on. `pointer`: the one under the mouse pointer. `focus`: the one of the window in front. |
+| `window.shortcut` | text | Ctrl+Shift+ù | Windows: the keys that show the history from any program. In the settings, click the field and press the keys. As text: Ctrl, Shift, Alt, Win and a key (a letter, a digit, F1 to F12, Space…, or the character a key types: ù), joined by `+`. Win+V stays the system's. |
 
-After the first start, papier keeps the size that you give the window; `picker.width` and `picker.height` apply again
+After the first start, papier keeps the size that you give the window; `window.width` and `window.height` apply again
 when `$XDG_STATE_HOME/papier/window` is deleted.
 
 ## Examples

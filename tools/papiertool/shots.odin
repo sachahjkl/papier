@@ -38,7 +38,7 @@ run_shots :: proc(args: []string) -> int {
 	if run_build({"release"}) != 0 { return 1 }
 	s: Session
 	defer session_stop(&s)
-	if why := session_start(&s, SHOTS_DIR, SHOTS_PORT, {"picker.mode\tdark"}); why != "" { fmt.eprintfln("papiertool shots: %s", why); return 1 }
+	if why := session_start(&s, SHOTS_DIR, SHOTS_PORT, {"appearance.mode\tdark"}); why != "" { fmt.eprintfln("papiertool shots: %s", why); return 1 }
 	samples := SAMPLES
 	for x in samples {
 		if !copy_and_wait(&s, x.text, x.mime, x.file, x.seen) { fmt.eprintfln("papiertool shots: %q did not reach the history", x.seen); return 1 }
@@ -93,9 +93,9 @@ run_shots :: proc(args: []string) -> int {
 	shot(&c, out, "palette", &failed)
 	// a setting chosen: the settings, on it alone
 	cdp.key(&c, "Enter")
-	if !cdp.wait_for(&c, "The window's colours", SESSION_WAIT) { fmt.eprintln("papiertool shots: the palette's setting did not open the settings"); failed = true }
+	if !cdp.wait_for(&c, "The colours of papier's windows", SESSION_WAIT) { fmt.eprintln("papiertool shots: the palette's setting did not open the settings"); failed = true }
 	cdp.key(&c, "ctrl+,")
-	cdp.wait_for(&c, "The window's colours", SESSION_WAIT, gone = true)
+	cdp.wait_for(&c, "The colours of papier's windows", SESSION_WAIT, gone = true)
 	// the address as a QR code
 	cdp.type_text(&c, "github")
 	cdp.wait_for(&c, "proc fibonacci", SESSION_WAIT, gone = true)
@@ -106,13 +106,15 @@ run_shots :: proc(args: []string) -> int {
 	cdp.wait_for(&c, "proc fibonacci", SESSION_WAIT)
 	// the settings
 	cdp.key(&c, "ctrl+,")
-	cdp.wait_for(&c, "Max entries", SESSION_WAIT, gone = true)   // (the first page: Appearance)
-	cdp.wait_for(&c, "Theme", SESSION_WAIT)
+	cdp.wait_for(&c, "Max entries", SESSION_WAIT, gone = true)   // (the first page: General)
+	cdp.wait_for(&c, "Appearance", SESSION_WAIT)
+	cdp.click_text(&c, "Appearance")
+	cdp.wait_for(&c, "Light or dark", SESSION_WAIT)
 	shot(&c, out, "settings", &failed)
 	cdp.key(&c, "ctrl+,")
 	cdp.close(&c)
 
-	_, _ = run_in(&s, PROGRAM, "set", "picker.mode", "light")
+	_, _ = run_in(&s, PROGRAM, "set", "appearance.mode", "light")
 	_, _ = run_in(&s, PROGRAM, "hide")
 	_, _ = run_in(&s, PROGRAM, "show")
 	if lc, lok := window_connect(&s); lok {

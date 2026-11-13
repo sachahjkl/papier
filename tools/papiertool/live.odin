@@ -204,17 +204,19 @@ live_window :: proc(l: ^Live) {
 	cfg := fmt.tprintf("%s/config/papier", l.dir)
 	_ = os.remove_all(cfg)
 	check(l, cdp.key(&c, "ctrl+,"), "Ctrl+,")
+	check(l, cdp.wait_for(&c, "Appearance", SESSION_WAIT), "the settings open")
+	check(l, cdp.click_text(&c, "Appearance"), "click the Appearance page")
 	check(l, cdp.wait_for(&c, "Graphite", SESSION_WAIT), "the settings show the themes")
 	check(l, cdp.click_text(&c, "Graphite"), "click Graphite's card")
 	saved := false
 	for _ in 0 ..< 50 {
-		if data, err := os.read_entire_file(fmt.tprintf("%s/prefs", cfg), context.temp_allocator); err == nil && strings.contains(string(data), "picker.theme\tGraphite") { saved = true; break }
+		if data, err := os.read_entire_file(fmt.tprintf("%s/prefs", cfg), context.temp_allocator); err == nil && strings.contains(string(data), "appearance.theme\tGraphite") { saved = true; break }
 		time.sleep(100 * time.Millisecond)
 	}
 	check(l, saved, "the theme is in %s/prefs", cfg)
 	time.sleep(300 * time.Millisecond)   // (the running papier reads its preferences again)
 	prefs, _ := run_in(l, PROGRAM, "prefs")
-	check(l, strings.contains(prefs, "picker.theme = Graphite"), "papier prefs: picker.theme is Graphite after the reload")
+	check(l, strings.contains(prefs, "appearance.theme = Graphite"), "papier prefs: appearance.theme is Graphite after the reload")
 	check(l, cdp.key(&c, "ctrl+,"), "Ctrl+, again")
 	check(l, cdp.wait_for(&c, EDITED, SESSION_WAIT), "the history is back")
 

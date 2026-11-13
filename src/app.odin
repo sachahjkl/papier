@@ -48,6 +48,10 @@ App :: struct {
 	mono:       font.Font_Id,   // what a text entry is shown in
 	prefs:      config.Prefs,
 	prefs_writer: config.User_Writer,   // the preferences file, written off the window's thread when they change
+	prefs_path: string,                 // the preferences file, at the settings' foot (owned)
+	standard:   prefs_page.Standard_Watch,   // the toolkit's standard settings, applied as they change
+	themes_file: prefs_page.Themes_File,     // papier's themes, then the user's own (themes.txt beside the preferences)
+	licence:    Licence_View,           // licence.odin
 	settings:   Settings,
 	announcer:  ui.Announcer,           // where "Copied", "Saved"... are said (general.messages)
 	crash_report: string,               // the report of the last session's crash, said at the first build (owned; "": none)
@@ -105,12 +109,11 @@ App :: struct {
 	updater:    ^update.Updater,    // updates.odin
 	update_serial: int,             // the updater's state last said
 	installed_copy: bool,           // this program is the installed copy: it updates itself (update.auto)
-	hotkey_held: bool,              // Windows: picker.shortcut is registered
+	hotkey_held: bool,              // Windows: window.shortcut is registered
 	shortcut_problem: string,       // why it is not (owned; "": it is)
 	status:     string,             // a message for the status bar (owned), until status_until (ui clock, ms)
 	paste_due:  bool,               // the paste keys wait for the focus to be back in another window (app_paste_follow)
 	paste_asked: time.Tick,         // when they were asked
-	prefs_shown: string,            // the settings' foot: where the preferences file is (owned; made once)
 	status_until: f64,
 }
 
@@ -134,7 +137,9 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	prefs^ = {}
 	app.settings = prefs_read(&app.prefs)
 	config.user_writer_start(&app.prefs_writer, &app.prefs, prefs_file())
-	app.prefs_shown = prefs_shown()
+	app.prefs_path = prefs_file(context.allocator)
+	// (no file read here: the user's themes come at the first builds, read by a task)
+	prefs_page.themes_file_init(&app.themes_file, themes_file(), themes())
 	// (read here, on this thread, before the window exists: they size it; from now on the reader does the files)
 	app.place = state_load()
 	app.ids_version = 1   // (0 would tell the list to compare the ids)
@@ -148,9 +153,13 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	}
 	h := &app.main
 	win := h.win
-	app.announcer = {mode = app.settings.messages, window = win}
+	// (a message said between two builds, a task's result, shows in this window's state)
+	app.announcer = {mode = app.settings.messages, window = win, state = &h.state}
 	app.icons, _ = font.load_embedded(&app.shared.fonts, lucide.DATA)
-	app.mono = mono_font(&app.shared.fonts)
+	app_fonts(app)
+	// (the zoom, the density, the scrolling, the delays, the text's rendering...: applied now, then each as it changes)
+	prefs_page.standard_watch(&app.standard, &app.prefs, &h.state, app_standard_targets(app))
+	licence_init(app)
 	// (Lucide: the icons of the palette and of the menus; the widgets' own marks have the toolkit's font)
 	h.state.icon_font = app.icons
 	app.vl.multi = true   // (a Ctrl or Shift click marks entries: actions.odin acts on them)
@@ -248,8 +257,11 @@ app_free :: proc(app: ^App) {
 	delete(app.ids)
 	delete(app.query)
 	delete(app.status)
-	delete(app.prefs_shown)
+	delete(app.prefs_path)
 	delete(app.crash_report)
+	// (the chores have stopped: no task of theirs is on its way)
+	prefs_page.themes_file_destroy(&app.themes_file)
+	licence_destroy(app)
 	ui.field_destroy(&app.search)
 	ui.vlist_destroy(&app.vl)
 	ui.field_destroy(&app.palette.field)
@@ -262,15 +274,38 @@ app_free :: proc(app: ^App) {
 	delete(app.shortcut_problem)
 	delete(app.place.setup)
 	settings_free(&app.settings)
+	prefs_page.standard_unwatch(&app.standard)
 	config.user_writer_stop(&app.prefs_writer, &app.prefs)   // (the last change written)
 	config.prefs_destroy(&app.prefs)
 }
 
-// The face of the texts shown as they are (an entry's text, code, a diff): the system's monospace, drawn for its screens
-// (the embedded one is thin at small sizes), the first of MONO_FAMILIES it has, else the embedded one. Found at start,
-// before the window's loop: the system's font lists are read here, the start-up's exception to "no file on this thread".
+// What the standard settings reach besides the interface: the renderer, the fonts, the host's partial redraw.
 @(private = "file")
-mono_font :: proc(fonts: ^font.State) -> font.Font_Id {
+app_standard_targets :: proc(app: ^App) -> prefs_page.Standard_Targets {
+	return {renderer = &app.shared.r, fonts = &app.shared.fonts, partial_redraw = &app.main.partial_redraw}
+}
+
+// The fonts the user named (appearance.text.*: read at the start). Found before the window's loop: the system's font
+// lists and the emoji file are read here, the start-up's exception to "no file on this thread".
+@(private = "file")
+app_fonts :: proc(app: ^App) {
+	fonts := &app.shared.fonts
+	if family := config.string_of(&app.prefs, prefs_page.UI_FONT_PREF); family != "" {
+		if id, ok := font.load_system(fonts, family); ok { app.shared.font = id } else { log.warnf("papier: no font %q on this system", family) }
+	}
+	app.mono = mono_font(fonts, config.string_of(&app.prefs, prefs_page.MONO_FONT_PREF))
+	if path := config.string_of(&app.prefs, prefs_page.EMOJI_FONT_PREF); path != "" { font.set_emoji_source(fonts, path) }
+}
+
+// The face of the texts shown as they are (an entry's text, code, a diff): the family the user named, else the system's
+// monospace, drawn for its screens (the embedded one is thin at small sizes), the first of MONO_FAMILIES it has, else the
+// embedded one.
+@(private = "file")
+mono_font :: proc(fonts: ^font.State, named: string) -> font.Font_Id {
+	if named != "" {
+		if id, ok := font.load_system(fonts, named); ok { return id }
+		log.warnf("papier: no font %q on this system", named)
+	}
 	families := MONO_FAMILIES
 	for family in families {
 		if id, ok := font.load_system(fonts, family); ok { return id }
@@ -284,12 +319,13 @@ mono_font :: proc(fonts: ^font.State) -> font.Font_Id {
 app_params :: proc(h: ^host.Host, bp: ^ui.Build_Params) {
 	app := (^App)(h.user)
 	// (applied only when it changes, or the system goes light or dark: a palette applied starts a cross-fade)
-	choice := ui.Theme_Choice{name = app.settings.theme, mode = app.settings.mode, finish = app.settings.finish, glow = app.settings.glow ? 1 : 0}
-	if ui.theme_show(&app.shared.theme, themes(), choice, &app.theme_shown, render.blend_space(&app.shared.r)) {
+	// (the user's themes read again show at once: theme_show compares the theme's colours too)
+	choice := prefs_page.appearance_choice(app.settings.look)
+	if ui.theme_show(&app.shared.theme, app.themes_file.all[:], choice, &app.theme_shown, render.blend_space(&app.shared.r)) {
 		platform.set_dark_title(h.win, !app.theme_shown.light)
 		app.view.runs_for = {}   // (the code's colours are the theme's)
 	}
-	bp.base = ui.Style{pref = {.X = ui.text_size(), .Y = ui.px(28)}, font = app.shared.font, font_size = app.settings.font_size, text_pad = 6, cursor = .Arrow}
+	bp.base = ui.Style{pref = {.X = ui.text_size(), .Y = ui.px(28)}, font = app.shared.font, font_size = app.settings.look.font_size, text_pad = 6, cursor = .Arrow}
 }
 
 // The window's input before the interface: a close (the compositor's, the title bar's) hides the window.
@@ -329,7 +365,7 @@ app_show :: proc(app: ^App) {
 		refilter(app, reset = true)
 	}
 	app.hide_due = false
-	// (Windows: on the screen the user works on, not the one it was last shown on: picker.follow)
+	// (Windows: on the screen the user works on, not the one it was last shown on: window.follow)
 	platform.move_to_active_monitor(app.main.win, app.settings.follow)
 	if app.visible {
 		token := watcher_take_token(&app.watcher)
@@ -390,7 +426,7 @@ app_toggle :: proc(app: ^App) {
 // The id of papier's hotkey (platform.hotkey_register).
 HOTKEY_ID :: 1
 
-// The shortcut that shows the history from any program (picker.shortcut), registered again when it changes. Linux has
+// The shortcut that shows the history from any program (window.shortcut), registered again when it changes. Linux has
 // none of papier's own: the compositor binds `papier toggle` (docs/usage.md).
 @(private = "file")
 // What went wrong is kept for the settings (under the shortcut's line) and said in the status bar: a program of the
@@ -412,7 +448,7 @@ app_shortcut :: proc(app: ^App) {
 			app.hotkey_held = true
 		}
 		if app.shortcut_problem != "" {
-			log.errorf("papier: picker.shortcut: %s", app.shortcut_problem)
+			log.errorf("papier: window.shortcut: %s", app.shortcut_problem)
 			say(app, "The shortcut does not work: %s", app.shortcut_problem)
 		}
 	}
@@ -539,8 +575,11 @@ app_job_done :: proc(app: ^App, d: ^Job_Done) {
 		return
 	case .Read_Prefs:
 		if d.ok {
+			// (the watch is the old registry's: let go before it goes, then made on the new one, which applies its values)
+			prefs_page.standard_unwatch(&app.standard)
 			config.prefs_destroy(&app.prefs)
 			app.prefs, d.prefs, d.ok = d.prefs, {}, false
+			prefs_page.standard_watch(&app.standard, &app.prefs, &app.main.state, app_standard_targets(app))
 			// (the file holds what was just read: the writer has nothing to write until the next change)
 			app.prefs_writer.version = app.prefs.user_version
 			settings_free(&app.settings)
@@ -610,7 +649,6 @@ STATUS_SHOWN_MS :: 3000
 // Says what papier just did (Copied, Saved, Removed): a notification of the system, or a toast of the window, as
 // general.messages says. What is only a state of the window (a reading under way, a failure to look at) is said by say.
 announce :: proc(app: ^App, format: string, args: ..any) {
-	ui.use(&app.main.state)   // (called between builds too: a toast goes to this window's state)
 	ui.announce(&app.announcer, .Good, fmt.tprintf(format, ..args))
 }
 
@@ -641,7 +679,7 @@ themes :: proc() -> []ui.Theme_Def {
 	return list[:]
 }
 
-// picker.system_title: the system's title bar, or papier's own, switched at once.
+// window.system_title: the system's title bar, or papier's own, switched at once.
 app_title_follow :: proc(app: ^App) {
 	platform.set_integrated_title(app.main.win, !app.settings.system_title)
 }

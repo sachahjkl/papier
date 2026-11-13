@@ -127,6 +127,21 @@ manifest, whose Ed25519 signature it checked first, and puts it in place of the 
 loop; the loop reads the state at each turn. Once the new program is in place, papier ends as soon as its window is
 hidden, and the new one starts hidden (`--hidden`). Settings > Updates shows the state (`prefs_page`'s update line).
 
+## The settings (src/settings.odin, src/settings_view.odin)
+
+One registry (`gt:config`) holds the toolkit's standard settings (`prefs_page.standard_register`) and papier's own.
+`prefs_page.standard_watch` applies each standard one to the toolkit when it changes (the zoom, the scrolling, the
+delays, the text's rendering); papier shows the theme itself (`prefs_page.appearance_read`, `ui.theme_show`) and reads
+its own settings again after each change. The user's themes file (`prefs_page.Themes_File`, `themes.txt` beside the
+preferences) is looked at and read by tasks.
+
+## The licence (src/licence.odin, src/licence)
+
+A licence is a key signed with papier's Ed25519 key (`gt:licence`), checked on the computer with no network. Its store
+keeps it in papier's configuration folder; every read and write of it is a task (`ui.task`), and the settings' General
+page shows the last status read. `papiertool licence` makes the key pair and issues licences; the toolkit's licence Worker
+sells them, and the site's shop pages come from the toolkit's templates at each `papiertool site build`.
+
 ## Tests
 
 - Unit tests: `src` (capture, commands, window state, the reader, the decoder), `src/history`, `tools/papiertool` (versions, the changelog).

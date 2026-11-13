@@ -240,6 +240,8 @@ view_build :: proc(h: ^host.Host, size: host.Vec2) {
 	app.room = size.x / max(ui.scale(), 0.01)
 	app_shortcut_follow(app)
 	app_crash_said(app)
+	// (the user's themes file: a task looks at it now and then, and reads it when it changed; app_params shows it)
+	if prefs_page.themes_file_poll(&app.themes_file, &app.main.state) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 	// the keyboard is the search's, unless the edit view or the settings have it
 	dialog := app.palette.open || app.sheet_open || app.qr.open || app.setup.open
 	if !app.edit.active && !app.settings_open && !dialog && app.search_key != 0 && ui.focus_key() != app.search_key { ui.set_focus(app.search_key) }

@@ -33,10 +33,11 @@ build_sqlite :: proc() -> bool {
 	}
 }
 
-// What a build or a test needs first: the toolkit's text library, SQLite, the console launcher (papier embeds it).
+// What a build or a test needs first: the toolkit's native libraries and the Lucide subset (build_native), SQLite, the
+// console launcher (papier embeds it).
 @(private = "file")
 build_parts :: proc(p: toolbox.Project) -> bool {
-	return toolbox.build_native_text(p) && build_sqlite() && toolbox.build_launcher(p)
+	return toolbox.build_native(p) && build_sqlite() && toolbox.build_launcher(p)
 }
 
 run_build :: proc(args: []string) -> int {

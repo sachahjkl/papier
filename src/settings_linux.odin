@@ -52,10 +52,3 @@ history_dir :: proc(persist: bool, allocator := context.temp_allocator) -> strin
 	}
 	return platform.user_dir(.Data, APP_NAME, allocator)
 }
-
-// A path as the user reads it: the home folder as "~" (temp allocator).
-path_shown :: proc(path: string) -> string {
-	home := os.get_env("HOME", context.temp_allocator)
-	if home == "" || !strings.has_prefix(path, home) { return path }
-	return strings.concatenate({"~", path[len(home):]}, context.temp_allocator)
-}

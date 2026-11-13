@@ -7,6 +7,8 @@ package papier
 // its window is hidden: the new one starts hidden, in the notification area. A copy from the Nix store is left to Nix.
 
 import "core:fmt"
+import "core:strings"
+import config "gt:config"
 import process "gt:process"
 import "gt:platform"
 import update "gt:update"
@@ -20,8 +22,11 @@ app_updates_start :: proc(app: ^App, offer: bool) {
 	// (whether this is the installed copy is read from the disk and the system's records: by the reader; app_job_done
 	// applies it, update.auto with it)
 	reader_job(&app.reader, {kind = .Setup_Facts, text = app.place.setup, offer = offer})
+	// (update.base_url and update.channel: read at the start)
+	folder := config.string_of(&app.prefs, "update.base_url")
+	if folder == "" { folder = UPDATE_FOLDER } else if !strings.has_suffix(folder, "/") { folder = strings.concatenate({folder, "/"}, context.temp_allocator) }
 	app.updater = update.updater_start({
-		product = papier_update.PRODUCT, folder = UPDATE_FOLDER, current = APP_VERSION,
+		product = papier_update.PRODUCT, folder = folder, channel = config.string_of(&app.prefs, "update.channel"), current = APP_VERSION,
 		exe = process.executable_path(), user_agent = fmt.tprintf("papier/%s", APP_VERSION),
 		// (the updater's thread: the loop wakes, and app_updates_follow reads the state)
 		news = proc(user: rawptr) { platform.wake((^App)(user).main.win) }, user = app,

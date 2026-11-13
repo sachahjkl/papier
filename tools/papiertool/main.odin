@@ -9,8 +9,8 @@ package papiertool
 
 import changelog "gt:changelog"
 import release "gt:release"
-import tk_site "gt:site"
 import toolbox "gt:toolbox"
+import papier_licence "../../src/licence"
 import papier_update "../../src/update"
 
 REPOSITORY :: "https://github.com/sachahjkl/papier"
@@ -30,7 +30,18 @@ project :: proc() -> toolbox.Project {
 		version_file = "src/main.odin", version_line = "APP_VERSION :: ", program = PROGRAM,
 		launcher = {out = LAUNCHER_OUT, mark = "(papier console launcher)", default_rule = "wait",
 		            others = "(none),toggle,--hidden", refuses_exit = 2},
+		// (live and shots drive the release build over CDP: Devtools; only the icons papier names: Lucide_Subset)
+		features = {.Devtools, .Lucide_Subset},
 	}
+}
+
+// The `licence` and `paddle` commands: papier's licence (src/licence.odin), its development pair, its Paddle catalogue.
+LICENCE_TOOL :: toolbox.Licence_Tool{
+	product  = papier_licence.PRODUCT,
+	// (the development pair's private key, public on purpose: "papier-dev-licence-test-seed-01!")
+	dev_seed = "cGFwaWVyLWRldi1saWNlbmNlLXRlc3Qtc2VlZC0wMSE",
+	hint     = "Open this file with papier (Settings > General > Choose a file), or paste the key there.",
+	paddle   = {name = "Papier User Licence", description = "A personal, perpetual licence of papier, the clipboard history.", amounts = "supporter=1500,patron=4500", currency = "EUR"},
 }
 
 // What goes beside the program in a release's archive: the file, and its name there (the icons' licence is the
@@ -53,8 +64,10 @@ commands :: proc() -> []toolbox.Command {
 		r[0], r[1], r[2],
 		toolbox.Command{name = "update", usage = "keygen <file> | pubkey | manifest <program> <version> - <out> | verify <manifest> -: papier's update key and manifests", run = proc(args: []string) -> int { return toolbox.update_command(papier_update.PRODUCT, args) }},
 		changelog.command(p),
-		tk_site.command({meta = site_meta(), pages = {version_mark = VERSION_MARK, downloads = SITE_DOWNLOADS[:]}}),
+		site_command(),
 	)
+	l := toolbox.licence_commands(LICENCE_TOOL)
+	append(&list, l[0], l[1])
 	// (the real program in a sway nobody sees: Linux)
 	when ODIN_OS == .Linux {
 		append(&list,

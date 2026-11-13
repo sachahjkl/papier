@@ -46,7 +46,13 @@ VIEW_MIN_PX   :: 200
 // The heights of the bars and the rows, in ems.
 FIELD_EM  :: 1.95   // the search and the filters
 HALO_ROOM_PX :: 2   // logical pixels past the halo's reach before the bar's rule
-FILTER_EM :: 23   // the filter's segmented control
+FILTER_EM :: 23   // the filter's segmented control, at least
+FILTER_LABEL_PAD_EM :: 1.6   // a segment's room beside its label (its key's margins and the label's own padding)
+FILTER_TRACK_PAD_EM :: 0.5   // the track's padding around its segments
+// The title bar's parts other than the search and the filter (its icon, the grip, two buttons, the spaces), and the
+// least the search keeps: under that, the filter goes to a row of its own.
+TITLE_FIXED_EM :: 9.8
+SEARCH_MIN_EM  :: 10
 ROW_EM    :: 2.05
 MARK_EM   :: 2.6    // a row's mark: its kind's icon, or an image's thumbnail
 STATUS_EM :: 1.9
@@ -261,11 +267,22 @@ view_build :: proc(h: ^host.Host, size: host.Vec2) {
 build_page :: proc(app: ^App, em: f32) {
 	build_title(app, em)
 	ui.hline(ui.fill())
-	crash_bar.bar(&app.crash_bar, {name = "Papier", version = APP_VERSION, repository = "sachahjkl/papier"})
+	crash_bar.bar(&app.crash_bar, {name = "papier", version = APP_VERSION, repository = "sachahjkl/papier"})
 	ui.next({width = ui.fill(), height = ui.fill()})
 	if app.settings_open {
 		settings_build(app)
 		return
+	}
+	if filter_alone(app, em) {
+		ui.next({width = ui.fill(), height = ui.px(ui.dense(em * (FIELD_EM + 0.5)))})
+		if ui.row(.Center) {
+			ui.spacer(ui.px(em * 0.5))
+			ui.next({width = ui.fill(), height = ui.px(ui.dense(em * FIELD_EM))})
+			build_filter(app)
+			ui.spacer(ui.px(em * 0.5))
+		}
+		ui.hline(ui.fill())
+		ui.next({width = ui.fill(), height = ui.fill()})
 	}
 	if ui.row() { build_body(app, em) }
 	ui.hline(ui.fill())
@@ -276,6 +293,11 @@ build_page :: proc(app: ^App, em: f32) {
 glyph :: proc(app: ^App, g: string, width: f32, fg: Maybe(ui.Color) = nil) {
 	ui.next({width = ui.px(width), height = ui.pct(1), font = app.icons, text_align = .Center, fg = fg})
 	ui.build_box({.Draw_Text, .No_Text_Trunc}, fmt.tprintf("%s###g%d", g, ui.parent_box().child_count))
+}
+
+// A tooltip's text: what a button does and its key, the key named as the keyboards of the language print it.
+key_tip :: proc(label: string, key: ui.Chord) -> string {
+	return fmt.tprintf("%s (%s)", label, ui.chord_text(key))
 }
 
 // A small button with a Lucide icon; its tooltip says what it does.
@@ -295,11 +317,11 @@ build_title :: proc(app: ^App, em: f32) {
 		if app.settings_open {
 			// the page has its own search: the title says where one is, its empty part moves the window
 			ui.next({width = ui.fill(), height = ui.pct(1)})
-			ui.label("Papier###apptitle")
-			if icon_action(app, "back", lucide.ARROW_LEFT, i18n.tr("Back to the history (Escape)"), em) { app.settings_open = false }
+			ui.label("papier###apptitle")
+			if icon_action(app, "back", lucide.ARROW_LEFT, key_tip(i18n.tr("Back to the history"), {.Escape, {}}), em) { app.settings_open = false }
 			ui.spacer(ui.px(em * 0.3))
 			// (the system's title bar has its own close button)
-		if !app.settings.system_title && icon_action(app, "close", lucide.X, i18n.tr("Hide (Escape)"), em) { app_hide(app) }
+			if !app.settings.system_title && icon_action(app, "close", lucide.X, key_tip(i18n.tr("Hide"), {.Escape, {}}), em) { app_hide(app) }
 			ui.spacer(ui.px(em * 0.4))
 			return
 		}
@@ -325,17 +347,40 @@ build_title :: proc(app: ^App, em: f32) {
 		if ui.tags("weak") { d.color = ui.color("text") }
 		ui.next({width = ui.px(em * GRIP_EM), height = ui.pct(1)})
 		ui.custom("###grip", grip_draw, d)
-		ui.next({width = ui.px(em * FILTER_EM), height = ui.px(ui.dense(em * FIELD_EM))})
-		sel := int(app.filter)
-		labels: [len(Filter)]string
-		for l, i in filter_labels { labels[i] = i18n.tr(l) }
-		if ui.segmented("###filter", labels[:FILTER_COUNT], &sel) { set_filter(app, Filter(sel)) }
+		if !filter_alone(app, em) {
+			ui.next({width = ui.px(filter_width(em)), height = ui.px(ui.dense(em * FIELD_EM))})
+			build_filter(app)
+		}
 		ui.spacer(ui.px(em * 0.3))
-		if icon_action(app, "settings", lucide.SETTINGS, i18n.tr("Settings (Ctrl+,)"), em) { settings_toggle(app) }
+		if icon_action(app, "settings", lucide.SETTINGS, key_tip(i18n.tr("Settings"), {.Comma, {.Ctrl}}), em) { settings_toggle(app) }
 		// (the system's title bar has its own close button)
-		if !app.settings.system_title && icon_action(app, "close", lucide.X, i18n.tr("Hide (Escape)"), em) { app_hide(app) }
+		if !app.settings.system_title && icon_action(app, "close", lucide.X, key_tip(i18n.tr("Hide"), {.Escape, {}}), em) { app_hide(app) }
 		ui.spacer(ui.px(em * 0.4))
 	}
+}
+
+// The filter's segments are as wide as each other: each one gets the widest label's width, so that a language with a
+// long word ("Épinglés") widens the control instead of cutting the word.
+@(private = "file")
+filter_width :: proc(em: f32) -> f32 {
+	widest: f32
+	for l in filter_labels[:FILTER_COUNT] { widest = max(widest, ui.text_width(ui.top_style().font, em, i18n.tr(l))) }
+	return max(em * FILTER_EM, f32(FILTER_COUNT) * (widest + em * FILTER_LABEL_PAD_EM) + em * FILTER_TRACK_PAD_EM)
+}
+
+// Whether the filter leaves the title bar for a row of its own: in a narrow window, beside it the search would keep
+// too little room to show what is typed in it.
+@(private = "file")
+filter_alone :: proc(app: ^App, em: f32) -> bool {
+	return app.room * ui.scale() < em * (TITLE_FIXED_EM + SEARCH_MIN_EM) + filter_width(em)
+}
+
+@(private = "file")
+build_filter :: proc(app: ^App) {
+	sel := int(app.filter)
+	labels: [len(Filter)]string
+	for l, i in filter_labels { labels[i] = i18n.tr(l) }
+	if ui.segmented("###filter", labels[:FILTER_COUNT], &sel) { set_filter(app, Filter(sel)) }
 }
 
 @(private = "file")
@@ -446,11 +491,21 @@ build_status :: proc(app: ^App, em: f32) {
 					if PINS { msg = fmt.tprintf(i18n.tr(app.list.pinned, "%s · %d pinned", "%s · %d pinned"), msg, app.list.pinned) }
 				}
 				ui.label(fmt.tprintf("%s###status", msg))
+				// (the hints, most useful first, as many as the room beside the status leaves: a narrow window or a
+				// language with longer words drops the last ones instead of running off the window)
 				hints := app.edit.active ? EDIT_HINTS[:] : LIST_HINTS[:]
-			for hint in hints {
-					ui.kbd(hint[0])
+				font_now := ui.top_style().font
+				size_now := ui.font_size()
+				room := app.room * ui.scale() - em * 1.0 - ui.text_width(font_now, size_now, msg) - em * 1.5
+				for hint, i in hints {
+					key := ui.chord_text(hint.key)
+					label := i18n.tr(hint.label)
+					w := ui.text_width(ui.mono_font(), size_now * 0.8, key) + size_now * 0.5 + ui.text_width(font_now, size_now, label) + size_now * 0.3 + em * 0.4
+					if w > room { break }
+					room -= w
+					ui.kbd(key)
 					ui.next({width = ui.text_size(em * 0.3)})
-					ui.label(fmt.tprintf("%s###h%s", i18n.tr(hint[1]), hint[0]))
+					ui.label(fmt.tprintf("%s###h%d", label, i))
 					ui.spacer(ui.px(em * 0.4))
 				}
 			}
@@ -732,16 +787,20 @@ build_diff :: proc(app: ^App, l: ^Loaded_Entry, em: f32) {
 size_text :: proc(n: int, allocator := context.temp_allocator) -> string {
 	switch {
 	case n < 1024:        return fmt.aprintf(i18n.tr("%d B"), n, allocator = allocator)
-	case n < 1024 * 1024: return fmt.aprintf(i18n.tr("%.1f KB"), f64(n) / 1024, allocator = allocator)
+	// (the number with the language's decimal mark: "1,5 Ko" in French)
+	case n < 1024 * 1024: return fmt.aprintf(i18n.tr("%s KB"), i18n.decimal(f64(n) / 1024, 1), allocator = allocator)
 	}
-	return fmt.aprintf(i18n.tr("%.1f MB"), f64(n) / (1024 * 1024), allocator = allocator)
+	return fmt.aprintf(i18n.tr("%s MB"), i18n.decimal(f64(n) / (1024 * 1024), 1), allocator = allocator)
 }
 
-// (their words in English, a key's name and what it does: i18n.tr where shown)
+// A hint of the status bar: a key, named as the keyboards of the language print it (ui.chord_text), and what it does
+// (in English: i18n.tr where shown). The tables put the most useful first: a narrow window drops the last ones.
+@(private = "file")
+Hint :: struct { key: ui.Chord, label: string }
 when PINS {
-	@(private = "file") LIST_HINTS := [?][2]string{{"Enter", i18n.later("copy")}, {"Ctrl+E", i18n.later("edit")}, {"Menu", i18n.later("more")}, {"Ctrl+P", i18n.later("pin")}, {"Tab", i18n.later("filter")}, {"Esc", i18n.later("hide")}}
+	@(private = "file") LIST_HINTS := [?]Hint{{{.Return, {}}, i18n.later("copy")}, {{.Escape, {}}, i18n.later("hide")}, {{.E, {.Ctrl}}, i18n.later("edit")}, {{.Menu, {}}, i18n.later("more")}, {{.P, {.Ctrl}}, i18n.later("pin")}, {{.Tab, {}}, i18n.later("filter")}}
 } else {
-	@(private = "file") LIST_HINTS := [?][2]string{{"Enter", i18n.later("copy")}, {"Ctrl+E", i18n.later("edit")}, {"Menu", i18n.later("more")}, {"Tab", i18n.later("filter")}, {"Esc", i18n.later("hide")}}
+	@(private = "file") LIST_HINTS := [?]Hint{{{.Return, {}}, i18n.later("copy")}, {{.Escape, {}}, i18n.later("hide")}, {{.E, {.Ctrl}}, i18n.later("edit")}, {{.Menu, {}}, i18n.later("more")}, {{.Tab, {}}, i18n.later("filter")}}
 }
-@(private = "file") EDIT_HINTS := [?][2]string{{"Ctrl+Enter", i18n.later("copy")}, {"Ctrl+S", i18n.later("save")}, {"Esc", i18n.later("cancel")}}
+@(private = "file") EDIT_HINTS := [?]Hint{{{.Return, {.Ctrl}}, i18n.later("copy")}, {{.S, {.Ctrl}}, i18n.later("save")}, {{.Escape, {}}, i18n.later("cancel")}}
 @(private = "file") filter_labels := [len(Filter)]string{i18n.later("All"), i18n.later("Text"), i18n.later("Images"), i18n.later("Files"), i18n.later("Pinned")}

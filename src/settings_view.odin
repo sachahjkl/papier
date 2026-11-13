@@ -72,13 +72,12 @@ settings_options :: proc(app: ^App) -> prefs_page.Page_Options {
 	return {
 		user = app, changed = settings_changed,
 		hotkeys = HOTKEY_PREFS[:], problem = settings_problem,
-		page_foot = settings_page_foot,
 		updater = app.updater, restart = proc(user: rawptr) { app_restart((^App)(user), hidden = false) },
 		pages = SETTINGS_PAGES[:], icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.ROTATE_CCW,
 		file = app.prefs_path,
-		version = "Papier " + APP_VERSION,
+		version = "papier " + APP_VERSION,
 		themes = app.themes_file.all[:], themes_light = app.theme_shown.light, themes_file = &app.themes_file,
-		install = &app.install, diagnostics = &app.main,
+		licence = &app.licence, install = &app.install, diagnostics = &app.main,
 	}
 }
 
@@ -86,12 +85,6 @@ settings_options :: proc(app: ^App) -> prefs_page.Page_Options {
 settings_show :: proc(app: ^App, name: string) {
 	app.settings_open = true
 	prefs_page.show(&app.settings_page, &app.prefs, settings_options(app), name)
-}
-
-// Under the General page's preferences: the licence.
-@(private = "file")
-settings_page_foot :: proc(user: rawptr, category: string, em: f32) {
-	if category == "general" { licence_section((^App)(user), em) }
 }
 
 // A preference was set or reset: papier's settings read again, handed to the watcher; the standard ones are applied by

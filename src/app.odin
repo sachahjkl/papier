@@ -56,7 +56,7 @@ App :: struct {
 	prefs_path: string,                 // the preferences file, at the settings' foot (owned)
 	standard:   prefs_page.Standard_Watch,   // the toolkit's standard settings, applied as they change
 	themes_file: prefs_page.Themes_File,     // papier's themes, then the user's own (themes.txt beside the preferences)
-	licence:    Licence_View,           // licence.odin
+	licence:    prefs_page.Licence,     // licence.odin: the settings' Licence page
 	settings:   Settings,
 	announcer:  ui.Announcer,           // where "Copied", "Saved"... are said (general.messages)
 	crash_bar:  crash_bar.Bar,          // the last session's crash, said in a bar at the top of the window
@@ -161,7 +161,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	platform.set_app_id(APP_NAME)
 	platform.dragdrop_thread_init()   // (Windows: OLE, for an entry dragged out: drag.odin)
 	size := app.place.size != {} ? app.place.size : app.settings.size
-	if !host.host_open(&app.main, &app.shared, {title = "Papier", size = size, integrated_title = !app.settings.system_title}, view_build, app) {
+	if !host.host_open(&app.main, &app.shared, {title = "papier", size = size, integrated_title = !app.settings.system_title}, view_build, app) {
 		log.error("papier: no window")
 		return 1
 	}
@@ -203,7 +203,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	app_updates_start(app)
 	// (the install read on a task: setup_follow; offered on Windows, at a start that shows the window)
 	prefs_page.install_offer(&app.install, &h.state, offer = ODIN_OS == .Windows && !hidden && !setup_asked)
-	app.tray = platform.tray_create(win, LOGO_PNG, "Papier")
+	app.tray = platform.tray_create(win, LOGO_PNG, "papier")
 	app_tray_menu(app)
 
 	// (hidden at start: the window is made and never shown, it has had no frame: nothing to take off the screen)
@@ -636,7 +636,7 @@ app_tray_menu :: proc(app: ^App) {
 		{id = int(Tray_Item.Show), text = i18n.tr("Show the history"), default = true},
 		{kind = .Separator},
 		{id = int(Tray_Item.Clear), text = i18n.tr("Clear the history (pinned entries stay)")},
-		{id = int(Tray_Item.Quit), text = i18n.tr("Quit Papier")},
+		{id = int(Tray_Item.Quit), text = i18n.tr("Quit papier")},
 	})
 }
 

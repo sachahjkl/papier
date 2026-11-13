@@ -44,14 +44,14 @@ ACTIONS := [Action]ui.Command{
 	.Filter_Pinned   = {label = i18n.later("Show pinned entries"), group = i18n.later("Filter"), icon = lucide.PIN},
 	.Filter_Next     = {label = i18n.later("Next filter"), group = i18n.later("Filter"), keys = {{.Tab, {}}}, icon = lucide.FILTER},
 	.Filter_Previous = {label = i18n.later("Previous filter"), group = i18n.later("Filter"), keys = {{.Tab, {.Shift}}}, icon = lucide.FILTER},
-	.Clear_History   = {label = i18n.later("Clear the history (pinned entries stay)"), group = i18n.later("Papier"), icon = lucide.TRASH_2, tags = {"wipe", "erase", "empty"}},
-	.Settings        = {label = i18n.later("Settings"), group = i18n.later("Papier"), keys = {{.Comma, {.Ctrl}}}, icon = lucide.SETTINGS, tags = {"preferences", "options", "configure"}},
-	.Check_Updates   = {label = i18n.later("Check for updates"), group = i18n.later("Papier"), icon = lucide.REFRESH_CW, tags = {"upgrade", "version", "new"}},
-	.Palette         = {label = i18n.later("Command palette"), group = i18n.later("Papier"), keys = {{.K, {.Ctrl}}, {.P, {.Ctrl, .Shift}}}, icon = lucide.COMMAND},
-	.Shortcuts       = {label = i18n.later("Keyboard shortcuts"), group = i18n.later("Papier"), keys = {{.F1, {}}}, icon = lucide.KEYBOARD, tags = {"help", "keys", "hotkeys"}},
-	.Hide            = {label = i18n.later("Hide the window"), group = i18n.later("Papier"), icon = lucide.X, tags = {"close", "dismiss"}},
-	.Restart         = {label = i18n.later("Restart Papier"), group = i18n.later("Papier"), icon = lucide.ROTATE_CCW, tags = {"reload", "relaunch"}},
-	.Quit            = {label = i18n.later("Quit Papier"), group = i18n.later("Papier"), keys = {{.Q, {.Ctrl}}}, icon = lucide.POWER, tags = {"exit", "close", "stop"}},
+	.Clear_History   = {label = i18n.later("Clear the history (pinned entries stay)"), group = i18n.later("papier"), icon = lucide.TRASH_2, tags = {"wipe", "erase", "empty"}},
+	.Settings        = {label = i18n.later("Settings"), group = i18n.later("papier"), keys = {{.Comma, {.Ctrl}}}, icon = lucide.SETTINGS, tags = {"preferences", "options", "configure"}},
+	.Check_Updates   = {label = i18n.later("Check for updates"), group = i18n.later("papier"), icon = lucide.REFRESH_CW, tags = {"upgrade", "version", "new"}},
+	.Palette         = {label = i18n.later("Command palette"), group = i18n.later("papier"), keys = {{.K, {.Ctrl}}, {.P, {.Ctrl, .Shift}}}, icon = lucide.COMMAND},
+	.Shortcuts       = {label = i18n.later("Keyboard shortcuts"), group = i18n.later("papier"), keys = {{.F1, {}}}, icon = lucide.KEYBOARD, tags = {"help", "keys", "hotkeys"}},
+	.Hide            = {label = i18n.later("Hide the window"), group = i18n.later("papier"), icon = lucide.X, tags = {"close", "dismiss"}},
+	.Restart         = {label = i18n.later("Restart papier"), group = i18n.later("papier"), icon = lucide.ROTATE_CCW, tags = {"reload", "relaunch"}},
+	.Quit            = {label = i18n.later("Quit papier"), group = i18n.later("papier"), keys = {{.Q, {.Ctrl}}}, icon = lucide.POWER, tags = {"exit", "close", "stop"}},
 }
 
 // The entries an action acts on: the marked ones in the list's order, else the selected one (temp memory). Run when an
@@ -214,7 +214,7 @@ actions_build :: proc(app: ^App) {
 			if i < len(Action) { action_run(app, Action(i)) } else { settings_show(app, t.names[i - len(Action)]) }
 		}
 	}
-	ui.shortcuts_sheet(&app.sheet, "keys", slice.enumerated_array(&ACTIONS), i18n.tr("Papier's keys"))
+	ui.shortcuts_sheet(&app.sheet, "keys", slice.enumerated_array(&ACTIONS), i18n.tr("papier's keys"))
 }
 
 // A tooltip: the action's label and its key.

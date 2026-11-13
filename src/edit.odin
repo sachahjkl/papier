@@ -89,9 +89,9 @@ edit_build :: proc(app: ^App, e: ^history.Entry, em: f32) {
 					e.kind == .Html ? i18n.tr(" · saved as text") : ""))
 			}
 		}
-		if icon_action(app, "editcopy", lucide.COPY, i18n.tr("Copy (Ctrl+Enter)"), em) { edit_copy(app); return }
-		if icon_action(app, "editsave", lucide.SAVE, i18n.tr("Save in place (Ctrl+S)"), em) { edit_save(app); return }
-		if icon_action(app, "editcancel", lucide.X, i18n.tr("Cancel (Escape)"), em) { edit_end(app); return }
+		if icon_action(app, "editcopy", lucide.COPY, key_tip(i18n.tr("Copy"), {.Return, {.Ctrl}}), em) { edit_copy(app); return }
+		if icon_action(app, "editsave", lucide.SAVE, key_tip(i18n.tr("Save in place"), {.S, {.Ctrl}}), em) { edit_save(app); return }
+		if icon_action(app, "editcancel", lucide.X, key_tip(i18n.tr("Cancel"), {.Escape, {}}), em) { edit_end(app); return }
 		ui.spacer(ui.px(em * 0.4))
 	}
 	ui.hline(ui.fill())

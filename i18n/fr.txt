@@ -73,8 +73,8 @@ fr Filtre précédent
 en Clear the history (pinned entries stay)
 fr Vider l'historique (les éléments épinglés restent)
 
-en Papier
-fr Papier
+en papier
+fr papier
 
 en Settings
 fr Réglages
@@ -91,11 +91,11 @@ fr Raccourcis clavier
 en Hide the window
 fr Masquer la fenêtre
 
-en Restart Papier
-fr Redémarrer Papier
+en Restart papier
+fr Redémarrer papier
 
-en Quit Papier
-fr Quitter Papier
+en Quit papier
+fr Quitter papier
 
 en Removed %d entry
 en+ Removed %d entries
@@ -105,8 +105,8 @@ fr+ %d éléments supprimés
 en Copied the QR code's content
 fr Contenu du code QR copié
 
-en Papier's keys
-fr Les touches de Papier
+en papier's keys
+fr Les touches de papier
 
 en The preferences cannot be written
 fr Les réglages ne peuvent pas être enregistrés
@@ -171,14 +171,11 @@ fr+ %d lignes
 en  · saved as text
 fr  · enregistré en texte
 
-en Copy (Ctrl+Enter)
-fr Copier (Ctrl+Enter)
+en Save in place
+fr Enregistrer dans l'élément
 
-en Save in place (Ctrl+S)
-fr Enregistrer à la place (Ctrl+S)
-
-en Cancel (Escape)
-fr Annuler (Escape)
+en Cancel
+fr Annuler
 
 en The entry's text
 fr Le texte de l'élément
@@ -216,63 +213,6 @@ fr Épingler
 en Save the entry
 fr Enregistrer l'élément
 
-en Licence registered: thank you
-fr Licence enregistrée : merci
-
-en Licence removed
-fr Licence retirée
-
-en This licence is not papier's.
-fr Cette licence n'est pas celle de papier.
-
-en This key is not a valid licence of papier: check that it was copied whole.
-fr Cette clé n'est pas une licence valide de papier : vérifiez qu'elle a été copiée en entier.
-
-en This build of papier accepts no licence yet.
-fr Cette version de papier n'accepte pas encore de licence.
-
-en The licence file cannot be read.
-fr Le fichier de licence ne peut pas être lu.
-
-en The licence cannot be saved.
-fr La licence ne peut pas être enregistrée.
-
-en Licence
-fr Licence
-
-en Reading the licence…
-fr Lecture de la licence…
-
-en Registered to %s (%s). Thank you for supporting papier.
-fr Enregistrée au nom de %s (%s). Merci de soutenir papier.
-
-en Remove the licence
-fr Retirer la licence
-
-en Unregistered. Papier is free; a licence supports its work.
-fr Non enregistré. Papier est gratuit ; une licence soutient son développement.
-
-en The licence stored here is not valid: %s
-fr La licence enregistrée ici n'est pas valide : %s
-
-en Support papier: buy a licence
-fr Soutenir papier : acheter une licence
-
-en Paste a licence key
-fr Collez une clé de licence
-
-en Register
-fr Enregistrer
-
-en Choose a file…
-fr Choisir un fichier…
-
-en Choose a licence file
-fr Choisir un fichier de licence
-
-en papier licence
-fr Licence papier
-
 en No program opens addresses
 fr Aucun programme n'ouvre les adresses
 
@@ -306,7 +246,7 @@ en The program does not start
 fr Le programme ne démarre pas
 
 en On select
-fr Au choix
+fr Coller l'élément choisi
 
 en An entry chosen (Enter, a double click, Alt+1…9) is pasted into the program papier was called from: the window hides and papier presses the paste keys there.
 fr Un élément choisi (Entrée, un double clic, Alt+1…9) est collé dans le programme d'où papier a été appelé : la fenêtre se masque et papier y appuie sur les touches de collage.
@@ -315,7 +255,7 @@ en Keys
 fr Touches
 
 en The keys papier presses to paste: Ctrl+V in most programs, Ctrl+Shift+V in a terminal, Shift+Insert in both on many systems.
-fr Les touches sur lesquelles papier appuie pour coller : Ctrl+V dans la plupart des programmes, Ctrl+Shift+V dans un terminal, Shift+Insert dans les deux sur de nombreux systèmes.
+fr Les touches sur lesquelles papier appuie pour coller : Ctrl+V dans la plupart des programmes, Ctrl+Maj+V dans un terminal, Maj+Inser dans les deux sur de nombreux systèmes.
 
 en Close on copy
 fr Fermer à la copie
@@ -456,7 +396,7 @@ en Shortcut
 fr Raccourci
 
 en The keys that show the history from any program. In the settings, click the field and press them; as text, Ctrl, Shift, Alt, Win and a key joined by + (Ctrl+Shift+ù). Win+V stays the system's.
-fr Les touches qui affichent l'historique depuis n'importe quel programme. Dans les réglages, cliquez dans le champ et appuyez dessus ; en texte, Ctrl, Shift, Alt, Win et une touche reliés par + (Ctrl+Shift+ù). Win+V reste celui du système.
+fr Les touches qui affichent l'historique depuis n'importe quel programme. Dans les réglages, cliquez dans le champ et appuyez dessus ; en texte, les noms anglais Ctrl, Shift (Maj), Alt, Win et une touche, reliés par + (Ctrl+Shift+ù). Win+V reste celui du système.
 
 en Follow
 fr Écran suivi
@@ -482,17 +422,14 @@ fr Texte enrichi
 en Data
 fr Données
 
-en Back to the history (Escape)
-fr Retour à l'historique (Escape)
+en Back to the history
+fr Retour à l'historique
 
-en Hide (Escape)
-fr Masquer (Escape)
+en Hide
+fr Masquer
 
 en Search the history
 fr Rechercher dans l'historique
-
-en Settings (Ctrl+,)
-fr Réglages (Ctrl+,)
 
 en Nothing copied yet: copy something, it shows here.
 fr Rien de copié pour l'instant : copiez quelque chose, cela s'affiche ici.
@@ -521,8 +458,8 @@ fr il y a %s
 
 en %d type
 en+ %d types
-fr %d type
-fr+ %d types
+fr %d format
+fr+ %d formats
 
 en Show it rendered
 fr Afficher le rendu
@@ -542,14 +479,17 @@ fr Seules les adresses web et de courriel s'ouvrent : %s
 en %d B
 fr %d o
 
-en %.1f KB
-fr %.1f Ko
+en %s KB
+fr %s Ko
 
-en %.1f MB
-fr %.1f Mo
+en %s MB
+fr %s Mo
 
 en copy
 fr copier
+
+en hide
+fr masquer
 
 en edit
 fr modifier
@@ -562,9 +502,6 @@ fr épingler
 
 en filter
 fr filtrer
-
-en hide
-fr masquer
 
 en save
 fr enregistrer

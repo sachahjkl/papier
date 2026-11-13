@@ -3,6 +3,24 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.21.0] - 2026-11-13
+
+### Added
+- **A Diagnostics page in the settings, with a Copy button.** It shows the versions, the system, the graphics adapter (and whether a software rasterizer draws), the window's size and scale, the last frames' times and how much partial redraw drew. If papier is slow, copy it and send it.
+
+### Changed
+- **Windows: papier works from a terminal without an install.** The archive has `papier.com` beside `papier.exe`: `papier list` in cmd or PowerShell prints its output and gives its exit code. papier's windows group under its shortcut in the taskbar. Paths longer than 260 characters and UTF-8 text work.
+- **The licence has its own page in the settings, worded as in the other programs.** It says whether papier is registered. It offers Buy a licence, a field to paste a key, Choose a licence file… and Remove the licence.
+- **A crash of the last session shows in a bar at the top of the window**, in place of a message with the report's path. The bar says what happened and offers Open the report, Copy and Report on GitHub (a new issue with the report in it). Its cross dismisses it.
+- **The install is in the settings: an Installation page.** It says where the installed copy is, its version, and whether this copy is the installed one. It shows the menu entry, Settings > Apps, the start with the session and the PATH, with Install, Repair, Upgrade and Uninstall. The palette finds the page ("install").
+The command line is `--install`, `--uninstall`, `--status` and `--setup`, as in the other programs. `--status` says what is installed and whether papier runs. `--install` installs the copy in its own folder. `papier install`, `uninstall`, `status` and the Setup… command are gone.
+- **A change of language shows at once**: the window, the settings and the tray menu take the new language without a restart.
+- **papier has the same settings as the other programs of Froment Software.** Only its theme, Papier, is its own. Its defaults stay the same: light or dark as the system is, the machined finish and 14 px text. The settings' reset button has the same arrow as in the other programs.
+
+### Fixed
+- **The filter and the status bar never cut their text.** The filter in the title bar is as wide as its longest word in every language. In a narrow window, the filter moves to its own row under the search, and the status bar drops its last hints.
+- **French done right.** Keys have the names that a French keyboard prints ("Entrée", "Échap", "Ctrl+Maj+V") in the status bar, the tooltips and the message about a shortcut that cannot be used. Numbers and percents use the French decimal mark and spacing. Some texts are clearer ("Coller l'élément choisi", "1 format"), and the program writes its name "papier" everywhere.
+
 ## [0.20.2] - 2026-11-13
 
 ### Changed
@@ -391,6 +409,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.21.0]: https://github.com/sachahjkl/papier/releases/tag/v0.21.0
 [0.20.2]: https://github.com/sachahjkl/papier/releases/tag/v0.20.2
 [0.20.1]: https://github.com/sachahjkl/papier/releases/tag/v0.20.1
 [0.20.0]: https://github.com/sachahjkl/papier/releases/tag/v0.20.0

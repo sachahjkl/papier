@@ -42,7 +42,7 @@ LICENCE_TOOL :: toolbox.Licence_Tool{
 	// (the development pair's private key, public on purpose: "papier-dev-licence-test-seed-01!")
 	dev_seed = "cGFwaWVyLWRldi1saWNlbmNlLXRlc3Qtc2VlZC0wMSE",
 	hint     = "Open this file with papier (Settings > General > Choose a file), or paste the key there.",
-	paddle   = {name = "Papier User Licence", description = "A personal, perpetual licence of papier, the clipboard history.", amounts = "supporter=1500,patron=4500", currency = "EUR"},
+	paddle   = {name = "papier licence", description = "A personal, perpetual licence of papier, the clipboard history.", amounts = "supporter=1500", currency = "EUR"},
 }
 
 // What goes beside the program in a release's archive: the file, and its name there (the icons' licence is the

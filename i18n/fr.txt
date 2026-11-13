@@ -276,8 +276,8 @@ fr Choisir un fichier…
 en Choose a licence file
 fr Choisir un fichier de licence
 
-en Papier licence
-fr Licence Papier
+en papier licence
+fr Licence papier
 
 en No program opens addresses
 fr Aucun programme n'ouvre les adresses

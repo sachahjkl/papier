@@ -7,7 +7,7 @@ import licence "gt:licence"
 
 PRODUCT :: licence.Product{
 	name           = "papier",
-	title          = "Papier",
+	title          = "papier",
 	version_tag    = "PAPIER1",
 	sign_context   = "papier-licence-v1\n",
 	file_extension = ".papierlicence",
@@ -15,5 +15,5 @@ PRODUCT :: licence.Product{
 	public_key     = "",
 	// (the development pair: its seed is public on purpose, papiertool's dev_seed)
 	dev_public_key = "AxUmDVadQ3OHFyeMIrDczTTo63rdjtn3zgMJ6a6QyU0",
-	editions       = {0 = {id = "supporter", title = "Supporter"}, 1 = {id = "patron", title = "Patron"}},
+	editions       = {0 = {id = "supporter", title = "Supporter"}},
 }

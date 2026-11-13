@@ -186,7 +186,7 @@ licence_section :: proc(app: ^App, em: f32) {
 // The system's Open dialog, then the file installed: both off the window's thread.
 @(private = "file")
 licence_choose_file :: proc(app: ^App) {
-	d := licence.file_dialog(papier_licence.PRODUCT, i18n.tr("Choose a licence file"), i18n.tr("Papier licence"))
+	d := licence.file_dialog(papier_licence.PRODUCT, i18n.tr("Choose a licence file"), i18n.tr("papier licence"))
 	d.owner = app.main.win
 	ui.file_dialog(&app.main.state, .Open, d, proc(r: platform.Dialog_Result, user: rawptr) {
 		if r.status != .Chosen || len(r.paths) == 0 { return }

@@ -54,19 +54,16 @@ site_meta :: proc() -> tk_site.Meta {
 // The shop: papier's licence (src/licence), sold through Paddle by the toolkit's licence Worker. Its pages (pricing,
 // thanks, terms, refunds, privacy, imprint) are the toolkit's templates, filled at each `site build`. What is empty is
 // the maintainer's to give once the shop is set up (docs/licence.md, "What the maintainer does at the end"): until the
-// client token, the price ids and the Worker are there, the buttons say "Coming soon".
-@(rodata)
-SHOP_PRICES := [?]tk_site.Shop_Price{
-	{edition = "supporter", label = "Buy the Supporter licence"},
-	{edition = "patron", label = "Buy the Patron licence"},
-}
-
+// client token, the price id and the Worker are there, the button says "Coming soon".
 SHOP :: tk_site.Shop{
 	name           = "papier",
-	product_title  = "Papier User Licence",
+	icon           = "../img/logo.png",
+	product_title  = "papier licence",
 	price          = "15&nbsp;&euro;",
-	price_note     = "Once. Taxes included. Patron: 45&nbsp;&euro;.",
+	price_note     = "",
 	environment    = "sandbox",
+	edition        = "supporter",
+	price_id       = "",
 	thanks         = "https://papier.froment.software/thanks/",
 	help           = "https://github.com/sachahjkl/papier/issues",
 	register       = "Open papier's settings (Ctrl+,), the <b>General</b> page, <b>Licence</b>: paste the key, or choose the file.",
@@ -90,9 +87,7 @@ site_run :: proc(args: []string, user: rawptr) -> int {
 	inner := (^toolbox.Command)(user)
 	code := inner.run_with(args, inner.user)
 	if code != toolbox.EXIT_DONE || len(args) != 3 || args[0] != "build" { return code }
-	shop := SHOP
-	shop.prices = SHOP_PRICES[:]
-	for page in tk_site.licence_pages(shop) {
+	for page in tk_site.licence_pages(SHOP) {
 		path := fmt.tprintf("%s/%s", args[2], page.path)
 		_ = os.make_directory_all(path[:strings.last_index_byte(path, '/')])
 		if os.write_entire_file(path, transmute([]u8)page.text) != nil { fmt.eprintfln("papiertool site: %s cannot be written", path); return toolbox.EXIT_FAILED }

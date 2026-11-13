@@ -154,6 +154,12 @@ live_image_menu :: proc(l: ^Live, c: ^cdp.Client) {
 		check(l, cdp.wait_for(c, "Copy the text of the image", SESSION_WAIT), "the image's menu offers to read its text")
 		check(l, cdp.key(c, "Escape"), "Escape closes the menu")
 		check(l, cdp.wait_for(c, "Copy the text of the image", SESSION_WAIT, gone = true), "and it closes")
+		// (the same menu from a right click on the picture of the preview)
+		_, clicked := cdp.call(c, "Toolkit.click", `{"name":"image","index":0,"count":1,"button":"right"}`)
+		check(l, clicked, "a right click on the image's preview")
+		check(l, cdp.wait_for(c, "Copy the text of the image", SESSION_WAIT), "opens the entry's menu, with its text to read")
+		check(l, cdp.key(c, "Escape"), "Escape closes it")
+		check(l, cdp.wait_for(c, "Copy the text of the image", SESSION_WAIT, gone = true), "and it closes")
 	} else {
 		fmt.println("  skip  the image's menu and OCR: this system has no OCR engine or language (tesseract)")
 	}

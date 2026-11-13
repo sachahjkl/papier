@@ -579,11 +579,30 @@ build_view_body :: proc(app: ^App, em: f32) {
 		ui.spacer(ui.px(em * 0.4))
 	}
 	ui.hline(ui.fill())
+	// (the text of this image being read: said where the user looks, the picture still shown and the window free)
+	if app.ocr_reading == e.id {
+		ui.next({width = ui.fill(), height = ui.px(ui.dense(em * 2.2)), axis = .X, cross = .Center})
+		if ui.row(.Center, {}, "###ocr_strip") {
+			ui.spacer(ui.px(em * 0.8))
+			if ui.tags("weak") {
+				ui.next({width = ui.text_size(), height = ui.pct(1)})
+				ui.label("Reading the text of the image…###ocr_label")
+			}
+			ui.spacer(ui.px(em * 0.8))
+			ui.next({width = ui.fill(), height = ui.px(max(f32(3), f32(int(em * 0.3))))})
+			ui.progress("###ocr_progress", 0, indeterminate = true)
+			ui.spacer(ui.px(em * 0.8))
+		}
+		ui.hline(ui.fill())
+	}
 	ui.next({width = ui.fill(), height = ui.fill()})
 	if app.view.has_tex {
 		// (gui_toolkit's preview: the wheel zooms, a drag moves it, a double click shows its pixels; its bar in the corner)
 		ui.next({width = ui.fill(), height = ui.fill()})
-		ui.preview_image("###image", &app.view.preview, app.view.tex, {f32(app.view.size.x), f32(app.view.size.y)}, {buttons = true, radius = 6})
+		res := ui.preview_image("###image", &app.view.preview, app.view.tex, {f32(app.view.size.x), f32(app.view.size.y)}, {buttons = true, radius = 6})
+		// (a right click on the picture: the entry's menu, where what can be done with an image is found: its text, a code's
+		// content, saving it)
+		if res.box != nil && ui.signal(res.box).right_clicked { entry_menu_open(app, e, ui.mouse_pos()) }
 		return
 	}
 	// (a picture: decoded, or why it is not; anything else: the reader's answer)

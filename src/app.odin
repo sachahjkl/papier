@@ -8,6 +8,7 @@ package papier
 // frame (a hidden window's frame would wait for a screen it is not on).
 
 import "core:fmt"
+import "core:time"
 import config "gt:config"
 import "gt:devtools"
 import "gt:font"
@@ -100,6 +101,8 @@ App :: struct {
 	hotkey_held: bool,              // Windows: picker.shortcut is registered
 	shortcut_problem: string,       // why it is not (owned; "": it is)
 	status:     string,             // a message for the status bar (owned), until status_until (ui clock, ms)
+	paste_due:  bool,               // the paste keys wait for the focus to be back in another window (app_paste_follow)
+	paste_asked: time.Tick,         // when they were asked
 	prefs_shown: string,            // the settings' foot: where the preferences file is (owned; made once)
 	status_until: f64,
 }
@@ -168,11 +171,13 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 		if app.visible {
 			host.hosts_wait({h})
 		} else {
-			platform.wait_event(win, 0)
+			// (a paste waiting for the focus: woken to look again, at most PASTE_LOOK_MS later)
+			platform.wait_event(win, app.paste_due ? PASTE_LOOK_MS : 0)
 			// (what came while hidden is nothing for the interface, but the shortcut)
 			for e in platform.poll_events(win, false) { if e.kind == .Hotkey { app_toggle(app) } }
 		}
 		app_requests(app)
+		app_paste_follow(app)
 		app_tray(app)
 		app_updates_follow(app)
 		if app_follow_reader(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
@@ -321,6 +326,28 @@ app_show :: proc(app: ^App) {
 @(private = "file")
 app_paste :: proc(app: ^App) {
 	if app.visible { app_hide_now(app) }
+	app.paste_due, app.paste_asked = true, time.tick_now()
+	app_paste_follow(app)
+}
+
+// How long the paste keys wait for the compositor to give the focus back to another window, and how often the loop
+// looks while they wait.
+PASTE_FOCUS_WAIT_MS :: 500
+PASTE_LOOK_MS       :: 20
+
+// The paste keys, once the focus is in another window: keys sent at once, as the window goes, reached no program on a
+// compositor that gives the focus back a moment later (ShojiWM). Where the compositor lists the session's windows
+// (platform.toplevels), they wait until one of another program is active, PASTE_FOCUS_WAIT_MS at most; elsewhere they go
+// at once.
+@(private = "file")
+app_paste_follow :: proc(app: ^App) {
+	if !app.paste_due { return }
+	waited := time.duration_milliseconds(time.tick_since(app.paste_asked))
+	windows := platform.toplevels(app.main.win, context.temp_allocator)
+	back := len(windows) == 0   // (no list: nothing to wait for)
+	for t in windows { if t.active && t.app_id != APP_NAME { back = true; break } }
+	if !back && waited < PASTE_FOCUS_WAIT_MS { return }
+	app.paste_due = false
 	hk, ok := platform.hotkey_parse(app.settings.paste_keys)
 	if !ok { errf("papier: paste.keys: %q is not a key combination (Ctrl+V, Ctrl+Shift+V, Shift+Insert...)", app.settings.paste_keys); return }
 	if !platform.send_hotkey(app.main.win, hk) {
@@ -463,7 +490,7 @@ app_ocr_follow :: proc(app: ^App) -> bool {
 	case d.unreadable:     say(app, "The image cannot be read")
 	case d.err != .None:   say(app, "%s", ocr.error_text(d.err))
 	case d.lines == 0:     say(app, "No text in the image")
-	case:                  copy_new_text(app, d.text, fmt.tprintf("Copied the text of the image (%d line%s)", d.lines, d.lines == 1 ? "" : "s"))
+	case:                  copy_new_text(app, d.text, fmt.tprintf("Copied the text of the image (%d line%s)", d.lines, d.lines == 1 ? "" : "s"), chosen = false)
 	}
 	return true
 }

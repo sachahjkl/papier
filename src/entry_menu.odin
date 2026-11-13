@@ -87,6 +87,7 @@ entry_menu_build :: proc(app: ^App, em: f32) {
 		// (an image: what it holds, when there is something to read; greyed while a reading runs)
 		if action_enabled(app, .Copy_Qr_Content) { item(app, .Copy_Qr_Content) }
 		if e.kind == .Image && ocr_offered(app) { item(app, .Copy_Image_Text) }
+		if action_enabled(app, .Toggle_Markdown_Source) { item(app, .Toggle_Markdown_Source) }
 		ui.menu_separator()
 		item(app, .Open)
 		if ui.menu_submenu("Open with", enabled = len(m.handlers) > 0) {
@@ -117,10 +118,12 @@ item :: proc(app: ^App, a: Action, label := "") {
 
 // A text as a new entry at the top, on the clipboard (the watcher adds it): pasted and the window hidden as the
 // settings say. `message` goes to the status bar.
-copy_new_text :: proc(app: ^App, text: string, message: string) {
-	paste := app.settings.paste_on_select
+copy_new_text :: proc(app: ^App, text: string, message: string, chosen := true) {
+	// (`chosen`: as an entry chosen, the window goes and the text is pasted where papier was called from; what papier
+	// read for the user (an image's text, a code's content) goes on the clipboard only, the window staying)
+	paste := chosen && app.settings.paste_on_select
 	watcher_send(&app.watcher, {verb = .Add_Text, text = text, paste = paste})
-	if app.settings.close_on_copy || paste { app_hide(app) }
+	if chosen && (app.settings.close_on_copy || paste) { app_hide(app) }
 	say(app, "%s", message)
 }
 

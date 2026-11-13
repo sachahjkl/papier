@@ -140,7 +140,7 @@ action_run :: proc(app: ^App, a: Action) {
 		if len(ids) > 1 { say(app, "Removed %d entries", len(ids)) }
 	case .Show_QR:       qr_open(app, on[0])
 	case .Toggle_Markdown_Source: app.markdown_source = !app.markdown_source
-	case .Copy_Qr_Content: copy_new_text(app, image_qr(app, on[0]), "Copied the QR code's content")
+	case .Copy_Qr_Content: copy_new_text(app, image_qr(app, on[0]), "Copied the QR code's content", chosen = false)
 	case .Copy_Image_Text:
 		e := on[0]
 		at := image_rep(e)

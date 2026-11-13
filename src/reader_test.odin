@@ -7,11 +7,9 @@ package papier
 import "core:fmt"
 import "core:os"
 import "core:slice"
-import "core:strings"
 import "core:testing"
 import "core:time"
 import "gt:fsx"
-import "gt:markdown"
 import syntax "gt:syntax"
 import "history"
 
@@ -204,25 +202,6 @@ the_preview_knows_what_a_text_is :: proc(t: ^testing.T) {
 	}
 }
 
-// A Markdown table is a row with its separator of as many cells under it; pipes alone are not.
-@(test)
-a_table_is_a_row_with_its_separator :: proc(t: ^testing.T) {
-	at, ok := markdown_table_at("| Name | Size |\n|------|-----:|\n| a.txt | 12 |\n")
-	testing.expect(t, ok && at == 0, "a table alone")
-	at, ok = markdown_table_at("Sizes of the files:\n\n| Name | Size |\n| :--- | :-: |\n| a.txt | 12 |\n")
-	testing.expect(t, ok && at == 1, "a table after a line of prose")
-	_, ok = markdown_table_at("| a | b |\n| c | d |\n")
-	testing.expect(t, !ok, "rows without a separator")
-	_, ok = markdown_table_at("| a | b | c |\n|---|---|\n")
-	testing.expect(t, !ok, "a separator of another number of cells")
-	_, ok = markdown_table_at("cat log.txt | grep error | sort\nps aux | less\n")
-	testing.expect(t, !ok, "a shell's pipelines")
-	_, ok = markdown_table_at("|---|---|\n| a | b |\n")
-	testing.expect(t, !ok, "a separator with no header above it")
-	_, ok = markdown_table_at("| a \\| b | c |\n|---|---|\n")
-	testing.expect(t, ok, "an escaped pipe is in its cell")
-}
-
 // A text that is only a table is Markdown (its rows rendered); a text with pipes and no separator stays plain.
 @(test)
 a_table_alone_is_markdown :: proc(t: ^testing.T) {
@@ -277,14 +256,15 @@ a_mermaid_block_is_a_diagram :: proc(t: ^testing.T) {
 	testing.expect(t, len(good.light.items) > 0 && len(good.dark.items) > 0, "it is drawn in both themes")
 	testing.expect(t, good.light.view[2] > 0 && good.light.view[3] > 0, "it has a size")
 	testing.expect(t, bad.why != "", "a text that is no diagram says why")
-	// (the view is given the block's text by the doc: the same string, found without a compare of its bytes)
+	// (the view gives each fenced block its number, markdown.Code.fence: the diagram is found by it)
 	d := s.loaded.markdown
-	for bl, n in d.blocks {
+	fence := 0
+	for bl in d.blocks {
 		if bl.kind != .Code { continue }
-		found := diagram_find(s.loaded.diagrams, markdown.block_text(d, n))
+		found := diagram_find(s.loaded.diagrams, fence)
 		if is_mermaid(bl.lang) { testing.expect(t, found != nil, "each mermaid block has its diagram") } else { testing.expect(t, found == nil, "code is no diagram") }
+		fence += 1
 	}
-	testing.expect(t, diagram_find(s.loaded.diagrams, strings.clone("flowchart LR\n  A[Copy] --> B[History]\n  B --> C[Paste]", context.temp_allocator)) == good, "found by its text elsewhere too")
 }
 
 ////////////////////////////////

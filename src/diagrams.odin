@@ -18,7 +18,7 @@ import "gt:ui"
 
 // A ```mermaid block of the loaded entry, laid out by the reader (heap; diagrams_free).
 Diagram :: struct {
-	code:        string,         // the block's text as the doc keeps it: the view finds the diagram by where it lies
+	fence:       int,            // its block's number among the doc's fenced blocks (markdown.Code.fence): how the view finds it
 	light, dark: svg.Document,
 	why:         string,         // not a diagram: what mermaid says ("" it is one)
 }
@@ -31,12 +31,14 @@ DIAGRAM_FONT_PX :: 14
 // The reader's side: each closed ```mermaid block of `doc` laid out, in the reader's heap.
 diagrams_make :: proc(doc: ^markdown.Doc) -> []Diagram {
 	out := make([dynamic]Diagram)
+	fence := -1
 	for bl, n in doc.blocks {
-		if bl.kind != .Code || !bl.closed || !is_mermaid(bl.lang) { continue }
+		if bl.kind != .Code { continue }
+		fence += 1   // (every fenced block counts, as markdown.view counts them)
+		if !bl.closed || !is_mermaid(bl.lang) { continue }
 		if len(out) >= DIAGRAMS_MAX { break }
-		// (block_text keeps the text in the doc: the view gets the same string back, at the same place)
 		code := markdown.block_text(doc, n)
-		d := Diagram{code = code}
+		d := Diagram{fence = fence}
 		why: string
 		d.light, why = mermaid.diagram(code, false)
 		if why == "" { d.dark, why = mermaid.diagram(code, true) }
@@ -72,15 +74,9 @@ first_line :: proc(s: string) -> string {
 	return t
 }
 
-// The diagram of a block's text: matched by where the text lies (the doc gives the text the reader laid out), else by its
-// content (a doc that made the text again).
-diagram_find :: proc(ds: []Diagram, code: string) -> ^Diagram {
-	for &d in ds {
-		if raw_data(d.code) == raw_data(code) && len(d.code) == len(code) { return &d }
-	}
-	for &d in ds {
-		if d.code == code { return &d }
-	}
+// The diagram of a fenced block, by its number (nil: none: not mermaid, not closed, past DIAGRAMS_MAX).
+diagram_find :: proc(ds: []Diagram, fence: int) -> ^Diagram {
+	for &d in ds { if d.fence == fence { return &d } }
 	return nil
 }
 
@@ -96,7 +92,7 @@ Markdown_User :: struct {
 markdown_code :: proc(user: rawptr, id: string, c: markdown.Code) {
 	u := (^Markdown_User)(user)
 	if !is_mermaid(c.lang) { markdown.code_block(id, c, u.cfg); return }
-	d := diagram_find(u.loaded.diagrams, c.text)
+	d := diagram_find(u.loaded.diagrams, c.fence)
 	if d != nil && d.why == "" {
 		diagram_box(u, d, id)
 		return

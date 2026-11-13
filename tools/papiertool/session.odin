@@ -51,7 +51,7 @@ session_start :: proc(s: ^Session, dir: string, port: int, prefs: []string = nil
 	s.papier, s.running = p, true
 	deadline := time.tick_add(time.tick_now(), SESSION_WAIT)
 	for time.tick_diff(time.tick_now(), deadline) > 0 {
-		if out, _ := run_in(s, PROGRAM, "status"); strings.contains(out, "running: true") { return "" }
+		if out, _ := run_in(s, PROGRAM, "--status"); strings.contains(out, "running: true") { return "" }
 		time.sleep(SESSION_POLL)
 	}
 	return "papier does not answer"

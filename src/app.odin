@@ -12,6 +12,7 @@ import "core:log"
 import "core:time"
 import config "gt:config"
 import crash "gt:crash"
+import crash_bar "gt:crash_bar"
 import "gt:devtools"
 import "gt:font"
 import "gt:host"
@@ -58,7 +59,7 @@ App :: struct {
 	licence:    Licence_View,           // licence.odin
 	settings:   Settings,
 	announcer:  ui.Announcer,           // where "Copied", "Saved"... are said (general.messages)
-	crash_report: string,               // the report of the last session's crash, said at the first build (owned; "": none)
+	crash_bar:  crash_bar.Bar,          // the last session's crash, said in a bar at the top of the window
 	save_id:    u64,                    // the entry a Save as dialog is open for (entry_save_as)
 	watcher:    Watcher,
 	decoder:    Decoder,            // the pictures of the preview (decoder.odin)
@@ -67,6 +68,7 @@ App :: struct {
 	markdown_source: bool,          // Markdown is shown as its source, not rendered (the session's choice)
 	ocr_reading: u64,               // the image whose text is being read (0: none; app_ocr_follow)
 	tray:       ^platform.Tray,
+	tray_language: u32,             // i18n.version() of the tray menu's texts
 	devtools:   ^devtools.Server,   // TOOLKIT_DEVTOOLS=<port>: driven and captured over the Chrome DevTools Protocol
 	theme_shown: ui.Theme_Shown,    // the theme, mode and finish shown (ui.theme_show)
 	visible:    bool,
@@ -106,10 +108,11 @@ App :: struct {
 	settings_page: prefs_page.Page,
 	sel_rect:   ui.Rect,            // the selected row, as last built (where the Menu key opens the menu)
 	room:       f32,                // the window's width at this build, logical pixels
-	setup:      setup.Dialog,       // the Setup (setup_view.odin)
-	logo:       render.Texture,     // its logo (made at its first show)
+	install:    prefs_page.Install, // the install: its offer, its dialog, the settings' page (setup_view.odin)
+	setup_known: bool,              // the start's reading of the install came (setup_follow)
+	logo:       render.Texture,     // the install dialog's logo (made at its first show)
 	logo_made:  bool,
-	launch_after: string,           // the installed copy, started once this one has ended (owned; "": none)
+	launch_after: string,           // this program again after an update, started once this one has ended (owned; "": none)
 	launch_hidden: bool,            // and in the notification area (an update: updates.odin)
 	updater:    ^update.Updater,    // updates.odin
 	update_serial: int,             // the updater's state last said
@@ -137,10 +140,14 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	defer crash.end_session()   // (each return of this procedure is a clean end)
 	app := new(App)
 	defer free(app)
-	if path, crashed := crash.last_report(); crashed { app.crash_report = path }
+	if path, crashed := crash.last_report(context.temp_allocator); crashed {
+		log.warnf("papier: the last session ended in a crash: %s", path)
+		crash_bar.init(&app.crash_bar, path)
+	}
 	app.prefs = prefs^
 	prefs^ = {}
 	app.settings = prefs_read(&app.prefs)
+	prefs_page.install_init(&app.install, &app.prefs, setup_options())
 	// (general.language is in the registry now, and nothing is shown yet: every text from here on is in its language)
 	prefs_page.language_start(&app.prefs, PROGRAM_CATALOGUES)
 	config.user_writer_start(&app.prefs_writer, &app.prefs, prefs_file())
@@ -193,16 +200,11 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	decoder_start(&app.decoder, win)
 	slow_start(&app.slow, win)
 	app_shortcut(app)
-	app_updates_start(app, offer = !hidden && !setup_asked)
+	app_updates_start(app)
+	// (the install read on a task: setup_follow; offered on Windows, at a start that shows the window)
+	prefs_page.install_offer(&app.install, &h.state, offer = ODIN_OS == .Windows && !hidden && !setup_asked)
 	app.tray = platform.tray_create(win, LOGO_PNG, "Papier")
-	if app.tray != nil {
-		platform.tray_set_menu(app.tray, {
-			{id = int(Tray_Item.Show), text = i18n.tr("Show the history"), default = true},
-			{kind = .Separator},
-			{id = int(Tray_Item.Clear), text = i18n.tr("Clear the history (pinned entries stay)")},
-			{id = int(Tray_Item.Quit), text = i18n.tr("Quit Papier")},
-		})
-	}
+	app_tray_menu(app)
 
 	// (hidden at start: the window is made and never shown, it has had no frame: nothing to take off the screen)
 	if !hidden { app_show(app) }
@@ -243,8 +245,11 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	if app.logo_made { render.destroy_texture(&app.shared.r, app.logo) }
 	// (a Save as dialog's answer comes to the window's state: the chores end before it does)
 	ui.chores_stop()
+	prefs_page.install_end(&app.install)   // (its thread waited for, before the window's State goes)
+	crash_bar.destroy(&app.crash_bar)
 	host.host_close(h)
-	setup.finish(&app.setup, setup_config())
+	// (the instance is let go (watcher_stop): the installed copy the install's dialog opened is the running papier now)
+	prefs_page.install_launch(&app.install)
 	launch, launch_hidden := app.launch_after, app.launch_hidden
 	app.launch_after = ""
 	exit_code := app.exit_code
@@ -267,7 +272,6 @@ app_free :: proc(app: ^App) {
 	delete(app.query)
 	delete(app.status)
 	delete(app.prefs_path)
-	delete(app.crash_report)
 	// (the chores have stopped: no task of theirs is on its way)
 	prefs_page.themes_file_destroy(&app.themes_file)
 	licence_destroy(app)
@@ -280,10 +284,8 @@ app_free :: proc(app: ^App) {
 	entry_menu_free(&app.menu)
 	ui.text_edit_destroy(&app.edit.area)
 	prefs_page.destroy(&app.settings_page)
-	setup.destroy(&app.setup)
 	delete(app.launch_after)
 	delete(app.shortcut_problem)
-	delete(app.place.setup)
 	settings_free(&app.settings)
 	prefs_page.standard_unwatch(&app.standard)
 	config.user_writer_stop(&app.prefs_writer, &app.prefs)   // (the last change written)
@@ -574,7 +576,6 @@ app_job_done :: proc(app: ^App, d: ^Job_Done) {
 	#partial switch d.kind {
 	case .Drag:     drag_arrived(app, d)
 	case .Handlers: entry_menu_handlers(app, d)
-	case .Setup_Facts: setup_offer(app, d)
 	case .Setup_Updated:
 		// (a log line, as an install's record is nothing the window shows)
 		if !d.ok { log.errorf("papier: the update is in place, but %s", d.message) }
@@ -625,9 +626,24 @@ app_requests :: proc(app: ^App) {
 	app_reload(app)
 }
 
+// The tray menu, in the language in use; made again when the language changes (app_tray), as the system keeps the texts
+// it was given.
+@(private = "file")
+app_tray_menu :: proc(app: ^App) {
+	if app.tray == nil { return }
+	app.tray_language = i18n.version()
+	platform.tray_set_menu(app.tray, {
+		{id = int(Tray_Item.Show), text = i18n.tr("Show the history"), default = true},
+		{kind = .Separator},
+		{id = int(Tray_Item.Clear), text = i18n.tr("Clear the history (pinned entries stay)")},
+		{id = int(Tray_Item.Quit), text = i18n.tr("Quit Papier")},
+	})
+}
+
 @(private = "file")
 app_tray :: proc(app: ^App) {
 	if app.tray == nil { return }
+	if app.tray_language != i18n.version() { app_tray_menu(app) }
 	for e in platform.tray_poll(app.tray) {
 		#partial switch e.kind {
 		case .Click: app_toggle(app)
@@ -656,15 +672,6 @@ STATUS_SHOWN_MS :: 3000
 // general.messages says. What is only a state of the window (a reading under way, a failure to look at) is said by say.
 announce :: proc(app: ^App, format: string, args: ..any) {
 	ui.announce(&app.announcer, .Good, fmt.tprintf(format, ..args))
-}
-
-// The last session's crash, said once the window builds: where its report is (nothing was sent anywhere).
-app_crash_said :: proc(app: ^App) {
-	if app.crash_report == "" { return }
-	log.warnf("papier: the last session ended in a crash: %s", app.crash_report)
-	ui.announce(&app.announcer, .Bad, i18n.tr("Papier stopped unexpectedly last time"), app.crash_report)
-	delete(app.crash_report)
-	app.crash_report = ""
 }
 
 // papier's own theme, first of the list: ink and paper, a soft sand accent (the colours of the logo).

@@ -19,17 +19,16 @@ when ODIN_OS == .Windows {
 } else {
 	PROGRAM :: "build/papier"
 }
-// papier.com, the console launcher papier embeds (src/integration.odin).
-LAUNCHER_OUT :: "build/papier.com"
-
-// What papier is to its tool and to the toolkit's standard commands. papier.com's rules: a command waits and gives its
-// output and exit code through; no argument, --hidden and toggle, which may become the running papier, do not wait.
+// What papier is to its tool and to the toolkit's standard commands, and what Windows shows of it. papier.com's rules
+// (its console launcher, which the toolkit builds and papier embeds): a command waits and gives its output and exit code
+// through; no argument, --hidden and toggle, which may become the running papier, do not wait.
 project :: proc() -> toolbox.Project {
 	return {
 		name = "papier", repository = REPOSITORY, changelog = "CHANGELOG.md",
 		version_file = "src/main.odin", version_line = "APP_VERSION :: ", program = PROGRAM,
-		launcher = {out = LAUNCHER_OUT, mark = "(papier console launcher)", default_rule = "wait",
-		            others = "(none),toggle,--hidden", refuses_exit = 2},
+		launcher = {default_rule = "wait", others = "(none),toggle,--hidden", refuses_exit = 2},
+		title = "Papier", description = "A fast clipboard history, searched as you type.",
+		publisher = "Froment Software", copyright = "Copyright (c) 2026 sachahjkl",
 		// (live and shots drive the release build over CDP: Devtools; only the icons papier names: Lucide_Subset; a
 		// ```mermaid block of a Markdown entry drawn: Mermaid)
 		features = {.Mermaid, .Devtools, .Lucide_Subset},
@@ -42,7 +41,7 @@ LICENCE_TOOL :: toolbox.Licence_Tool{
 	// (the development pair's private key, public on purpose: "papier-dev-licence-test-seed-01!")
 	dev_seed = "cGFwaWVyLWRldi1saWNlbmNlLXRlc3Qtc2VlZC0wMSE",
 	hint     = "Open this file with papier (Settings > General > Choose a file), or paste the key there.",
-	paddle   = {name = "papier licence", description = "A personal, perpetual licence of papier, the clipboard history.", amounts = "supporter=1500", currency = "EUR"},
+	paddle   = {name = "Papier User License", description = "A personal, perpetual licence of papier, the clipboard history.", amounts = "supporter=1500", currency = "EUR"},
 }
 
 // What goes beside the program in a release's archive: the file, and its name there (the icons' licence is the

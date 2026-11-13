@@ -9,10 +9,11 @@ Win+V); papier reads it, puts an entry back, removes one, clears it.
 Unzip the archive and start `papier.exe`: its Setup offers to install it for you. Install copies it to
 `%LOCALAPPDATA%\Programs\papier` and writes a launcher in the Start menu, `papier` on your PATH, its start with the
 session (the `Run` key of your user: `papier --hidden`, in the notification area) and the Settings > Apps entry. The
-same dialog repairs, upgrades (start the newer `papier.exe`) or removes the install: `papier --setup`, or Settings >
-Apps > Papier > Uninstall. Keep standalone runs the copy where it is, and the Setup does not ask again.
+same dialog repairs, upgrades (start the newer `papier.exe`) or removes the install: `papier --setup`, Settings >
+Apps > Papier > Uninstall, or papier's own settings, page Installation, which also says where everything is. Keep
+standalone runs the copy where it is, and the Setup does not ask again.
 
-`papier install` integrates the copy where it is, with no Setup (`--no-autostart`, `--no-path`: leave a part out). With the PATH comes `papier.com` beside `papier.exe`:
+`papier --install` installs the copy without a window, `papier --uninstall` removes it. With the PATH comes `papier.com` beside `papier.exe`:
 papier has a window and no console of its own, so in cmd or PowerShell `papier` runs `papier.com`, which gives a command
 (`papier list`, `papier set`…) its output and its exit code, and gives the prompt back at once for `papier` and
 `papier toggle`. Ctrl+Shift+ù shows the window from any program
@@ -33,7 +34,7 @@ copy, and the old entry goes).
 
 ## Linux: install
 
-`papier install` integrates the program where it is (a downloaded release, a build, a Nix profile):
+`papier --install` installs the downloaded program for you: the program in `~/.local/share/papier`, and
 
 - a launcher in the applications menu, with its icons;
 - a link `~/.local/bin/papier`, so that `papier` works in a terminal and in a key binding;
@@ -41,9 +42,9 @@ copy, and the old entry goes).
 
 ```sh
 tar -xzf papier-0.1.0-linux-x64.tar.gz
-./papier-0.1.0-linux-x64/papier install          # --no-autostart, --no-path: leave a part out
-papier status                                      # what is there, and whether papier runs
-papier uninstall                                   # takes it all away; the history stays
+./papier-0.1.0-linux-x64/papier --install        # or the settings' Installation page, which says what is there
+papier --status                                    # what is there, and whether papier runs
+papier --uninstall                                 # takes it all away; the history stays
 ```
 
 A compositor that does not read `~/.config/autostart` (Hyprland, Sway) starts papier from its own configuration.
@@ -90,7 +91,7 @@ for_window [app_id="papier"] floating enable, resize set 900 560, move position 
 
 ## KDE Plasma
 
-`papier install` puts papier in the autostart list. Bind `papier toggle` in System Settings, Shortcuts, Add New, Command or
+`papier --install` puts papier in the autostart list. Bind `papier toggle` in System Settings, Shortcuts, Add New, Command or
 Script. Plasma's own clipboard (Klipper) runs beside it; turn its history off if you use papier's.
 
 ## NixOS and home-manager

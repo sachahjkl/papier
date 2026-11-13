@@ -27,6 +27,7 @@ import "gt:platform"
 import "gt:render"
 import syntax "gt:syntax"
 import prefs_page "gt:prefs_page"
+import crash_bar "gt:crash_bar"
 import timefmt "gt:timefmt"
 import "gt:ui"
 import "history"
@@ -204,7 +205,7 @@ remove_entry :: proc(app: ^App, id: u64) {
 // The keys of the window, taken before the search field sees them.
 @(private = "file")
 view_keys :: proc(app: ^App) {
-	if app.setup.open || app.palette.open || app.sheet.open || app.qr.open { return }   // (a dialog has the keyboard)
+	if prefs_page.install_open_now(&app.install) || app.palette.open || app.sheet.open || app.qr.open { return }   // (a dialog has the keyboard)
 	if app.settings_open { settings_keys(app); return }
 	if app.edit.active { edit_keys(app); return }
 	// (the moves of the selection: a move clears the marks, as the list's own keys do)
@@ -241,11 +242,10 @@ view_build :: proc(h: ^host.Host, size: host.Vec2) {
 	em := ui.font_size()
 	app.room = size.x / max(ui.scale(), 0.01)
 	app_shortcut_follow(app)
-	app_crash_said(app)
 	// (the user's themes file: a task looks at it now and then, and reads it when it changed; app_params shows it)
 	if prefs_page.themes_file_poll(&app.themes_file, &app.main.state) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 	// the keyboard is the search's, unless the edit view or the settings have it
-	dialog := app.palette.open || app.sheet.open || app.qr.open || app.setup.open
+	dialog := app.palette.open || app.sheet.open || app.qr.open || prefs_page.install_open_now(&app.install)
 	if !app.edit.active && !app.settings_open && !dialog && app.search_key != 0 && ui.focus_key() != app.search_key { ui.set_focus(app.search_key) }
 	view_keys(app)
 	ui.next({width = ui.fill(), height = ui.fill(), axis = .Y})
@@ -261,6 +261,7 @@ view_build :: proc(h: ^host.Host, size: host.Vec2) {
 build_page :: proc(app: ^App, em: f32) {
 	build_title(app, em)
 	ui.hline(ui.fill())
+	crash_bar.bar(&app.crash_bar, {name = "Papier", version = APP_VERSION, repository = "sachahjkl/papier"})
 	ui.next({width = ui.fill(), height = ui.fill()})
 	if app.settings_open {
 		settings_build(app)

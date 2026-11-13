@@ -87,7 +87,6 @@ Job_Kind :: enum u8 {
 	Join,          // ids: the texts of several entries as one
 	Write,         // path, data: a file of the window (its state)
 	Read_Prefs,    // the preferences file, read again
-	Setup_Facts,   // text, offer: whether this is the installed copy, and (offer) whether the Setup is offered
 	Setup_Updated, // text: an update is in place: the install's record says its version
 }
 
@@ -100,7 +99,6 @@ Job :: struct {
 	handler: string,
 	text:    string,
 	data:    []u8,
-	offer:   bool,
 }
 
 // A job done (heap; job_done_free).
@@ -113,8 +111,6 @@ Job_Done :: struct {
 	drag:     platform.Drag_Data,   // Drag
 	handlers: []desktop.Handler,    // Handlers
 	prefs:    config.Prefs,         // Read_Prefs (ok: read)
-	running_it:   bool,             // Setup_Facts: this program is the installed copy
-	setup_wanted: bool,             // Setup_Facts: the Setup is offered
 }
 
 // What the window takes from the mailbox at a turn of its loop. The caller owns each part (reader_results_free).
@@ -276,7 +272,7 @@ reader_load :: proc(r: ^Reader, id: u64, key: u64) {
 // A job, after those asked before it. Its strings and slices are copied.
 reader_job :: proc(r: ^Reader, j: Job) {
 	heap := runtime.heap_allocator()
-	own := Job{kind = j.kind, id = j.id, offer = j.offer}
+	own := Job{kind = j.kind, id = j.id}
 	if j.ids != nil { own.ids = make([]u64, len(j.ids), heap); copy(own.ids, j.ids) }
 	own.path = strings.clone(j.path, heap)
 	own.handler = strings.clone(j.handler, heap)
@@ -729,14 +725,8 @@ reader_run_job :: proc(r: ^Reader, j: ^Job) -> (d: Job_Done) {
 	case .Read_Prefs:
 		prefs_open(&d.prefs, nil)
 		d.ok = true
-	case .Setup_Facts:
-		f := setup.facts(setup_config())
-		d.running_it = f.running_it
-		// (Windows: an install to offer; elsewhere `papier install` and Nix install papier)
-		when ODIN_OS == .Windows { d.setup_wanted = j.offer && setup.wanted(f, APP_VERSION, j.text) }
-		d.ok = true
 	case .Setup_Updated:
-		ok, why := setup.updated(setup_config(), j.text)
+		ok, why := setup.updated(setup_options(), j.text)
 		d.ok = ok
 		if !ok { d.message = strings.clone(why) }
 	case .Handlers:

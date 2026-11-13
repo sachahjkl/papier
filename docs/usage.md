@@ -5,7 +5,7 @@ you ask for it.
 
 ## Start it
 
-- `papier --hidden` starts papier in the notification area, with no window. Start it with the session (`papier install`
+- `papier --hidden` starts papier in the notification area, with no window. Start it with the session (`papier --install`
   does it for you, see [desktop.md](desktop.md)).
 - `papier` shows the window. When papier does not run yet, this command starts it.
 - `papier toggle` shows the window, or hides it when it is shown. Bind it to a key.
@@ -189,7 +189,7 @@ it, papier puts the last entry back (`clipboard.keep`).
 | `papier quit` | stops papier |
 | `papier prefs` | every preference, its value and what it does |
 | `papier set <name> <value>` | changes a preference and saves it; the running papier reads it again |
-| `papier install`, `papier uninstall`, `papier status` | the desktop integration ([desktop.md](desktop.md)) |
+| `papier --install`, `papier --uninstall`, `papier --status`, `papier --setup` | the install, without a window or in its dialog (`--status`: what is installed, and whether papier runs); the settings' Installation page says where it is ([desktop.md](desktop.md)) |
 | `papier version` | the version |
 
 `--pref name=value` sets a preference for one run only.

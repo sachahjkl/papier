@@ -14,10 +14,13 @@ import "gt:ui"
 
 APP_NAME :: "papier"
 
-// What papier gives the standard settings as their defaults.
-STANDARD_DEFAULTS :: prefs_page.Standard_Defaults{
-	theme = "Papier", mode = "system", finish = "machined", font_size = 14, glow = 1,
-	menu = true, update_auto = true, app_name = APP_NAME,
+// papier's identity in the standard settings: its theme and its name. The rest is the toolkit's, as in its other
+// programs (prefs_page.STANDARD_DEFAULTS).
+@(private = "file")
+standard_defaults :: proc() -> prefs_page.Standard_Defaults {
+	d := prefs_page.STANDARD_DEFAULTS
+	d.theme, d.app_name = "Papier", APP_NAME
+	return d
 }
 
 // The preferences of every system; each system adds its own (settings_linux.odin, settings_windows.odin). Their words
@@ -71,7 +74,7 @@ state_path :: proc(allocator := context.temp_allocator) -> string {
 // frees (a registry read for one turn of a loop gives its temporary allocator).
 prefs_open :: proc(p: ^config.Prefs, args: []string, descriptions := context.allocator) -> (rest: [dynamic]string, problems: [dynamic]string) {
 	p^ = config.prefs_make()
-	prefs_page.standard_register(p, prefs_page.STANDARD_ALL, STANDARD_DEFAULTS, descriptions)
+	prefs_page.standard_register(p, prefs_page.STANDARD_ALL, standard_defaults(), descriptions)
 	config.register(p, PREF_DEFS[:])
 	config.register(p, PREF_DEFS_SYSTEM[:])
 	_, file_problems := config.load_file(p, prefs_file(), .User)

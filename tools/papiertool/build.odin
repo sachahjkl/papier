@@ -33,11 +33,11 @@ build_sqlite :: proc() -> bool {
 	}
 }
 
-// What a build or a test needs first: the toolkit's native libraries and the Lucide subset (build_native), SQLite, the
-// console launcher (papier embeds it).
+// What a build or a test needs first: the toolkit's native libraries, the Lucide subset, on Windows the resource and the
+// console launcher (build_native), then SQLite.
 @(private = "file")
 build_parts :: proc(p: toolbox.Project) -> bool {
-	return toolbox.build_native(p) && build_sqlite() && toolbox.build_launcher(p)
+	return toolbox.build_native(p) && build_sqlite()
 }
 
 run_build :: proc(args: []string) -> int {
@@ -52,28 +52,10 @@ run_build :: proc(args: []string) -> int {
 	// (Windows: no console of its own, none flashes at a start with the session; its text goes to the parent's: output.odin)
 	when ODIN_OS == .Windows {
 		if release { append(&extra, "-subsystem:windows") }
-		// the icon, the manifest and the version (res/papier.rc)
-		if !write_version_header(p) { return 1 }
-		append(&extra, "-resource:res/papier.rc")
 	}
 	if !toolbox.run(toolbox.odin_command(p, "build", "", extra[:]), {echo = true}) { return 1 }
-	// (an exe without its icon shows a blank one in the Start menu and Settings > Apps)
-	when ODIN_OS == .Windows {
-		if !toolbox.exe_has_icon(PROGRAM) { fmt.eprintfln("papiertool: %s has no icon (res/papier.rc)", PROGRAM); return 1 }
-	}
 	fmt.printfln("built %s", PROGRAM)
 	return 0
-}
-
-// build/version.h: APP_VERSION's numbers for res/papier.rc.
-VERSION_H :: "build/version.h"
-
-write_version_header :: proc(p: toolbox.Project) -> bool {
-	if why := toolbox.write_version_header(VERSION_H, toolbox.project_version(p)); why != "" {
-		fmt.eprintfln("papiertool: %s", why)
-		return false
-	}
-	return true
 }
 
 run_test :: proc(args: []string) -> int {
@@ -94,15 +76,9 @@ run_check :: proc(args: []string) -> int {
 	if !toolbox.check_scopes("src") { return 1 }
 	// (a text of the code not in the catalogue, or not translated, shows in English to a French user)
 	if problem := toolbox.i18n_catalogue(I18N.dirs, "i18n/fr.txt", "fr", true); problem != "" { fmt.eprintln(problem); return 1 }
-	if !toolbox.build_launcher(p) { return 1 }   // (papier embeds it: odin check reads it)
 	if !toolbox.run(toolbox.odin_command(p, "check"), {echo = true}) { return 1 }
 	// (the whole program for Windows too, from any system: Windows code that does not compile fails the Linux job)
 	when ODIN_OS != .Windows {
-		// (papier for Windows embeds papier.com, which only Windows builds: an empty one stands for it in a check)
-		if !os.exists(LAUNCHER_OUT) {
-			_ = os.make_directory("build")
-			if os.write_entire_file(LAUNCHER_OUT, []u8{}) != nil { fmt.eprintfln("papiertool: %s cannot be written", LAUNCHER_OUT); return 1 }
-		}
 		if !toolbox.check_windows(p) { return 1 }
 	}
 	if !toolbox.run({"odin", "check", "tools/papiertool", fmt.tprintf("-collection:gt=%s/src", toolbox.toolkit_dir(p)), "-vet"}, {echo = true}) { return 1 }

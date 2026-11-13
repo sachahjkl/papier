@@ -11,6 +11,8 @@ import "core:strings"
 import config "gt:config"
 import instance "gt:instance"
 import "gt:platform"
+import process "gt:process"
+import setup "gt:setup"
 import timefmt "gt:timefmt"
 import "history"
 
@@ -20,7 +22,13 @@ USAGE :: `papier: the clipboard's history
 
   papier                      show the history (start papier when it does not run)
   papier --hidden             start papier in the notification area (for the session's start)
-  papier --setup              install papier for you, repair or upgrade the install, or uninstall it
+  papier --setup              the install's dialog: install papier for you, repair or upgrade the install, or
+                              uninstall it (also in the settings: Installation)
+  papier --install            install this copy for you: the program, the launcher, the start with the session,
+                              papier on the PATH
+  papier --uninstall          take the install away (the history stays)
+  papier --status             what is installed, and whether papier runs (exit 0 installed, 2 to repair,
+                              1 not installed)
   papier toggle               show the history, or hide it when it is shown (for a key binding)
   papier show | hide | quit
   papier list [count]         the newest entries: id, kind, age, a line of text
@@ -28,10 +36,6 @@ USAGE :: `papier: the clipboard's history
   papier copy <id>            put an entry back on the clipboard
   papier pin | unpin | delete <id>
   papier clear                remove every entry that is not pinned
-  papier install [--no-autostart] [--no-path]
-                              the launcher, the icons, ~/.local/bin/papier and the start with the session
-  papier uninstall            take them away (the history stays)
-  papier status               what is installed, and whether papier runs
   papier prefs                every preference, its value and what it does
   papier set <name> <value>   change a preference (saved; the running papier reads it again)
   papier version
@@ -47,6 +51,11 @@ run :: proc(all_args: []string) -> int {
 	args, problems := prefs_open(&prefs, all_args)
 	defer config.prefs_destroy(&prefs)
 	for p in problems { errf("papier: %s", p) }
+	// (--install, --uninstall and --status: no window, whether papier runs or not; --setup is a verb below: the running
+	// papier shows it)
+	if cmd, _ := setup.command_of(args[:]); setup.command_alone(cmd) {
+		return setup.command_run(cmd, setup_options(), process.console_write)
+	}
 	verb := len(args) > 0 ? args[0] : ""
 	rest := len(args) > 1 ? args[1:] : nil
 	switch verb {
@@ -59,9 +68,6 @@ run :: proc(all_args: []string) -> int {
 		return 0
 	case "list":    return cmd_list(&prefs, rest)
 	case "get":     return cmd_get(&prefs, rest)
-	case "install":   return cmd_install(rest)
-	case "uninstall": return cmd_uninstall(rest)
-	case "status":    return cmd_status(rest)
 	case "prefs":   return cmd_prefs(&prefs)
 	case "set":     return cmd_set(&prefs, rest)
 	case "version", "--version":

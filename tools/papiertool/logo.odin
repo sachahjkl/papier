@@ -13,7 +13,7 @@ import toolbox "gt:toolbox"
 LOGO_DIR    :: "assets"
 LOGO_MASTER :: 1024
 LOGO_SIZES  :: [?]int{16, 32, 64, 128, 256}
-// The icon of papier.exe (res/papier.rc): Explorer, the Start menu's shortcut, Settings > Apps, the window and the
+// The icon of papier.exe (resource 1, which the toolkit's build links): Explorer, the Start menu's shortcut, Settings > Apps, the window and the
 // taskbar (the sizes Windows asks for: toolbox.ICO_SIZES).
 LOGO_ICO    :: "assets/papier.ico"
 // The drawing's own units: a square of LOGO_UNITS, scaled to the canvas.

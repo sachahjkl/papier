@@ -82,9 +82,6 @@ fr Réglages
 en Check for updates
 fr Rechercher des mises à jour
 
-en Setup…
-fr Installation…
-
 en Command palette
 fr Palette de commandes
 
@@ -111,9 +108,6 @@ fr Contenu du code QR copié
 en Papier's keys
 fr Les touches de Papier
 
-en Show the history
-fr Afficher l'historique
-
 en The preferences cannot be written
 fr Les réglages ne peuvent pas être enregistrés
 
@@ -137,8 +131,8 @@ en+ Copied the text of the image (%d lines)
 fr Texte de l'image copié (%d ligne)
 fr+ Texte de l'image copié (%d lignes)
 
-en Papier stopped unexpectedly last time
-fr Papier s'est arrêté de façon inattendue la dernière fois
+en Show the history
+fr Afficher l'historique
 
 en Not a diagram: %s
 fr Pas un diagramme : %s

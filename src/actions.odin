@@ -20,7 +20,7 @@ Action :: enum u8 {
 	Copy, Copy_Plain, Edit, Open, Save_As, Pin, Remove, Show_QR, Copy_Qr_Content, Copy_Image_Text, Toggle_Markdown_Source,
 	Mark_All, Clear_Marks,
 	Filter_All, Filter_Text, Filter_Images, Filter_Files, Filter_Pinned, Filter_Next, Filter_Previous,
-	Clear_History, Settings, Check_Updates, Setup, Palette, Shortcuts, Hide, Restart, Quit,
+	Clear_History, Settings, Check_Updates, Palette, Shortcuts, Hide, Restart, Quit,
 }
 
 ACTIONS := [Action]ui.Command{
@@ -47,7 +47,6 @@ ACTIONS := [Action]ui.Command{
 	.Clear_History   = {label = i18n.later("Clear the history (pinned entries stay)"), group = i18n.later("Papier"), icon = lucide.TRASH_2, tags = {"wipe", "erase", "empty"}},
 	.Settings        = {label = i18n.later("Settings"), group = i18n.later("Papier"), keys = {{.Comma, {.Ctrl}}}, icon = lucide.SETTINGS, tags = {"preferences", "options", "configure"}},
 	.Check_Updates   = {label = i18n.later("Check for updates"), group = i18n.later("Papier"), icon = lucide.REFRESH_CW, tags = {"upgrade", "version", "new"}},
-	.Setup           = {label = i18n.later("Setup…"), group = i18n.later("Papier"), icon = lucide.PACKAGE, tags = {"install", "uninstall", "start menu"}},
 	.Palette         = {label = i18n.later("Command palette"), group = i18n.later("Papier"), keys = {{.K, {.Ctrl}}, {.P, {.Ctrl, .Shift}}}, icon = lucide.COMMAND},
 	.Shortcuts       = {label = i18n.later("Keyboard shortcuts"), group = i18n.later("Papier"), keys = {{.F1, {}}}, icon = lucide.KEYBOARD, tags = {"help", "keys", "hotkeys"}},
 	.Hide            = {label = i18n.later("Hide the window"), group = i18n.later("Papier"), icon = lucide.X, tags = {"close", "dismiss"}},
@@ -107,7 +106,7 @@ action_enabled :: proc(app: ^App, a: Action) -> bool {
 	case .Filter_Pinned: return PINS
 	case .Clear_History: return len(app.list.entries) > 0
 	case .Filter_All, .Filter_Text, .Filter_Images, .Filter_Files, .Filter_Next, .Filter_Previous,
-	     .Settings, .Check_Updates, .Setup, .Palette, .Shortcuts, .Hide, .Restart, .Quit:
+	     .Settings, .Check_Updates, .Palette, .Shortcuts, .Hide, .Restart, .Quit:
 		return true
 	}
 	return false
@@ -160,7 +159,6 @@ action_run :: proc(app: ^App, a: Action) {
 	case .Clear_History: watcher_send(&app.watcher, {verb = .Clear})
 	case .Settings:      settings_toggle(app)
 	case .Check_Updates: update_check_asked(app)
-	case .Setup:         setup_open(app)
 	case .Palette:       ui.palette_open(&app.palette)
 	case .Shortcuts:     app.sheet.open = true
 	case .Hide:          app_hide(app)
@@ -183,7 +181,7 @@ Palette_Table :: struct {
 	commands: []ui.Command,
 	names:    []string,      // the setting each command after the actions names
 	prefs:    u64,           // the preferences' version it was made for (0: not made)
-	language: ^i18n.Language,
+	language: u32,           // i18n.version() it was made in: a change of language makes it again
 	version:  u64,           // bumped at each making (Palette_Options.version)
 }
 
@@ -195,13 +193,13 @@ palette_table_destroy :: proc(t: ^Palette_Table) {
 @(private = "file")
 palette_table_keep :: proc(app: ^App) {
 	t := &app.palette_table
-	if t.prefs == app.prefs.version + 1 && t.language == i18n.current() { return }
+	if t.prefs == app.prefs.version + 1 && t.language == i18n.version() { return }
 	virtual.arena_free_all(&t.arena)
 	a := virtual.arena_allocator(&t.arena)
 	settings, names := prefs_page.palette_commands(&app.prefs, settings_options(app), a)
 	t.commands = slice.concatenate([][]ui.Command{slice.enumerated_array(&ACTIONS), settings}, a)
 	t.names = names
-	t.prefs, t.language = app.prefs.version + 1, i18n.current()
+	t.prefs, t.language = app.prefs.version + 1, i18n.version()
 	t.version += 1
 }
 

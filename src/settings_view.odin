@@ -74,10 +74,11 @@ settings_options :: proc(app: ^App) -> prefs_page.Page_Options {
 		hotkeys = HOTKEY_PREFS[:], problem = settings_problem,
 		page_foot = settings_page_foot,
 		updater = app.updater, restart = proc(user: rawptr) { app_restart((^App)(user), hidden = false) },
-		pages = SETTINGS_PAGES[:], icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.REFRESH_CW,
+		pages = SETTINGS_PAGES[:], icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.ROTATE_CCW,
 		file = app.prefs_path,
 		version = "Papier " + APP_VERSION,
 		themes = app.themes_file.all[:], themes_light = app.theme_shown.light, themes_file = &app.themes_file,
+		install = &app.install, diagnostics = &app.main,
 	}
 }
 

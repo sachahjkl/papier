@@ -1,25 +1,29 @@
 package papier
 
-// Setup: papier installs itself for the user from the copy that was downloaded (gui_toolkit's setup): the program in
-// %LOCALAPPDATA%\Programs\papier, the Start menu, the start with the session, papier on the PATH with papier.com, the
-// Settings > Apps entry (whose Uninstall runs `papier --setup`). A start of a copy that is not installed offers it, once
-// per version unless the user keeps this copy standalone (Windows; on Linux `papier install` integrates the copy where it
-// is, and Nix installs it).
+// Setup: papier installs itself for the user from the copy that was downloaded (gui_toolkit's setup, through
+// prefs_page.Install): the program in %LOCALAPPDATA%\Programs\papier (~/.local/share/papier on Linux), the Start menu, the
+// start with the session, papier on the PATH with papier.com, the Settings > Apps entry (whose Uninstall runs
+// `papier --setup`). A start of a copy that is not installed offers it, once per version unless the user keeps this copy
+// standalone (Windows; on Linux Nix installs papier, or `papier --install`). The settings' Installation page shows the
+// install and acts on it.
 //
-//   papier --setup        the dialog (the running papier shows it)
+//   papier --setup        the install's dialog (the running papier shows it)
+//   papier --install      this copy installed, without a window
+//   papier --uninstall    the install taken away (the history stays)
+//   papier --status       what is installed, and whether papier runs
 
 import desktop "gt:desktop"
 import i18n "gt:i18n"
 import "gt:platform"
+import prefs_page "gt:prefs_page"
 import "gt:render"
 import setup "gt:setup"
-import "core:strings"
 
 // What the setup knows of papier.
-setup_config :: proc() -> setup.Setup_Options {
+setup_options :: proc() -> setup.Setup_Options {
 	return setup.Setup_Options{
 		identity = papier_identity(), version = APP_VERSION, install_folder = APP_NAME, icons = ICON_PNGS[:],
-		choices = SETUP_CHOICES[:],
+		choices = SETUP_CHOICES[:], running = daemon_running,
 		prepare = proc(o: ^desktop.Integration_Options, choices: []bool, user: rawptr) {
 			papier_parts(o)
 			if len(choices) == len(SETUP_CHOICES) { o.autostart, o.add_to_path = choices[0], choices[1] }
@@ -34,55 +38,38 @@ SETUP_CHOICES := [?]setup.Choice{
 	{label = i18n.later("papier in the terminal (on the PATH)"), on = true},
 }
 
-// What the reader found of the install (a Setup_Facts job, asked at the start): the dialog when there is something to do
-// (Windows), unless the user answered for this version or kept this copy standalone.
-setup_offer :: proc(app: ^App, d: ^Job_Done) {
-	app.installed_copy = d.running_it
+// Once the start's reading of the install came (prefs_page.install_offer): whether this is the installed copy, which
+// updates itself (update.auto).
+setup_follow :: proc(app: ^App) {
+	if app.setup_known || !app.install.known { return }
+	app.setup_known = true
+	app.installed_copy = app.install.running_it
 	app_updates_auto(app)
-	if d.setup_wanted { setup_open(app) }
 }
 
+// The install's dialog, the window shown (--setup, Settings > Apps' Uninstall).
 setup_open :: proc(app: ^App) {
-	setup.open(&app.setup, setup_config())
+	prefs_page.install_open(&app.install)
 	app.main.settle = max(app.main.settle, FRAMES_AT_SHOW)
 }
 
-// The dialog, over the page, while it is open; what the user answered is kept (state.odin).
+// The install's machinery each frame (its dialog while open); its logo made at its first show.
 setup_build :: proc(app: ^App, em: f32) {
-	if !app.setup.open { return }
-	if !app.logo_made { setup_logo(app) }
-	logo: Maybe(setup.Logo)
-	if app.logo_made { logo = setup.Logo{app.logo, {f32(LOGO_SIZE), f32(LOGO_SIZE)}} }
-	switch setup.dialog(&app.setup, setup_config(), em, logo) {
-	case .Installed:       setup_choice(app, setup.CHOICE_INSTALLED)
-	case .Kept_Standalone: setup_choice(app, setup.CHOICE_STANDALONE)
-	case .Dismissed:       setup_choice(app, setup.choice_dismissed(APP_VERSION))
-	case .Launched:
-		// (the installed copy starts once this one has let go of the instance: app_run's end)
-		delete(app.launch_after)
-		app.launch_after = strings.clone(app.setup.installed)
-		app.quit = true
-	case .Uninstalled, .None:
-	}
-}
-
-@(private = "file")
-setup_choice :: proc(app: ^App, choice: string) {
-	delete(app.place.setup)
-	app.place.setup = strings.clone(choice)
-	state_write(app)
+	if prefs_page.install_open_now(&app.install) && !app.logo_made { setup_logo(app) }
+	setup_follow(app)
+	if prefs_page.install_frame(&app.install, em) == .Launched { app.quit = true }   // (the installed copy starts at the end: app_run)
 }
 
 // The logo of the dialog, a texture of the window's renderer (made once, freed with the window).
 @(private = "file")
 setup_logo :: proc(app: ^App) {
+	app.logo_made = true
 	img, ok := platform.clipboard_image_decode("image/png", LOGO_PNG_LARGE, context.temp_allocator)
 	if !ok { return }
 	app.logo = render.create_texture_rgba(&app.shared.r, img.size.x, img.size.y)
 	render.update_texture_rgba(&app.shared.r, app.logo, 0, 0, img.size.x, img.size.y, img.rgba)
-	app.logo_made = true
+	app.install.logo = setup.Logo{app.logo, {f32(LOGO_SIZE), f32(LOGO_SIZE)}}
 }
 
 LOGO_SIZE :: 128
 LOGO_PNG_LARGE :: #load("../assets/logo_128.png")
-

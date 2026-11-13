@@ -52,7 +52,7 @@ Vulkan and fontconfig. GNOME has no data-control: papier cannot watch the clipbo
 
 ```sh
 tar -xzf papier-*-linux-x64.tar.gz
-./papier-*-linux-x64/papier install     # a launcher, ~/.local/bin/papier, the start with the session
+./papier-*-linux-x64/papier --install   # the program, a launcher, ~/.local/bin/papier, the start with the session
 ```
 
 **Nix**:

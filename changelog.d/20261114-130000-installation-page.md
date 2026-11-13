@@ -1,3 +1,0 @@
-type: Changed
-
-**The install is in the settings: an Installation page.** It says where the installed copy is, its version, whether this copy is the installed one, the menu entry, Settings > Apps, the start with the session and the PATH, with Install, Repair, Upgrade and Uninstall. The command line is `--install`, `--uninstall`, `--status` and `--setup`, the same as in the other programs: `papier install`, `uninstall` and `status` are gone (`--status` says the same, and whether papier runs) (`--install` installs the copy in its own folder; it no longer integrates a copy where it is), and so is the Setup… command. The palette finds the page ("install").

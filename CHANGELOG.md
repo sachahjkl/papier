@@ -3,6 +3,11 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.20.1] - 2026-11-13
+
+### Fixed
+- **The Windows download is there again**: 0.20.0 had no Windows archive (its build stopped on a check that read the files with Windows line endings). This version has it.
+
 ## [0.20.0] - 2026-11-13
 
 ### Added
@@ -381,6 +386,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.20.1]: https://github.com/sachahjkl/papier/releases/tag/v0.20.1
 [0.20.0]: https://github.com/sachahjkl/papier/releases/tag/v0.20.0
 [0.19.2]: https://github.com/sachahjkl/papier/releases/tag/v0.19.2
 [0.19.1]: https://github.com/sachahjkl/papier/releases/tag/v0.19.1

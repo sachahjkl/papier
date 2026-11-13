@@ -166,6 +166,8 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	h.after_input = FRAMES_AFTER_INPUT
 	h.params = app_params
 	h.input = app_input
+	// (a close, the compositor's or the title bar's, hides the window: papier lives in the tray)
+	h.close_asked = proc(h: ^host.Host) { app_hide((^App)(h.user)) }
 	app.devtools = devtools.start_from_env(win, "papier")
 	h.before_input = proc(h: ^host.Host) { app := (^App)(h.user); devtools.service(app.devtools, &h.state, &app.shared.r) }
 	if app.place.placed {
@@ -328,17 +330,12 @@ app_params :: proc(h: ^host.Host, bp: ^ui.Build_Params) {
 	bp.base = ui.Style{pref = {.X = ui.text_size(), .Y = ui.px(28)}, font = app.shared.font, font_size = app.settings.look.font_size, text_pad = 6, cursor = .Arrow}
 }
 
-// The window's input before the interface: a close (the compositor's, the title bar's) hides the window.
+// The window's input before the interface: the hotkey shows or hides the window.
 @(private = "file")
 app_input :: proc(h: ^host.Host, events: []platform.Event) -> []platform.Event {
 	app := (^App)(h.user)
 	out := make([dynamic]platform.Event, 0, len(events), context.temp_allocator)
 	for e in events {
-		if e.kind == .Close {
-			platform.cancel_close(h.win)
-			app_hide(app)
-			continue
-		}
 		if e.kind == .Hotkey { app_toggle(app); continue }
 		append(&out, e)
 	}

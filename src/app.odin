@@ -451,7 +451,7 @@ app_shortcut :: proc(app: ^App) {
 		case !ok:
 			app.shortcut_problem = fmt.aprintf(i18n.tr("%q is not a shortcut: click the field and press the keys."), app.settings.shortcut)
 		case !platform.hotkey_register(win, HOTKEY_ID, hk):
-			app.shortcut_problem = fmt.aprintf(i18n.tr("%s cannot be used: Windows or another program holds it, or this keyboard has no such key. Choose other keys."), platform.hotkey_text(hk))
+			app.shortcut_problem = fmt.aprintf(i18n.tr("%s cannot be used: Windows or another program holds it, or this keyboard has no such key. Choose other keys."), platform.key_text(hk))
 		case:
 			app.hotkey_held = true
 		}

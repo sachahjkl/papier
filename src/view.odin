@@ -46,9 +46,6 @@ VIEW_MIN_PX   :: 200
 // The heights of the bars and the rows, in ems.
 FIELD_EM  :: 1.95   // the search and the filters
 HALO_ROOM_PX :: 2   // logical pixels past the halo's reach before the bar's rule
-FILTER_EM :: 23   // the filter's segmented control, at least
-FILTER_LABEL_PAD_EM :: 1.6   // a segment's room beside its label (its key's margins and the label's own padding)
-FILTER_TRACK_PAD_EM :: 0.5   // the track's padding around its segments
 // The title bar's parts other than the search and the filter (its icon, the grip, two buttons, the spaces), and the
 // least the search keeps: under that, the filter goes to a row of its own.
 TITLE_FIXED_EM :: 9.8
@@ -295,11 +292,6 @@ glyph :: proc(app: ^App, g: string, width: f32, fg: Maybe(ui.Color) = nil) {
 	ui.build_box({.Draw_Text, .No_Text_Trunc}, fmt.tprintf("%s###g%d", g, ui.parent_box().child_count))
 }
 
-// A tooltip's text: what a button does and its key, the key named as the keyboards of the language print it.
-key_tip :: proc(label: string, key: ui.Chord) -> string {
-	return fmt.tprintf("%s (%s)", label, ui.chord_text(key))
-}
-
 // A small button with a Lucide icon; its tooltip says what it does.
 icon_action :: proc(app: ^App, id, g, tip: string, em: f32) -> bool {
 	ui.next({width = ui.px(em * 2.1), height = ui.px(em * 2.1), radius = em * 0.4})
@@ -318,10 +310,10 @@ build_title :: proc(app: ^App, em: f32) {
 			// the page has its own search: the title says where one is, its empty part moves the window
 			ui.next({width = ui.fill(), height = ui.pct(1)})
 			ui.label("papier###apptitle")
-			if icon_action(app, "back", lucide.ARROW_LEFT, key_tip(i18n.tr("Back to the history"), {.Escape, {}}), em) { app.settings_open = false }
+			if icon_action(app, "back", lucide.ARROW_LEFT, ui.key_tip(i18n.tr("Back to the history"), {.Escape, {}}), em) { app.settings_open = false }
 			ui.spacer(ui.px(em * 0.3))
 			// (the system's title bar has its own close button)
-			if !app.settings.system_title && icon_action(app, "close", lucide.X, key_tip(i18n.tr("Hide"), {.Escape, {}}), em) { app_hide(app) }
+			if !app.settings.system_title && icon_action(app, "close", lucide.X, ui.key_tip(i18n.tr("Hide"), {.Escape, {}}), em) { app_hide(app) }
 			ui.spacer(ui.px(em * 0.4))
 			return
 		}
@@ -348,38 +340,37 @@ build_title :: proc(app: ^App, em: f32) {
 		ui.next({width = ui.px(em * GRIP_EM), height = ui.pct(1)})
 		ui.custom("###grip", grip_draw, d)
 		if !filter_alone(app, em) {
-			ui.next({width = ui.px(filter_width(em)), height = ui.px(ui.dense(em * FIELD_EM))})
+			ui.next({height = ui.px(ui.dense(em * FIELD_EM))})   // (as wide as its labels: ui.segmented's own width)
 			build_filter(app)
 		}
 		ui.spacer(ui.px(em * 0.3))
-		if icon_action(app, "settings", lucide.SETTINGS, key_tip(i18n.tr("Settings"), {.Comma, {.Ctrl}}), em) { settings_toggle(app) }
+		if icon_action(app, "settings", lucide.SETTINGS, ui.key_tip(i18n.tr("Settings"), {.Comma, {.Ctrl}}), em) { settings_toggle(app) }
 		// (the system's title bar has its own close button)
-		if !app.settings.system_title && icon_action(app, "close", lucide.X, key_tip(i18n.tr("Hide"), {.Escape, {}}), em) { app_hide(app) }
+		if !app.settings.system_title && icon_action(app, "close", lucide.X, ui.key_tip(i18n.tr("Hide"), {.Escape, {}}), em) { app_hide(app) }
 		ui.spacer(ui.px(em * 0.4))
 	}
 }
 
-// The filter's segments are as wide as each other: each one gets the widest label's width, so that a language with a
-// long word ("Épinglés") widens the control instead of cutting the word.
+// The filter's labels in the language in use (the first FILTER_COUNT are shown).
 @(private = "file")
-filter_width :: proc(em: f32) -> f32 {
-	widest: f32
-	for l in filter_labels[:FILTER_COUNT] { widest = max(widest, ui.text_width(ui.top_style().font, em, i18n.tr(l))) }
-	return max(em * FILTER_EM, f32(FILTER_COUNT) * (widest + em * FILTER_LABEL_PAD_EM) + em * FILTER_TRACK_PAD_EM)
+filter_texts :: proc() -> (labels: [len(Filter)]string) {
+	for l, i in filter_labels { labels[i] = i18n.tr(l) }
+	return
 }
 
 // Whether the filter leaves the title bar for a row of its own: in a narrow window, beside it the search would keep
-// too little room to show what is typed in it.
+// too little room to show what is typed in it. (The filter is as wide as its labels: ui.segmented_width, so a long
+// word such as "Épinglés" widens it instead of being cut.)
 @(private = "file")
 filter_alone :: proc(app: ^App, em: f32) -> bool {
-	return app.room * ui.scale() < em * (TITLE_FIXED_EM + SEARCH_MIN_EM) + filter_width(em)
+	labels := filter_texts()
+	return app.room * ui.scale() < em * (TITLE_FIXED_EM + SEARCH_MIN_EM) + ui.segmented_width(labels[:FILTER_COUNT])
 }
 
 @(private = "file")
 build_filter :: proc(app: ^App) {
 	sel := int(app.filter)
-	labels: [len(Filter)]string
-	for l, i in filter_labels { labels[i] = i18n.tr(l) }
+	labels := filter_texts()
 	if ui.segmented("###filter", labels[:FILTER_COUNT], &sel) { set_filter(app, Filter(sel)) }
 }
 

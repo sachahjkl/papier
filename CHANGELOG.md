@@ -3,6 +3,28 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.20.0] - 2026-11-13
+
+### Added
+- **A menu in the edit view**: a right click in the text offers Undo, Redo, Cut, Copy, Paste, Delete and Select all, with their keys. Each menu is now as wide as its longest line.
+- **A log and crash reports**: papier writes its errors to `papier.log` in the `logs` folder of its state folder (`~/.local/state/papier`, `%LOCALAPPDATA%\papier\state`). A crash writes a report in its `crashes` folder. At the next start, papier says that it stopped and where the report is. Nothing is sent anywhere.
+- **Messages in the system's notifications**: what papier did (copied, saved, removed) is said by a notification of the system, or in the window where the system shows none. Settings > General > Messages chooses the system, the window, or nowhere. A failure is always said.
+- **Diagrams and tables in Markdown entries**: the preview draws a ```mermaid block of a Markdown entry as its diagram, in the theme's colours. A block that is not a valid diagram shows its text, with the reason. A text that is only a table (a header row with its `|---|---|` separator under it) is shown as a table, not as raw text.
+- **A licence to support papier**: Settings > General > Licence registers a licence key, pasted or read from its file, and says whom it is registered to. The key is checked on your computer, with no network. Papier stays free and does the same without a licence.
+- **Export and import of the settings**: the settings' sidebar exports them to JSON, TOML, INI or papier's own format, and imports papier's own format back, to carry them to another computer.
+- **Themes of your own**: Settings > Appearance links to a themes file. The first click makes it with a commented guide and opens it in your editor. Each theme that you write there shows with the others as soon as the file is saved.
+- **Papier in French**: the window, the menus, the command palette, the messages, the settings, the setup dialog and the dates speak French. Settings > General > Language chooses System, English or Français; System follows the language of the system. The choice takes effect at the next start.
+
+### Changed
+- **Windows: the window's size is kept in the state folder** (`%LOCALAPPDATA%\papier\state\window`), beside the log, and no longer beside the preferences. Papier forgets the size of its window once.
+- **The QR code dialog in the middle of the window**: Show as a QR code (Ctrl+Shift+Q) opens its dialog in the middle of the window, not near its top.
+- **A faster command palette and keyboard shortcuts sheet**: the palette (Ctrl+K) sorts its actions and settings again only when you type or a setting changes, and the sheet of the keys (F1) builds only the lines in view.
+- **Ages in one short unit**: the list, the preview and `papier list` say "now", "4m", "2h", "5d" or "1w".
+- **A new settings page**: more settings, each on its page: zoom, density, rounding, animations, fonts and text rendering, scrolling, key and button repeats, tooltip and menu delays, rendering, where messages show, a place in the application menu and a start with the session. The technical ones are under a folded Advanced part of their page. The sidebar is resized with the mouse, and its foot opens the settings file. The settings have new names: the look is `appearance.theme`, `appearance.mode`, `appearance.finish`, `appearance.glow` (a level from 0 to 1) and `appearance.font_size`; the window's are `window.system_title`, `window.close_on_copy`, `window.width`, `window.height`, `window.shortcut` and `window.follow`. The `picker.*` names are gone: set again what you had changed.
+
+### Fixed
+- **Save as no longer freezes the window**: the system's file dialog no longer blocks the window. Papier saves the entry once you choose a name.
+
 ## [0.19.2] - 2026-11-13
 
 ### Fixed
@@ -359,6 +381,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.20.0]: https://github.com/sachahjkl/papier/releases/tag/v0.20.0
 [0.19.2]: https://github.com/sachahjkl/papier/releases/tag/v0.19.2
 [0.19.1]: https://github.com/sachahjkl/papier/releases/tag/v0.19.1
 [0.19.0]: https://github.com/sachahjkl/papier/releases/tag/v0.19.0

@@ -1,8 +1,9 @@
 package papier
 
-// Images are decoded on a thread of their own: a 4K screenshot takes about 180 ms to decode, and the selection must move
-// at once. The window asks for one picture at a time and the newest ask wins: a selection that passes over ten images
-// decodes the last one only. When a picture is ready, the decoder wakes the window, which makes its texture.
+// Images are decoded by a job on a pool of one thread of their own (gt:tasks): a 4K screenshot takes about 180 ms to
+// decode, and the selection must move at once. The window asks for one picture at a time and the newest ask wins: a
+// selection that passes over ten images decodes the last one only. When a picture is ready, the decoder wakes the
+// window, which makes its texture.
 //
 // The list's thumbnails come after it: the window says at each build which rows in view still want one, in place of what
 // it said before (a list scrolled fast decodes only what stays in view), and each is shrunk here to THUMB_PX.
@@ -12,18 +13,19 @@ package papier
 import "base:runtime"
 import "core:strings"
 import "core:sync"
-import "core:thread"
 import "core:unicode/utf8"
 import paint "gt:paint"
 import "gt:platform"
 import "gt:qr"
+import tasks "gt:tasks"
 import "history"
 
 Decoder :: struct {
-	thread:  ^thread.Thread,
+	pool:    tasks.Pool,         // one thread: a decode never waits behind the reader or the slow worker
+	job:     tasks.Job,          // decoder_work: asked at each ask, merged while it runs
+	up:      bool,
 	window:  ^platform.Window,   // woken when a picture is ready (platform.wake is thread-safe)
 	mutex:   sync.Mutex,
-	cond:    sync.Cond,
 	stop:    bool,
 	ask:     Decode_Ask,         // the newest ask, while `asked`
 	asked:   bool,
@@ -72,18 +74,23 @@ decoder_start :: proc(d: ^Decoder, window: ^platform.Window) {
 	d.window = window
 	d.thumbs_wanted = make([dynamic]Thumb_Ask, runtime.heap_allocator())
 	d.thumbs_done = make([dynamic]Thumb, runtime.heap_allocator())
-	d.thread = thread.create_and_start_with_data(d, decoder_run, context)
+	d.job = {work = decoder_work, data = d}
+	tasks.start(&d.pool, {threads = 1})
+	d.up = true
 }
 
+// What was asked is decoded, and what is asked meanwhile in one more run.
+@(private = "file")
+decoder_poke :: proc(d: ^Decoder) { tasks.ask(&d.pool, &d.job) }
+
 decoder_stop :: proc(d: ^Decoder) {
-	if d.thread == nil { return }
+	if !d.up { return }
 	sync.mutex_lock(&d.mutex)
 	d.stop = true
-	sync.cond_signal(&d.cond)
 	sync.mutex_unlock(&d.mutex)
-	thread.join(d.thread)
-	thread.destroy(d.thread)
-	d.thread = nil
+	// (a run under way ends at its next look at `stop`; one waiting is dropped)
+	tasks.stop(&d.pool, proc(_: rawptr) {})
+	d.up = false
 	heap := runtime.heap_allocator()
 	if d.asked { delete(d.ask.dir, heap); delete(d.ask.mime, heap) }
 	if d.ready { decoded_free(&d.done) }
@@ -114,7 +121,7 @@ decoder_want_thumbs :: proc(d: ^Decoder, asks: []Thumb_Ask) {
 		for t in d.thumbs_done { if t.hash == a.hash { continue next } }
 		append(&d.thumbs_wanted, Thumb_Ask{a.hash, strings.clone(a.dir, heap), strings.clone(a.mime, heap)})
 	}
-	if len(d.thumbs_wanted) > 0 { sync.cond_signal(&d.cond) }
+	if len(d.thumbs_wanted) > 0 { decoder_poke(d) }
 }
 
 // The thumbnails made since the last take (temp slice; the caller owns each: thumb_free).
@@ -166,7 +173,7 @@ decoder_ask :: proc(d: ^Decoder, id: u64, dir: string, hash: u64, mime: string) 
 	if d.asked { delete(d.ask.dir, heap); delete(d.ask.mime, heap) }
 	d.ask = {id, strings.clone(dir, heap), hash, strings.clone(mime, heap)}
 	d.asked = true
-	sync.cond_signal(&d.cond)
+	decoder_poke(d)
 }
 
 // The newest picture decoded, if one is ready. The caller owns it.
@@ -227,14 +234,14 @@ gray_qr :: proc(gray: []u8, size: [2]int) -> string {
 	return strings.clone(string(d.data))
 }
 
+// A run: the preview's picture and the thumbnails asked, one at a time, until none waits.
 @(private = "file")
-decoder_run :: proc(data: rawptr) {
+decoder_work :: proc(data: rawptr) {
 	d := (^Decoder)(data)
 	context.allocator = runtime.heap_allocator()
 	for {
 		sync.mutex_lock(&d.mutex)
-		for !d.asked && len(d.thumbs_wanted) == 0 && !d.stop { sync.cond_wait(&d.cond, &d.mutex) }
-		if d.stop { sync.mutex_unlock(&d.mutex); return }
+		if d.stop || (!d.asked && len(d.thumbs_wanted) == 0) { sync.mutex_unlock(&d.mutex); return }
 		// (the preview first: the one picture the user looks at)
 		if !d.asked {
 			ask := d.thumbs_wanted[0]

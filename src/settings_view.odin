@@ -2,7 +2,7 @@ package papier
 
 // The settings: gui_toolkit's page of the preferences (gt:prefs_page), in place of the history. The gear of the title
 // bar or Ctrl+, opens it; the arrow, Escape or Ctrl+, again goes back. Each change is applied at once (the window reads
-// its settings again) and saved to the preferences file by the reader; then the watcher reads the file again (a Reload).
+// its settings again), handed to the watcher, and saved to the preferences file by config's writer.
 
 import config "gt:config"
 import prefs_page "gt:prefs_page"
@@ -22,15 +22,31 @@ settings_keys :: proc(app: ^App) {
 	if ui.key_press(.Escape) && !prefs_page.editing(&app.settings_page) { app.settings_open = false }
 }
 
-// The pages: the categories of the preferences (settings.odin), their order and their icons.
-@(private = "file", rodata)
-SETTINGS_PAGES := [?]prefs_page.Page_Info{
-	{category = "appearance", title = "Appearance", icon = lucide.PALETTE},
-	{category = "window",     title = "Window",     icon = lucide.APP_WINDOW},
-	{category = "paste",      title = "Paste",      icon = lucide.CLIPBOARD},
-	{category = "history",    title = "History",    icon = lucide.HISTORY},
-	{category = "capture",    title = "Capture",    icon = lucide.CLIPBOARD},
-	{category = "updates",    title = "Updates",    icon = lucide.DOWNLOAD},
+// The pages, their order and their icons. A preference's group is now the first segment of its name (picker.theme is in
+// "picker"), which mixes the look and the window: each page lists its preferences by name, so the pages stay papier's.
+// A name not registered on this system (picker.shortcut on Linux) is left out by the page.
+@(private = "file", rodata) APPEARANCE_NAMES := [?]string{"picker.theme", "picker.mode", "picker.finish", "picker.glow", "picker.font_size"}
+@(private = "file", rodata) WINDOW_NAMES := [?]string{"picker.close_on_copy", "picker.system_title", "picker.width", "picker.height", "picker.shortcut", "picker.follow", prefs_page.MESSAGES_PREF}
+@(private = "file", rodata) PASTE_NAMES := [?]string{"paste.on_select", "paste.keys"}
+@(private = "file", rodata) HISTORY_NAMES := [?]string{"history.max_entries", "history.max_age_days", "history.persist"}
+@(private = "file", rodata) CAPTURE_NAMES := [?]string{"capture.text", "capture.html", "capture.image", "capture.files", "capture.primary", "capture.size_limit", "capture.ignore_secrets", "capture.ignore_mimes", "clipboard.keep"}
+@(private = "file", rodata) UPDATE_NAMES := [?]string{"update.auto"}
+
+// (made at the first call: a page holds slices of the name lists above)
+@(private = "file")
+settings_pages :: proc() -> []prefs_page.Page_Info {
+	@(static) pages: [6]prefs_page.Page_Info
+	if pages[0].category == "" {
+		pages = {
+			{category = "appearance", title = "Appearance", icon = lucide.PALETTE,    names = APPEARANCE_NAMES[:]},
+			{category = "window",     title = "Window",     icon = lucide.APP_WINDOW, names = WINDOW_NAMES[:]},
+			{category = "paste",      title = "Paste",      icon = lucide.CLIPBOARD,  names = PASTE_NAMES[:]},
+			{category = "history",    title = "History",    icon = lucide.HISTORY,    names = HISTORY_NAMES[:]},
+			{category = "capture",    title = "Capture",    icon = lucide.CLIPBOARD,  names = CAPTURE_NAMES[:]},
+			{category = "updates",    title = "Updates",    icon = lucide.DOWNLOAD,   names = UPDATE_NAMES[:]},
+		}
+	}
+	return pages[:]
 }
 
 @(private = "file", rodata)
@@ -63,7 +79,7 @@ settings_options :: proc(app: ^App) -> prefs_page.Options {
 		custom_names = CUSTOM[:], custom = settings_custom,
 		hotkeys = HOTKEY_PREFS[:], problem = settings_problem,
 		updater = app.updater, update_pref = "update.auto", restart = proc(user: rawptr) { app_restart((^App)(user), hidden = false) },
-		pages = SETTINGS_PAGES[:], icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.REFRESH_CW,
+		pages = settings_pages(), icon_font = app.icons, search_icon = lucide.SEARCH, reset_icon = lucide.REFRESH_CW,
 		foot = app.prefs_shown,
 		version = "Papier " + APP_VERSION,
 	}
@@ -85,14 +101,15 @@ settings_custom :: proc(user: rawptr, name: string, em: f32) {
 	}
 }
 
-// A preference was set or reset: applied by the window at once, and saved by the reader; once the file is written, the
-// watcher reads it again (app_job_done).
+// A preference was set or reset: applied by the window at once, handed to the watcher, and saved by the preferences'
+// writer at the next turn of the loop (app_run), off this thread.
 @(private = "file")
 settings_changed :: proc(user: rawptr, name: string) {
 	app := (^App)(user)
-	reader_job(&app.reader, {kind = .Write_Prefs, path = prefs_file(), text = config.serialize_user(&app.prefs, context.temp_allocator)})
 	settings_free(&app.settings)
 	app.settings = prefs_read(&app.prefs)
+	watcher_settings(&app.watcher, &app.prefs)
+	app.announcer.mode = app.settings.messages
 	app_updates_auto(app)
 	app_title_follow(app)
 }

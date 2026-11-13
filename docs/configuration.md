@@ -47,6 +47,7 @@ On Windows, the system keeps the history (Settings > System > Clipboard): the `h
 | `picker.font_size` | number, 8 to 40 | 14 | The size of the text, in logical pixels. |
 | `picker.follow` | pointer, focus | pointer | Windows: the screen the window shows on. `pointer`: the one under the mouse pointer. `focus`: the one of the window in front. |
 | `update.auto` | boolean | true | The installed papier checks for a newer one once a day and installs it, then gives way to it when its window is hidden. Settings > Updates says the state and checks now (also for a copy that is not installed). A copy installed by a package manager (Nix) is updated by it. |
+| `general.messages` | system, window, off | system | Where papier says what it did (copied, saved, removed). `system`: the system's notifications, or papier's window where the system has none. `window`: only in papier's window. `off`: nowhere; a failure is always said. |
 | `picker.shortcut` | text | Ctrl+Shift+ù | Windows: the keys that show the history from any program. In the settings, click the field and press the keys. As text: Ctrl, Shift, Alt, Win and a key (a letter, a digit, F1 to F12, Space…, or the character a key types: ù), joined by `+`. Win+V stays the system's. |
 
 After the first start, papier keeps the size that you give the window; `picker.width` and `picker.height` apply again

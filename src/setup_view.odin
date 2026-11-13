@@ -33,13 +33,12 @@ SETUP_CHOICES := [?]setup.Choice{
 	{label = "papier in the terminal (on the PATH)", on = true},
 }
 
-// At a start with the window: the dialog when there is something to do (Windows), unless the user answered for this
-// version or kept this copy standalone.
-setup_offer :: proc(app: ^App) {
-	when ODIN_OS == .Windows {
-		cfg := setup_config()
-		if setup.wanted(setup.facts(cfg), APP_VERSION, app.place.setup) { setup_open(app) }
-	}
+// What the reader found of the install (a Setup_Facts job, asked at the start): the dialog when there is something to do
+// (Windows), unless the user answered for this version or kept this copy standalone.
+setup_offer :: proc(app: ^App, d: ^Job_Done) {
+	app.installed_copy = d.running_it
+	app_updates_auto(app)
+	if d.setup_wanted { setup_open(app) }
 }
 
 setup_open :: proc(app: ^App) {

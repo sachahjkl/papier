@@ -11,6 +11,7 @@ import "core:strings"
 import config "gt:config"
 import instance "gt:instance"
 import "gt:platform"
+import timefmt "gt:timefmt"
 import "history"
 
 APP_VERSION :: "0.19.2"
@@ -119,7 +120,7 @@ cmd_list :: proc(prefs: ^config.Prefs, args: []string) -> int {
 	defer history.close(&s)
 	now := now_ms()
 	for e in s.entries[:min(count, len(s.entries))] {
-		outf("%d\t%s%s\t%s\t%s", e.id, history.KIND_NAMES[e.kind], e.pinned ? "*" : "", age_text(now - e.time_ms), one_line(e.preview, 100))
+		outf("%d\t%s%s\t%s\t%s", e.id, history.KIND_NAMES[e.kind], e.pinned ? "*" : "", timefmt.age(f64(now - e.time_ms)), one_line(e.preview, 100))
 	}
 	return 0
 }
@@ -169,17 +170,6 @@ cmd_set :: proc(prefs: ^config.Prefs, args: []string) -> int {
 	if !config.save_user(prefs, path) { errf("papier: %s cannot be written", path); return 1 }
 	command_send({verb = .Reload})
 	return 0
-}
-
-// "12 s", "5 min", "3 h", "2 d".
-age_text :: proc(ms: i64, allocator := context.temp_allocator) -> string {
-	s := max(ms, 0) / 1000
-	switch {
-	case s < 60:        return fmt.aprintf("%d s", s, allocator = allocator)
-	case s < 3600:      return fmt.aprintf("%d min", s / 60, allocator = allocator)
-	case s < 86400:     return fmt.aprintf("%d h", s / 3600, allocator = allocator)
-	}
-	return fmt.aprintf("%d d", s / 86400, allocator = allocator)
 }
 
 // The text on one line: blanks run together, cut after `max_runes` characters with an ellipsis.

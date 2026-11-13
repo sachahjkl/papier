@@ -7,7 +7,6 @@ package papiertool
 // assets/logo.png (1024 px), the sizes the program and the site embed, papier.ico and .project/image.png: the toolkit's
 // toolbox.write_logo writes them from logo_render.
 
-import "core:fmt"
 import paint "gt:paint"
 import toolbox "gt:toolbox"
 
@@ -142,12 +141,11 @@ logo_render :: proc(size: int) -> paint.Canvas {
 	return c
 }
 
-run_logo :: proc(args: []string) -> int {
-	sizes := LOGO_SIZES
-	why := toolbox.write_logo({
+// The files of the logo (the `logo` command): assets/logo*.png, papier.ico and .project/image.png.
+logo :: proc() -> toolbox.Logo {
+	@(static) sizes := LOGO_SIZES
+	return {
 		render = proc(size: int, _: rawptr) -> paint.Canvas { return logo_render(size) },
 		dir = LOGO_DIR, master = LOGO_MASTER, sizes = sizes[:], ico = LOGO_ICO, project_image = true,
-	})
-	if why != "" { fmt.eprintfln("papiertool: %s", why); return 1 }
-	return 0
+	}
 }

@@ -1,8 +1,8 @@
 package papier
 
-// The slow worker: what takes seconds, on a thread of its own, so that it never waits behind the preview's decoder or
-// the reader, nor makes them wait. It reads the text of an image (OCR: a second or more) and makes the system's
-// thumbnails of copied files (a thumbnailer may run 30 seconds).
+// The slow worker: what takes seconds, a job on a pool of one thread of its own (gt:tasks), so that it never waits
+// behind the preview's decoder or the reader, nor makes them wait. It reads the text of an image (OCR: a second or more)
+// and makes the system's thumbnails of copied files (a thumbnailer may run 30 seconds).
 //
 // At its start it asks whether the system can read text (ocr.available loads a library): the window offers the action
 // once it says so. An OCR ask goes first; the newest one replaces one not yet started. The thumbnails of files are asked
@@ -11,17 +11,19 @@ package papier
 import "base:runtime"
 import "core:strings"
 import "core:sync"
-import "core:thread"
 import desktop "gt:desktop"
 import ocr "gt:ocr"
 import "gt:platform"
+import tasks "gt:tasks"
 import "history"
 
 Slow :: struct {
-	thread:  ^thread.Thread,
+	pool:    tasks.Pool,         // one thread: a thumbnailer that hangs holds nothing else
+	job:     tasks.Job,          // slow_work: asked at each ask, merged while it runs
+	up:      bool,
+	started: bool,               // the job asked the system whether it reads text
 	window:  ^platform.Window,   // woken when a result is ready (nil: a test reads it itself)
 	mutex:   sync.Mutex,
-	cond:    sync.Cond,
 	stop:    bool,
 	ocr_known:     bool,         // atomic: the worker asked the system whether it can read text
 	ocr_available: bool,         // atomic: and it can
@@ -63,19 +65,25 @@ slow_start :: proc(s: ^Slow, window: ^platform.Window) {
 	s.window = window
 	s.files_wanted = make([dynamic]File_Thumb_Ask, heap)
 	s.files_done = make([dynamic]Thumb, heap)
-	s.thread = thread.create_and_start_with_data(s, slow_run, context)
+	s.job = {work = slow_work, data = s}
+	tasks.start(&s.pool, {threads = 1})
+	s.up = true
+	slow_poke(s)   // (the first run asks whether the system reads text)
 }
+
+// What was asked is done, and what is asked meanwhile in one more run.
+@(private = "file")
+slow_poke :: proc(s: ^Slow) { tasks.ask(&s.pool, &s.job) }
 
 // Stops the worker. (A thumbnailer or a reading under way ends first: neither can be cut short.)
 slow_stop :: proc(s: ^Slow) {
-	if s.thread == nil { return }
+	if !s.up { return }
 	sync.mutex_lock(&s.mutex)
 	s.stop = true
-	sync.cond_signal(&s.cond)
 	sync.mutex_unlock(&s.mutex)
-	thread.join(s.thread)
-	thread.destroy(s.thread)
-	s.thread = nil
+	// (a run under way ends at its next look at `stop`; one waiting is dropped)
+	tasks.stop(&s.pool, proc(_: rawptr) {})
+	s.up = false
 	if s.ocr_asked { ocr_ask_free(&s.ocr_ask) }
 	if s.ocr_ready { ocr_done_free(&s.ocr_done) }
 	s.ocr_asked, s.ocr_ready = false, false
@@ -98,7 +106,7 @@ slow_ocr :: proc(s: ^Slow, id: u64, dir: string, hash: u64, mime: string) {
 	if s.ocr_asked { ocr_ask_free(&s.ocr_ask) }
 	s.ocr_ask = {id, strings.clone(dir, heap), hash, strings.clone(mime, heap)}
 	s.ocr_asked = true
-	sync.cond_signal(&s.cond)
+	slow_poke(s)
 }
 
 // The text read, if a reading ended. The caller owns it.
@@ -121,7 +129,7 @@ slow_want_file_thumbs :: proc(s: ^Slow, asks: []File_Thumb_Ask) {
 		for t in s.files_done { if t.hash == a.key { continue next } }
 		append(&s.files_wanted, File_Thumb_Ask{a.key, strings.clone(a.path, heap)})
 	}
-	if len(s.files_wanted) > 0 { sync.cond_signal(&s.cond) }
+	if len(s.files_wanted) > 0 { slow_poke(s) }
 }
 
 // The thumbnails made since the last take (temp slice; the caller owns each: thumb_free).
@@ -148,20 +156,24 @@ file_asks_clear :: proc(s: ^Slow) {
 	clear(&s.files_wanted)
 }
 
+// A run: at the first, whether the system reads text; then the reading and the thumbnails asked, one at a time, until
+// none waits.
 @(private = "file")
-slow_run :: proc(data: rawptr) {
+slow_work :: proc(data: rawptr) {
 	s := (^Slow)(data)
 	context.allocator = runtime.heap_allocator()
-	// (it may load libtesseract: never on the window's thread)
-	_, available := ocr.available()
-	sync.atomic_store(&s.ocr_available, available)
-	sync.atomic_store(&s.ocr_known, true)
-	if s.window != nil { platform.wake(s.window) }
+	if !s.started {
+		s.started = true
+		// (it may load libtesseract: never on the window's thread)
+		_, available := ocr.available()
+		sync.atomic_store(&s.ocr_available, available)
+		sync.atomic_store(&s.ocr_known, true)
+		if s.window != nil { platform.wake(s.window) }
+	}
 
 	for {
 		sync.mutex_lock(&s.mutex)
-		for !s.ocr_asked && len(s.files_wanted) == 0 && !s.stop { sync.cond_wait(&s.cond, &s.mutex) }
-		if s.stop { sync.mutex_unlock(&s.mutex); return }
+		if s.stop || (!s.ocr_asked && len(s.files_wanted) == 0) { sync.mutex_unlock(&s.mutex); return }
 		// (the text the user asked for first: a thumbnail is only a row's mark)
 		if s.ocr_asked {
 			ask := s.ocr_ask

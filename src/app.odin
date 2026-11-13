@@ -8,12 +8,15 @@ package papier
 // frame (a hidden window's frame would wait for a screen it is not on).
 
 import "core:fmt"
+import "core:log"
 import "core:time"
 import config "gt:config"
+import crash "gt:crash"
 import "gt:devtools"
 import "gt:font"
 import "gt:host"
 import instance "gt:instance"
+import tk_log "gt:log"
 import ocr "gt:ocr"
 import "gt:platform"
 import prefs_page "gt:prefs_page"
@@ -44,7 +47,11 @@ App :: struct {
 	icons:      font.Font_Id,   // Lucide (icons.odin)
 	mono:       font.Font_Id,   // what a text entry is shown in
 	prefs:      config.Prefs,
+	prefs_writer: config.User_Writer,   // the preferences file, written off the window's thread when they change
 	settings:   Settings,
+	announcer:  ui.Announcer,           // where "Copied", "Saved"... are said (general.messages)
+	crash_report: string,               // the report of the last session's crash, said at the first build (owned; "": none)
+	save_id:    u64,                    // the entry a Save as dialog is open for (entry_save_as)
 	watcher:    Watcher,
 	decoder:    Decoder,            // the pictures of the preview (decoder.odin)
 	slow:       Slow,               // the text of an image, the thumbnails of files (slow.odin)
@@ -108,11 +115,25 @@ App :: struct {
 }
 
 app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup_asked := false) -> int {
+	// (the running papier's errors go to its log, written by a thread of its own; echoed on the standard error for a
+	// terminal and the live tests)
+	logger := tk_log.install({program = APP_NAME, echo = true})
+	context.logger = logger
+	defer {
+		context.logger = log.nil_logger()
+		tk_log.close(logger)
+	}
+	crash.install({program = APP_NAME, version = APP_VERSION, log_tail = {tk_log.tail, logger.data}})
+	// (files read and written here, before the window exists)
+	crash.begin_session()
+	defer crash.end_session()   // (each return of this procedure is a clean end)
 	app := new(App)
 	defer free(app)
+	if path, crashed := crash.last_report(); crashed { app.crash_report = path }
 	app.prefs = prefs^
 	prefs^ = {}
 	app.settings = prefs_read(&app.prefs)
+	config.user_writer_start(&app.prefs_writer, &app.prefs, prefs_file())
 	app.prefs_shown = prefs_shown()
 	// (read here, on this thread, before the window exists: they size it; from now on the reader does the files)
 	app.place = state_load()
@@ -122,11 +143,12 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	platform.dragdrop_thread_init()   // (Windows: OLE, for an entry dragged out: drag.odin)
 	size := app.place.size != {} ? app.place.size : app.settings.size
 	if !host.host_open(&app.main, &app.shared, {title = "Papier", size = size, integrated_title = !app.settings.system_title}, view_build, app) {
-		errln("papier: no window")
+		log.error("papier: no window")
 		return 1
 	}
 	h := &app.main
 	win := h.win
+	app.announcer = {mode = app.settings.messages, window = win}
 	app.icons, _ = font.load_embedded(&app.shared.fonts, lucide.DATA)
 	app.mono = mono_font(&app.shared.fonts)
 	// (Lucide: the icons of the palette and of the menus; the widgets' own marks have the toolkit's font)
@@ -147,13 +169,13 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	reader_start(&app.reader, win, history_dir(app.settings.persist))
 	if !watcher_start(&app.watcher, owner, win, &app.prefs) {
 		reader_stop(&app.reader)
-		errln("papier: the clipboard watcher cannot start")
+		log.error("papier: the clipboard watcher cannot start")
 		return 1
 	}
 	decoder_start(&app.decoder, win)
 	slow_start(&app.slow, win)
 	app_shortcut(app)
-	app_updates_start(app)
+	app_updates_start(app, offer = !hidden && !setup_asked)
 	app.tray = platform.tray_create(win, LOGO_PNG, "Papier")
 	if app.tray != nil {
 		platform.tray_set_menu(app.tray, {
@@ -166,7 +188,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 
 	// (hidden at start: the window is made and never shown, it has had no frame: nothing to take off the screen)
 	if !hidden { app_show(app) }
-	if setup_asked { setup_open(app) } else if !hidden { setup_offer(app) }
+	if setup_asked { setup_open(app) }
 	for !app.quit {
 		if app.visible {
 			host.hosts_wait({h})
@@ -180,6 +202,8 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 		app_paste_follow(app)
 		app_tray(app)
 		app_updates_follow(app)
+		config.user_writer_save(&app.prefs_writer, &app.prefs)
+		if config.user_writer_failed(&app.prefs_writer) { say(app, "The preferences cannot be written") }
 		if app_follow_reader(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if view_decoded(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
 		if app_ocr_follow(app) { app.main.settle = max(app.main.settle, FRAMES_AFTER_INPUT) }
@@ -199,6 +223,8 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	view_clear(app)
 	thumbs_destroy(app)
 	if app.logo_made { render.destroy_texture(&app.shared.r, app.logo) }
+	// (a Save as dialog's answer comes to the window's state: the chores end before it does)
+	ui.chores_stop()
 	host.host_close(h)
 	setup.finish(&app.setup, setup_config())
 	launch, launch_hidden := app.launch_after, app.launch_hidden
@@ -206,7 +232,7 @@ app_run :: proc(prefs: ^config.Prefs, hidden: bool, owner: instance.Owner, setup
 	exit_code := app.exit_code
 	app_free(app)
 	if launch != "" {
-		if !setup.launch(launch, launch_hidden ? []string{"--hidden"} : nil) { errf("papier: %s does not start", launch) }
+		if !setup.launch(launch, launch_hidden ? []string{"--hidden"} : nil) { log.errorf("papier: %s does not start", launch) }
 		delete(launch)
 	}
 	return exit_code
@@ -223,6 +249,7 @@ app_free :: proc(app: ^App) {
 	delete(app.query)
 	delete(app.status)
 	delete(app.prefs_shown)
+	delete(app.crash_report)
 	ui.field_destroy(&app.search)
 	ui.vlist_destroy(&app.vl)
 	ui.field_destroy(&app.palette.field)
@@ -235,6 +262,7 @@ app_free :: proc(app: ^App) {
 	delete(app.shortcut_problem)
 	delete(app.place.setup)
 	settings_free(&app.settings)
+	config.user_writer_stop(&app.prefs_writer, &app.prefs)   // (the last change written)
 	config.prefs_destroy(&app.prefs)
 }
 
@@ -349,9 +377,9 @@ app_paste_follow :: proc(app: ^App) {
 	if !back && waited < PASTE_FOCUS_WAIT_MS { return }
 	app.paste_due = false
 	hk, ok := platform.hotkey_parse(app.settings.paste_keys)
-	if !ok { errf("papier: paste.keys: %q is not a key combination (Ctrl+V, Ctrl+Shift+V, Shift+Insert...)", app.settings.paste_keys); return }
+	if !ok { log.errorf("papier: paste.keys: %q is not a key combination (Ctrl+V, Ctrl+Shift+V, Shift+Insert...)", app.settings.paste_keys); return }
 	if !platform.send_hotkey(app.main.win, hk) {
-		errln("papier: the entry is on the clipboard, but this desktop lets no program press keys for another (Wayland: zwp_virtual_keyboard_v1): paste it yourself")
+		log.error("papier: the entry is on the clipboard, but this desktop lets no program press keys for another (Wayland: zwp_virtual_keyboard_v1): paste it yourself")
 	}
 }
 
@@ -384,7 +412,7 @@ app_shortcut :: proc(app: ^App) {
 			app.hotkey_held = true
 		}
 		if app.shortcut_problem != "" {
-			errf("papier: picker.shortcut: %s", app.shortcut_problem)
+			log.errorf("papier: picker.shortcut: %s", app.shortcut_problem)
 			say(app, "The shortcut does not work: %s", app.shortcut_problem)
 		}
 	}
@@ -451,7 +479,7 @@ app_follow_reader :: proc(app: ^App) -> bool {
 	defer reader_results_free(&res)
 	changed := false
 	if res.failed {
-		errf("papier: the history cannot be opened: %s", res.failure)
+		log.errorf("papier: the history cannot be opened: %s", res.failure)
 		app.exit_code = 1
 		app.quit = true
 	}
@@ -504,15 +532,20 @@ app_job_done :: proc(app: ^App, d: ^Job_Done) {
 	#partial switch d.kind {
 	case .Drag:     drag_arrived(app, d)
 	case .Handlers: entry_menu_handlers(app, d)
-	case .Write_Prefs:
-		// (the file is on the disk: the watcher reads it again, and says Reload back)
-		if d.ok { watcher_send(&app.watcher, {verb = .Reload}) }
+	case .Setup_Facts: setup_offer(app, d)
+	case .Setup_Updated:
+		// (a log line, as an install's record is nothing the window shows)
+		if !d.ok { log.errorf("papier: the update is in place, but %s", d.message) }
+		return
 	case .Read_Prefs:
 		if d.ok {
 			config.prefs_destroy(&app.prefs)
 			app.prefs, d.prefs, d.ok = d.prefs, {}, false
+			// (the file holds what was just read: the writer has nothing to write until the next change)
+			app.prefs_writer.version = app.prefs.user_version
 			settings_free(&app.settings)
 			app.settings = prefs_read(&app.prefs)
+			app.announcer.mode = app.settings.messages
 			app_shortcut(app)
 			app_updates_auto(app)
 			app_title_follow(app)
@@ -521,7 +554,10 @@ app_job_done :: proc(app: ^App, d: ^Job_Done) {
 		// (several entries' texts as one new entry)
 		if d.ok { copy_new_text(app, d.text, d.message); return }
 	}
-	if d.message != "" { say(app, "%s", d.message) }
+	// (a job done says what it did; one that failed says why, in the status bar)
+	if d.message != "" {
+		if d.ok { announce(app, "%s", d.message) } else { say(app, "%s", d.message) }
+	}
 }
 
 // What the watcher asked for.
@@ -570,6 +606,22 @@ say :: proc(app: ^App, format: string, args: ..any) {
 }
 
 STATUS_SHOWN_MS :: 3000
+
+// Says what papier just did (Copied, Saved, Removed): a notification of the system, or a toast of the window, as
+// general.messages says. What is only a state of the window (a reading under way, a failure to look at) is said by say.
+announce :: proc(app: ^App, format: string, args: ..any) {
+	ui.use(&app.main.state)   // (called between builds too: a toast goes to this window's state)
+	ui.announce(&app.announcer, .Good, fmt.tprintf(format, ..args))
+}
+
+// The last session's crash, said once the window builds: where its report is (nothing was sent anywhere).
+app_crash_said :: proc(app: ^App) {
+	if app.crash_report == "" { return }
+	log.warnf("papier: the last session ended in a crash: %s", app.crash_report)
+	ui.announce(&app.announcer, .Bad, "Papier stopped unexpectedly last time", app.crash_report)
+	delete(app.crash_report)
+	app.crash_report = ""
+}
 
 // papier's own theme, first of the list: ink and paper, a soft sand accent (the colours of the logo).
 THEME_PAPIER :: ui.Theme_Def{"Papier",

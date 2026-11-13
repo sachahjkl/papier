@@ -137,7 +137,7 @@ action_run :: proc(app: ^App, a: Action) {
 		for e, i in on { ids[i] = e.id }
 		for id in ids { remove_entry(app, id) }
 		ui.list_marks_clear(&app.vl)
-		if len(ids) > 1 { say(app, "Removed %d entries", len(ids)) }
+		if len(ids) > 1 { announce(app, "Removed %d entries", len(ids)) }
 	case .Show_QR:       qr_open(app, on[0])
 	case .Toggle_Markdown_Source: app.markdown_source = !app.markdown_source
 	case .Copy_Qr_Content: copy_new_text(app, image_qr(app, on[0]), "Copied the QR code's content", chosen = false)

@@ -51,7 +51,7 @@ edit_copy :: proc(app: ^App) {
 	paste := app.settings.paste_on_select
 	watcher_send(&app.watcher, {verb = .Add_Text, text = text, paste = paste})
 	edit_end(app)
-	if app.settings.close_on_copy || paste { app_hide(app) } else { say(app, "Copied") }
+	if app.settings.close_on_copy || paste { app_hide(app) } else { announce(app, "Copied") }
 }
 
 edit_save :: proc(app: ^App) {
@@ -59,7 +59,7 @@ edit_save :: proc(app: ^App) {
 	if strings.trim_space(text) == "" { say(app, "An empty entry is not saved: remove it instead"); return }
 	watcher_send(&app.watcher, {verb = .Replace_Text, id = app.edit.id, text = text})
 	edit_end(app)
-	say(app, "Saved")
+	announce(app, "Saved")
 }
 
 // The keys of the edit view, taken before the editor sees them.

@@ -22,17 +22,18 @@ odin run tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papierto
 
 | Command | What it does |
 |---|---|
-| `build [release]` | the toolkit's text library (when its sources changed), then `build/papier` |
+| `build [release]` | the toolkit's text library and SQLite (when their sources changed), then `build/papier` |
 | `test` | the unit tests of `src` and `src/history` |
-| `check` | `odin check -vet` of the program and the tool, the tests, a release build |
+| `check` | the changelog's fragments, the scopes, `odin check -vet` of the program for this system and for Windows and of the tool, the tests, a release build |
+| `changelog new <type> <text>`, `check`, `preview` | a fragment of `changelog.d/`, their check, what the next version brings |
 | `live [--keep]` | the real program in a headless sway, driven through wl-clipboard and the DevTools protocol |
 | `shots [--out folder]` | the pictures of the README and the site, the program's own frames |
 | `logo` | `assets/logo*.png`, drawn by the toolkit's paint package |
 | `package [version]` | `build/dist`: the archive of a release build and its SHA-256, the program alone and, with `$UPDATE_SIGNING_KEY`, its signed update manifest |
 | `update <...>` | papier's update key and manifests: `keygen`, `pubkey`, `manifest`, `verify` (gui_toolkit's `toolbox.update_command`) |
 | `notes <version>` | the changelog's section of that version |
-| `ship <version> [--dry-run]` | a release: see below |
-| `site build <site> <out>`, `site check` | the site's pages, and their check in a real browser |
+| `ship <patch\|minor\|major\|x.y.z> [--dry-run]` | a release: see below |
+| `site build <site> <out>`, `site check`, `site card` | the site's pages, their check in a real browser, the card a shared link shows |
 
 `GT=<folder>` builds against another checkout of gui_toolkit.
 
@@ -59,11 +60,12 @@ odin run ext/gui_toolkit/tools/tk -- cdp --port 9222 tree , shot window.png
 ## A release
 
 ```sh
-odin run tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papiertool -keep-executable -- ship 0.2.0
+odin run tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papiertool -keep-executable -- ship minor
 ```
 
-From a clean `master`: the fragments of `changelog.d/` become the section `[0.2.0]` with the date and are deleted, `APP_VERSION` becomes `0.2.0`, `check` runs, then a
-commit, the tag `v0.2.0` and the push. The release workflow (`.github/workflows/release.yml`) builds the archive on
+From a clean checkout (`patch`, `minor`, `major` or a version; the number follows the last tag on origin, `minor` after
+`v0.19.2` is `0.20.0`): the fragments of `changelog.d/` become the section `[0.20.0]` with the date and are deleted,
+`APP_VERSION` becomes `0.20.0`, `check` runs, then a commit, the tag `v0.20.0` and the push. The release workflow (`.github/workflows/release.yml`) builds the archive on
 Ubuntu, checks that the tag is the program's version, and publishes the GitHub release with the changelog's section. The
 site (`.github/workflows/pages.yml`) follows: its download link names the new archive.
 

@@ -1,8 +1,9 @@
 package papier
 
 // What the window remembers from one run to the next: its size, its place (X11 only: a Wayland client cannot place its
-// window), the width of the list. A few lines of text in $XDG_STATE_HOME/papier/window, written by the reader when the
-// window hides and when papier quits (state_write). It is read at start, before the window exists: its size comes from it.
+// window), the width of the list. A few lines of text in the user's state folder (state_path), written by the reader
+// when the window hides and when papier quits (state_write). It is read at start, before the window exists: its size
+// comes from it.
 
 import "core:fmt"
 import "core:strconv"

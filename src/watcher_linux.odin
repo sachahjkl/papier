@@ -102,6 +102,7 @@ watcher_main :: proc(wt: ^Watcher) {
 // The window's commands, in the order they came.
 @(private = "file")
 watcher_drain :: proc(wt: ^Watcher) {
+	if watcher_take_settings(wt) { watcher_trim(wt) }   // (a smaller history.max_entries applies at once)
 	for c in watcher_take_queue(wt) {
 		watcher_apply(wt, c)
 		delete(c.text)
@@ -148,7 +149,7 @@ watcher_apply :: proc(wt: ^Watcher, c: Command) {
 		history.collect(&wt.store)
 	case .Reload:
 		prefs: config.Prefs
-		prefs_open(&prefs, nil)
+		prefs_open(&prefs, nil, context.temp_allocator)
 		settings_free(&wt.settings)
 		wt.settings = prefs_read(&prefs)
 		config.prefs_destroy(&prefs)

@@ -3,56 +3,68 @@
 //   odin run tools/papiertool -collection:gt=ext/gui_toolkit/src -out:build/papiertool -- <command>
 //   (build.sh and build.bat are its shortcuts for `build`)
 //
-// What it needs is on the path: git, odin, cargo (the toolkit's text library), tar; gh for what is published.
-// GT=<folder>: another checkout of gui_toolkit (its root, not its src).
+// What it needs is on the path: git, odin, cargo (the toolkit's text library), cc and ar (SQLite), tar; gh for what is
+// published. GT=<folder>: another checkout of gui_toolkit (its root, not its src).
 package papiertool
 
-import "core:fmt"
-import "core:os"
-import "core:strings"
+import changelog "gt:changelog"
+import release "gt:release"
+import tk_site "gt:site"
 import toolbox "gt:toolbox"
 import papier_update "../../src/update"
 
-EXIT_USAGE :: 2
-ROOT_MARK  :: "odin.version"
+REPOSITORY :: "https://github.com/sachahjkl/papier"
+when ODIN_OS == .Windows {
+	PROGRAM :: "build/papier.exe"
+} else {
+	PROGRAM :: "build/papier"
+}
+// papier.com, the console launcher papier embeds (src/integration.odin).
+LAUNCHER_OUT :: "build/papier.com"
 
-Command :: struct {
-	name, about: string,
-	run:         proc(args: []string) -> int,
+// What papier is to its tool and to the toolkit's standard commands. papier.com's rules: a command waits and gives its
+// output and exit code through; no argument, --hidden and toggle, which may become the running papier, do not wait.
+project :: proc() -> toolbox.Project {
+	return {
+		name = "papier", repository = REPOSITORY, changelog = "CHANGELOG.md",
+		version_file = "src/main.odin", version_line = "APP_VERSION :: ", program = PROGRAM,
+		launcher = {out = LAUNCHER_OUT, mark = "(papier console launcher)", default_rule = "wait",
+		            others = "(none),toggle,--hidden", refuses_exit = 2},
+	}
 }
 
-COMMANDS :: [?]Command{
-	{name = "build", about = "[release]: the toolkit's text library when its sources changed, then build/papier", run = run_build},
-	{name = "test", about = "the tests of the program and of its packages", run = run_test},
-	{name = "check", about = "odin check of the program and of this tool (-vet), the tests, then a release build", run = run_check},
-	{name = "logo", about = "assets/logo*.png, drawn by the toolkit's paint package", run = run_logo},
-	{name = "package", about = "[version]: build/dist, the archive of a release build, its SHA-256, the program alone and (with $UPDATE_SIGNING_KEY) its signed update manifest", run = run_package},
-	{name = "update", about = "keygen <file> | pubkey | manifest <program> <version> - <out> | verify <manifest> -: papier's update key and manifests", run = proc(args: []string) -> int { return toolbox.update_command(papier_update.PRODUCT, args) }},
-	{name = "notes", about = "<version>: the changelog's section of that version (a release's notes)", run = run_notes},
-	{name = "ship", about = "<version> [--dry-run]: from a clean master: the changelog, APP_VERSION, the checks, a commit, the tag, the push", run = run_ship},
-	{name = "site", about = "build <site> <out> | check: the site's pages from site/ and CHANGELOG.md", run = run_site},
-	{name = "shots", about = "[--out folder]: the pictures of the README and the site, the program's own frames in a sway nobody sees", run = run_shots},
-	{name = "live", about = "[--keep]: the real program in a sway nobody sees: copies of each kind, a secret, the window hidden and shown", run = run_live},
+// What goes beside the program in a release's archive: the file, and its name there (the icons' licence is the
+// toolkit's).
+@(rodata)
+RELEASE_FILES := [?][2]string{
+	{"README.md", "README.md"}, {"LICENSE", "LICENSE"}, {"CHANGELOG.md", "CHANGELOG.md"},
+	{"ext/gui_toolkit/src/lucide/LICENSE.txt", "LUCIDE-LICENSE.txt"},
+}
+
+commands :: proc() -> []toolbox.Command {
+	p := project()
+	r := release.commands({project = p, dist = "build/dist", files = RELEASE_FILES[:], check = proc() -> int { return run_check(nil) }, update = papier_update.PRODUCT})
+	list := make([dynamic]toolbox.Command, context.temp_allocator)
+	append(&list,
+		toolbox.Command{name = "build", usage = "[release]: the toolkit's text library and SQLite when their sources changed, then build/papier", run = run_build},
+		toolbox.Command{name = "test", usage = ": the tests of the program and of its packages", run = run_test},
+		toolbox.Command{name = "check", usage = ": the changelog, the scopes, odin check of the program for this system and for Windows and of this tool (-vet), the tests, then a release build", run = run_check},
+		toolbox.logo_command(logo()),
+		r[0], r[1], r[2],
+		toolbox.Command{name = "update", usage = "keygen <file> | pubkey | manifest <program> <version> - <out> | verify <manifest> -: papier's update key and manifests", run = proc(args: []string) -> int { return toolbox.update_command(papier_update.PRODUCT, args) }},
+		changelog.command(p),
+		tk_site.command({meta = site_meta(), pages = {version_mark = VERSION_MARK, downloads = SITE_DOWNLOADS[:]}}),
+	)
+	// (the real program in a sway nobody sees: Linux)
+	when ODIN_OS == .Linux {
+		append(&list,
+			toolbox.Command{name = "shots", usage = "[--out folder]: the pictures of the README and the site, the program's own frames in a sway nobody sees", run = run_shots},
+			toolbox.Command{name = "live", usage = "[--keep]: the real program in a sway nobody sees: copies of each kind, a secret, the window hidden and shown", run = run_live},
+		)
+	}
+	return list[:]
 }
 
 main :: proc() {
-	if len(os.args) < 2 || os.args[1] == "help" || os.args[1] == "-h" || os.args[1] == "--help" { usage(); return }
-	if !os.exists(ROOT_MARK) {
-		root, code := toolbox.capture({"git", "rev-parse", "--show-toplevel"})
-		if code != 0 { fmt.eprintln("papiertool: not in the repository"); os.exit(EXIT_USAGE) }
-		if os.set_working_directory(strings.trim_space(root)) != nil { fmt.eprintfln("papiertool: cannot work in %s", root); os.exit(EXIT_USAGE) }
-	}
-	commands := COMMANDS
-	for c in commands {
-		if c.name == os.args[1] { os.exit(c.run(os.args[2:])) }
-	}
-	fmt.eprintfln("papiertool: no command %s", os.args[1])
-	usage()
-	os.exit(EXIT_USAGE)
-}
-
-usage :: proc() {
-	fmt.println("papiertool <command> [arguments]")
-	commands := COMMANDS
-	for c in commands { fmt.printfln("  %-8s %s", c.name, c.about) }
+	toolbox.tool_main("papiertool", commands(), toolbox.ROOT_MARK_DEFAULT)
 }

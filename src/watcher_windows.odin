@@ -65,6 +65,7 @@ watcher_main :: proc(wt: ^Watcher) {
 		handles := [1]win.HANDLE{wt.wake}
 		win.MsgWaitForMultipleObjects(1, &handles[0], false, win.INFINITE, win.QS_ALLINPUT)
 		instance.pump_messages()   // (the instance's window: commands of other processes)
+		_ = watcher_take_settings(wt)   // (the system keeps the history: no setting of the window changes it)
 		for c in watcher_take_queue(wt) {
 			watcher_apply(wt, c)
 			delete(c.text)
@@ -124,7 +125,7 @@ watcher_apply :: proc(wt: ^Watcher, c: Command) {
 	case .Clear:  history.system_clear()
 	case .Reload:
 		prefs: config.Prefs
-		prefs_open(&prefs, nil)
+		prefs_open(&prefs, nil, context.temp_allocator)
 		settings_free(&wt.settings)
 		wt.settings = prefs_read(&prefs)
 		config.prefs_destroy(&prefs)

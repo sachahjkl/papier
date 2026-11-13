@@ -9,15 +9,17 @@ package papier
 import "core:fmt"
 import process "gt:process"
 import "gt:platform"
-import setup "gt:setup"
 import update "gt:update"
 import papier_update "update"
 
 // The folder of the latest release's files: its manifests (update-<platform>.json and .sig) and its programs.
 UPDATE_FOLDER :: "https://github.com/sachahjkl/papier/releases/latest/download/"
 
-app_updates_start :: proc(app: ^App) {
-	app.installed_copy = setup.facts(setup_config()).running_it
+// `offer`: the Setup is offered when there is something to do (setup_offer).
+app_updates_start :: proc(app: ^App, offer: bool) {
+	// (whether this is the installed copy is read from the disk and the system's records: by the reader; app_job_done
+	// applies it, update.auto with it)
+	reader_job(&app.reader, {kind = .Setup_Facts, text = app.place.setup, offer = offer})
 	app.updater = update.updater_start({
 		product = papier_update.PRODUCT, folder = UPDATE_FOLDER, current = APP_VERSION,
 		exe = process.executable_path(), user_agent = fmt.tprintf("papier/%s", APP_VERSION),
@@ -42,9 +44,7 @@ app_updates_follow :: proc(app: ^App) {
 		// (said when asked, or when there is something to know: not each check that found nothing)
 		if app.visible && (st.asked || st.phase == .Installed || st.phase == .Available) { say(app, "%s", update.status_words(st)) }
 		// (the installed copy: its manifest and Settings > Apps say the new version)
-		if st.phase == .Installed {
-			if ok, why := setup.updated(setup_config(), st.version); !ok { errf("papier: the update is in place, but %s", why) }
-		}
+		if st.phase == .Installed { reader_job(&app.reader, {kind = .Setup_Updated, text = st.version}) }
 	}
 	if st.phase == .Installed && !app.visible && !app.quit { app_restart(app) }
 }

@@ -117,14 +117,14 @@ item :: proc(app: ^App, a: Action, label := "") {
 // What the items do
 
 // A text as a new entry at the top, on the clipboard (the watcher adds it): pasted and the window hidden as the
-// settings say. `message` goes to the status bar.
+// settings say. `message` says what was done (announce).
 copy_new_text :: proc(app: ^App, text: string, message: string, chosen := true) {
 	// (`chosen`: as an entry chosen, the window goes and the text is pasted where papier was called from; what papier
 	// read for the user (an image's text, a code's content) goes on the clipboard only, the window staying)
 	paste := chosen && app.settings.paste_on_select
 	watcher_send(&app.watcher, {verb = .Add_Text, text = text, paste = paste})
 	if chosen && (app.settings.close_on_copy || paste) { app_hide(app) }
-	say(app, "%s", message)
+	announce(app, "%s", message)
 }
 
 // Puts the entry back on the clipboard (the watcher serves it) and hides the window. `plain`: its text only.
@@ -132,7 +132,7 @@ entry_copy :: proc(app: ^App, id: u64, plain := false) {
 	paste := app.settings.paste_on_select
 	watcher_send(&app.watcher, {verb = plain ? .Copy_Plain : .Copy, id = id, paste = paste})
 	// (a paste goes to the program papier was called from: the window goes first)
-	if app.settings.close_on_copy || paste { app_hide(app) } else { say(app, "Copied") }
+	if app.settings.close_on_copy || paste { app_hide(app) } else { announce(app, "Copied") }
 }
 
 // An address in the browser, a copied file with its program, anything else as a file of its type with the system's
@@ -145,12 +145,19 @@ entry_open_with :: proc(app: ^App, e: ^history.Entry, handler: string) {
 	reader_job(&app.reader, {kind = .Open_With, id = e.id, handler = handler})
 }
 
-// The system's dialog runs here (its own loop, as a drag's); the reader writes the file.
+// The system's dialog, off the window's thread (a modal loop or another process); the reader writes the file the user
+// names. The entry is the one the dialog was asked for, whatever is selected when it answers.
 entry_save_as :: proc(app: ^App, e: ^history.Entry) {
 	if entry_open_rep(e) < 0 { return }
-	r := platform.save_file_dialog({owner = app.main.win, title = "Save the entry", suggested_name = entry_file_name(e), overwrite_prompt = true}, context.temp_allocator)
+	app.save_id = e.id
+	ui.file_dialog(&app.main.state, .Save, {owner = app.main.win, title = "Save the entry", suggested_name = entry_file_name(e), overwrite_prompt = true}, entry_save_chosen, app)
+}
+
+@(private = "file")
+entry_save_chosen :: proc(r: platform.Dialog_Result, user: rawptr) {
+	app := (^App)(user)
 	if r.status != .Chosen || len(r.paths) == 0 { return }
-	reader_job(&app.reader, {kind = .Save_As, id = e.id, path = r.paths[0]})
+	reader_job(&app.reader, {kind = .Save_As, id = app.save_id, path = r.paths[0]})
 }
 
 ////////////////////////////////

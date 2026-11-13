@@ -12,6 +12,7 @@ import "core:strings"
 import "core:sync"
 import "core:thread"
 import "core:time"
+import config "gt:config"
 import instance "gt:instance"
 import "gt:platform"
 
@@ -36,6 +37,27 @@ Watcher :: struct {
 	stop:      bool,                 // atomic
 	error:     string,               // why it stopped, when it did by itself (read after the thread ended)
 	token:     string,               // the last activation token a second start handed (owned; guarded by `mutex`)
+	next_settings: Settings,         // the window's newer settings, while has_next_settings (guarded by `mutex`)
+	has_next_settings: bool,
+}
+
+// The window's preferences changed: the watcher takes their values at its next turn. The window's writer saves the file
+// on its own thread; the watcher waits for no read of it.
+watcher_settings :: proc(wt: ^Watcher, p: ^config.Prefs) {
+	s := prefs_read(p)
+	sync.guard(&wt.mutex)
+	if wt.has_next_settings { settings_free(&wt.next_settings) }
+	wt.next_settings, wt.has_next_settings = s, true
+	watcher_poke(wt)
+}
+
+// On the watcher's thread: the settings the window handed, in place of its own. True when there were some.
+watcher_take_settings :: proc(wt: ^Watcher) -> bool {
+	sync.guard(&wt.mutex)
+	if !wt.has_next_settings { return false }
+	settings_free(&wt.settings)
+	wt.settings, wt.next_settings, wt.has_next_settings = wt.next_settings, {}, false
+	return true
 }
 
 // A second start's activation token, for the window's next show (Wayland: the compositor gives it the keyboard).
@@ -105,6 +127,7 @@ watcher_free :: proc(wt: ^Watcher) {
 	settings_free(&wt.settings)
 	delete(wt.error)
 	delete(wt.token)
+	if wt.has_next_settings { settings_free(&wt.next_settings) }
 }
 
 now_ms :: proc() -> i64 { return time.to_unix_nanoseconds(time.now()) / 1e6 }

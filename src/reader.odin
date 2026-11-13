@@ -1,8 +1,9 @@
 package papier
 
-// The reader: a thread of its own that does every read and write of the window, so that the window's thread never waits
-// on the disk, a database or a program (docs/architecture.md). It owns the window's connection to the history (the
-// watcher writes it, the reader reads it) and keeps the list, each preview in lower case for the search.
+// The reader: a job on a pool of one thread (gt:tasks) that does every read and write of the window, so that the window's
+// thread never waits on the disk, a database or a program (docs/architecture.md). One thread: the history's connection is
+// used by one thread at a time, and the jobs run in the order they were asked. It owns the window's connection to the
+// history (the watcher writes it, the reader reads it) and keeps the list, each preview in lower case for the search.
 //
 // The window asks, and never waits:
 //
@@ -21,7 +22,6 @@ import "base:runtime"
 import "core:fmt"
 import "core:strings"
 import "core:sync"
-import "core:thread"
 import "core:unicode/utf8"
 import config "gt:config"
 import desktop "gt:desktop"
@@ -29,7 +29,10 @@ import diff "gt:diff"
 import "gt:fsx"
 import "gt:markdown"
 import "gt:platform"
+import setup "gt:setup"
 import syntax "gt:syntax"
+import tasks "gt:tasks"
+import "gt:ui"
 import "history"
 
 // The history as the window shows it: a copy of the reader's list (heap; history_list_free).
@@ -81,8 +84,9 @@ Job_Kind :: enum u8 {
 	Drag,          // id: what a drag of the entry carries
 	Join,          // ids: the texts of several entries as one
 	Write,         // path, data: a file of the window (its state)
-	Write_Prefs,   // path, text: the preferences file
 	Read_Prefs,    // the preferences file, read again
+	Setup_Facts,   // text, offer: whether this is the installed copy, and (offer) whether the Setup is offered
+	Setup_Updated, // text: an update is in place: the install's record says its version
 }
 
 // A job for the reader (heap; the reader frees it).
@@ -94,6 +98,7 @@ Job :: struct {
 	handler: string,
 	text:    string,
 	data:    []u8,
+	offer:   bool,
 }
 
 // A job done (heap; job_done_free).
@@ -106,6 +111,8 @@ Job_Done :: struct {
 	drag:     platform.Drag_Data,   // Drag
 	handlers: []desktop.Handler,    // Handlers
 	prefs:    config.Prefs,         // Read_Prefs (ok: read)
+	running_it:   bool,             // Setup_Facts: this program is the installed copy
+	setup_wanted: bool,             // Setup_Facts: the Setup is offered
 }
 
 // What the window takes from the mailbox at a turn of its loop. The caller owns each part (reader_results_free).
@@ -122,10 +129,11 @@ Reader_Results :: struct {
 }
 
 Reader :: struct {
-	thread: ^thread.Thread,
+	pool:   tasks.Pool,         // one thread
+	job:    tasks.Job,          // reader_work: every ask runs it, the asks made during a run run it once more
+	up:     bool,               // the pool runs (reader_stop stops it)
 	window: ^platform.Window,   // woken when the mailbox has something (nil: a test reads it itself)
 	mutex:  sync.Mutex,
-	cond:   sync.Cond,
 	stop:   bool,
 	dir:    string,             // the store's directory (heap)
 
@@ -152,8 +160,9 @@ Reader :: struct {
 	has_loaded: bool,
 	done:       [dynamic]Job_Done,
 
-	// the thread's own
+	// the job's own
 	store:   history.Store,
+	started: bool,              // the store was opened (or failed to)
 	opened:  bool,
 	lowered: [dynamic]string,   // each entry's preview in lower case (the search's short words)
 	current: Reader_Query,      // the last query given (its text owned)
@@ -173,7 +182,7 @@ Reader_Pin :: struct { id: u64, pinned: bool }
 ////////////////////////////////
 // The window's side
 
-// Starts the reader on the store of `dir`: it opens it on its own thread and puts the first list in the mailbox (or why
+// Starts the reader on the store of `dir`: it opens it on its thread and puts the first list in the mailbox (or why
 // it cannot be opened).
 reader_start :: proc(r: ^Reader, window: ^platform.Window, dir: string) {
 	heap := runtime.heap_allocator()
@@ -184,19 +193,27 @@ reader_start :: proc(r: ^Reader, window: ^platform.Window, dir: string) {
 	r.jobs = make([dynamic]Job, heap)
 	r.done = make([dynamic]Job_Done, heap)
 	r.lowered = make([dynamic]string, heap)
-	r.thread = thread.create_and_start_with_data(r, reader_run, context)
+	r.job = {work = reader_work, data = r}
+	tasks.start(&r.pool, {threads = 1})
+	r.up = true
+	reader_poke(r)   // (the first run opens the store)
 }
+
+// A run of the job: what was asked is done, and what is asked meanwhile in one more run.
+@(private = "file")
+reader_poke :: proc(r: ^Reader) { tasks.ask(&r.pool, &r.job) }
 
 // Stops the reader once the jobs asked are done (a state written at quit lands), and frees what nobody took.
 reader_stop :: proc(r: ^Reader) {
-	if r.thread == nil { return }
+	if !r.up { return }
 	sync.mutex_lock(&r.mutex)
 	r.stop = true
-	sync.cond_signal(&r.cond)
 	sync.mutex_unlock(&r.mutex)
-	thread.join(r.thread)
-	thread.destroy(r.thread)
-	r.thread = nil
+	// (after the job's run that waits, if one does: the last run does the jobs still asked, then closes the store, on the
+	// pool's thread; a run of the job asked during a stop would not run)
+	tasks.add(&r.pool, reader_last, r)
+	tasks.stop(&r.pool)
+	r.up = false
 	heap := runtime.heap_allocator()
 	delete(r.dir, heap)
 	if r.query_asked { delete(r.query.text, heap) }
@@ -217,7 +234,7 @@ reader_stop :: proc(r: ^Reader) {
 reader_reload :: proc(r: ^Reader, version: u64) {
 	sync.guard(&r.mutex)
 	r.reload_asked, r.reload_version = true, version
-	sync.cond_signal(&r.cond)
+	reader_poke(r)
 }
 
 // The view of `query` and `filter` on the reader's list, in place of any query not yet computed.
@@ -229,21 +246,21 @@ reader_query :: proc(r: ^Reader, seq: u64, query: string, filter: Filter, reset:
 	if r.query_asked { delete(r.query.text, heap) }
 	r.query = {seq, strings.clone(query, heap), filter, reset || keep_reset}
 	r.query_asked = true
-	sync.cond_signal(&r.cond)
+	reader_poke(r)
 }
 
 // The entry `id` is out of the list (the user removed it; the watcher deletes it): the view comes again as `seq`.
 reader_forget :: proc(r: ^Reader, id: u64, seq: u64) {
 	sync.guard(&r.mutex)
 	append(&r.forgets, Reader_Forget{id, seq})
-	sync.cond_signal(&r.cond)
+	reader_poke(r)
 }
 
 // The entry `id` is pinned or unpinned in the reader's list too (a Pinned filter sees it before the watcher's reload).
 reader_pin :: proc(r: ^Reader, id: u64, pinned: bool) {
 	sync.guard(&r.mutex)
 	append(&r.pins, Reader_Pin{id, pinned})
-	sync.cond_signal(&r.cond)
+	reader_poke(r)
 }
 
 // The content of entry `id` as it is with `key`, in place of any load not yet started. It is the selected entry: the
@@ -251,13 +268,13 @@ reader_pin :: proc(r: ^Reader, id: u64, pinned: bool) {
 reader_load :: proc(r: ^Reader, id: u64, key: u64) {
 	sync.guard(&r.mutex)
 	r.load, r.load_asked, r.selected = {id, key}, true, id
-	sync.cond_signal(&r.cond)
+	reader_poke(r)
 }
 
 // A job, after those asked before it. Its strings and slices are copied.
 reader_job :: proc(r: ^Reader, j: Job) {
 	heap := runtime.heap_allocator()
-	own := Job{kind = j.kind, id = j.id}
+	own := Job{kind = j.kind, id = j.id, offer = j.offer}
 	if j.ids != nil { own.ids = make([]u64, len(j.ids), heap); copy(own.ids, j.ids) }
 	own.path = strings.clone(j.path, heap)
 	own.handler = strings.clone(j.handler, heap)
@@ -265,7 +282,7 @@ reader_job :: proc(r: ^Reader, j: Job) {
 	if j.data != nil { own.data = make([]u8, len(j.data), heap); copy(own.data, j.data) }
 	sync.guard(&r.mutex)
 	append(&r.jobs, own)
-	sync.cond_signal(&r.cond)
+	reader_poke(r)
 }
 
 // What the mailbox holds, emptied. Never waits.
@@ -358,14 +375,35 @@ job_free :: proc(j: ^Job) {
 }
 
 ////////////////////////////////
-// The reader's thread
+// The reader's job
 
+// A run: the store opened at the first, then what was asked, a turn at a time.
 @(private = "file")
-reader_run :: proc(data: rawptr) {
+reader_work :: proc(data: rawptr) {
 	r := (^Reader)(data)
 	context.allocator = runtime.heap_allocator()
-	// (Windows: COM on this thread, which the shell's open of a file wants; nothing elsewhere)
+	// (Windows: COM on this thread, which the shell's open of a file wants; once per thread; nothing elsewhere)
 	platform.dragdrop_thread_init()
+	if !r.started { reader_open(r) }
+	for reader_turn(r) {}
+}
+
+// The last run, at reader_stop: the jobs still asked, then the store closed.
+@(private = "file")
+reader_last :: proc(data: rawptr) {
+	reader_work(data)
+	r := (^Reader)(data)
+	context.allocator = runtime.heap_allocator()
+	for s in r.lowered { delete(s) }
+	delete(r.lowered)
+	delete(r.current.text)
+	if r.opened { history.close(&r.store) }
+}
+
+// Opens the store and puts its first list in the mailbox, or why it cannot be opened.
+@(private = "file")
+reader_open :: proc(r: ^Reader) {
+	r.started = true
 	ok, why := history.open(&r.store, r.dir)
 	r.opened = ok
 	if ok {
@@ -381,97 +419,95 @@ reader_run :: proc(data: rawptr) {
 		sync.mutex_unlock(&r.mutex)
 	}
 	if r.window != nil { platform.wake(r.window) }
+}
 
-	for {
-		sync.mutex_lock(&r.mutex)
-		for !reader_has_work(r) && !r.stop { sync.cond_wait(&r.cond, &r.mutex) }
-		// (stopping: the jobs still asked are done first; the views and loads nobody will read are not)
-		if r.stop && len(r.jobs) == 0 { sync.mutex_unlock(&r.mutex); break }
-		stopping := r.stop
-		forgets := make([]Reader_Forget, len(r.forgets), context.temp_allocator)
-		copy(forgets, r.forgets[:])
-		clear(&r.forgets)
-		pins := make([]Reader_Pin, len(r.pins), context.temp_allocator)
-		copy(pins, r.pins[:])
-		clear(&r.pins)
-		reload, version := r.reload_asked, r.reload_version
-		r.reload_asked = false
-		query, has_query := r.query, r.query_asked
-		r.query, r.query_asked = {}, false
-		load, has_load := r.load, r.load_asked
-		r.load_asked = false
-		selected := r.selected
-		// (one job per turn: a query typed meanwhile is not kept behind a slow program's start)
-		job: Job
-		has_job := len(r.jobs) > 0
-		if has_job {
-			job = r.jobs[0]
-			ordered_remove(&r.jobs, 0)
-		}
-		sync.mutex_unlock(&r.mutex)
+// A turn: the forgets, pins, reload, query and load asked, and one job (a query typed meanwhile is not kept behind a slow
+// program's start). False when nothing was asked.
+@(private = "file")
+reader_turn :: proc(r: ^Reader) -> bool {
+	sync.mutex_lock(&r.mutex)
+	// (stopping: the jobs still asked are done first; the views and loads nobody will read are not)
+	if !reader_has_work(r) || (r.stop && len(r.jobs) == 0) { sync.mutex_unlock(&r.mutex); return false }
+	stopping := r.stop
+	forgets := make([]Reader_Forget, len(r.forgets), context.temp_allocator)
+	copy(forgets, r.forgets[:])
+	clear(&r.forgets)
+	pins := make([]Reader_Pin, len(r.pins), context.temp_allocator)
+	copy(pins, r.pins[:])
+	clear(&r.pins)
+	reload, version := r.reload_asked, r.reload_version
+	r.reload_asked = false
+	query, has_query := r.query, r.query_asked
+	r.query, r.query_asked = {}, false
+	load, has_load := r.load, r.load_asked
+	r.load_asked = false
+	selected := r.selected
+	// (one job per turn: a query typed meanwhile is not kept behind a slow program's start)
+	job: Job
+	has_job := len(r.jobs) > 0
+	if has_job {
+		job = r.jobs[0]
+		ordered_remove(&r.jobs, 0)
+	}
+	sync.mutex_unlock(&r.mutex)
 
-		woke := false
-		if r.opened && !stopping {
-			list_changed := false
-			for f in forgets {
-				if at := history.find(&r.store, f.id); at >= 0 {
-					history.forget(&r.store, f.id)
-					delete(r.lowered[at])
-					ordered_remove(&r.lowered, at)
-					list_changed = true
-				}
-				r.current.seq = max(r.current.seq, f.seq)
-			}
-			// (the view of a removal is asked even when the entry was gone: the window waits for its seq)
-			view_due := len(forgets) > 0
-			for p in pins {
-				if at := history.find(&r.store, p.id); at >= 0 { r.store.entries[at].pinned = p.pinned }
-			}
-			if reload {
-				history.reload(&r.store)
-				reader_lower(r)
-				r.version = version
+	woke := false
+	if r.opened && !stopping {
+		list_changed := false
+		for f in forgets {
+			if at := history.find(&r.store, f.id); at >= 0 {
+				history.forget(&r.store, f.id)
+				delete(r.lowered[at])
+				ordered_remove(&r.lowered, at)
 				list_changed = true
 			}
-			if has_query {
-				delete(r.current.text)
-				r.current.text, r.current.filter = query.text, query.filter
-				r.current.seq = max(r.current.seq, query.seq)
-				r.current.reset = r.current.reset || query.reset
-				view_due = true
-			}
-			if list_changed { r.serial += 1 }
-			if list_changed || view_due {
-				reader_publish(r, list_changed, selected)
-				woke = true
-			}
-			if has_load {
-				l := reader_load_entry(r, load[0], load[1])
-				sync.mutex_lock(&r.mutex)
-				if r.has_loaded { loaded_free(&r.loaded) }
-				r.loaded, r.has_loaded = l, true
-				sync.mutex_unlock(&r.mutex)
-				woke = true
-			}
-		} else if has_query {
-			delete(query.text)
+			r.current.seq = max(r.current.seq, f.seq)
 		}
-		if has_job {
-			d := reader_run_job(r, &job)
-			job_free(&job)
+		// (the view of a removal is asked even when the entry was gone: the window waits for its seq)
+		view_due := len(forgets) > 0
+		for p in pins {
+			if at := history.find(&r.store, p.id); at >= 0 { r.store.entries[at].pinned = p.pinned }
+		}
+		if reload {
+			history.reload(&r.store)
+			reader_lower(r)
+			r.version = version
+			list_changed = true
+		}
+		if has_query {
+			delete(r.current.text)
+			r.current.text, r.current.filter = query.text, query.filter
+			r.current.seq = max(r.current.seq, query.seq)
+			r.current.reset = r.current.reset || query.reset
+			view_due = true
+		}
+		if list_changed { r.serial += 1 }
+		if list_changed || view_due {
+			reader_publish(r, list_changed, selected)
+			woke = true
+		}
+		if has_load {
+			l := reader_load_entry(r, load[0], load[1])
 			sync.mutex_lock(&r.mutex)
-			append(&r.done, d)
+			if r.has_loaded { loaded_free(&r.loaded) }
+			r.loaded, r.has_loaded = l, true
 			sync.mutex_unlock(&r.mutex)
 			woke = true
 		}
-		if woke && r.window != nil { platform.wake(r.window) }
-		free_all(context.temp_allocator)
+	} else if has_query {
+		delete(query.text)
 	}
-
-	for s in r.lowered { delete(s) }
-	delete(r.lowered)
-	delete(r.current.text)
-	if r.opened { history.close(&r.store) }
+	if has_job {
+		d := reader_run_job(r, &job)
+		job_free(&job)
+		sync.mutex_lock(&r.mutex)
+		append(&r.done, d)
+		sync.mutex_unlock(&r.mutex)
+		woke = true
+	}
+	if woke && r.window != nil { platform.wake(r.window) }
+	free_all(context.temp_allocator)
+	return true
 }
 
 @(private = "file")
@@ -570,7 +606,7 @@ reader_load_entry :: proc(r: ^Reader, id, key: u64) -> (out: Loaded_Entry) {
 	switch e.kind {
 	case .Image:
 	case .Files:
-		out.view_text = strings.clone(shown_text(e.preview))
+		out.view_text = strings.clone(ui.text_shown(e.preview))
 		out.text = strings.clone(e.preview)
 	case .Text, .Html, .Other:
 		main := 0
@@ -581,7 +617,7 @@ reader_load_entry :: proc(r: ^Reader, id, key: u64) -> (out: Loaded_Entry) {
 		text := string(data[:min(len(data), VIEW_TEXT_MAX_BYTES)])
 		for len(text) > 0 && !utf8.valid_string(text) { text = text[:len(text) - 1] }   // (cut inside a character)
 		// (as the window shows it: a "##" would end a box's shown text, so it is escaped here, once)
-		out.view_text = strings.clone(shown_text(text))
+		out.view_text = strings.clone(ui.text_shown(text))
 		// (what the text is, guessed on it as it is: rich text stays plain, its markup is gone)
 		if e.kind == .Text { preview_form(&out, text) }
 		if e.kind != .Other { out.text = strings.clone(entry_whole_text(r, e)) }
@@ -681,12 +717,19 @@ reader_run_job :: proc(r: ^Reader, j: ^Job) -> (d: Job_Done) {
 	case .Write:
 		if i := strings.last_index_any(j.path, "/\\"); i > 0 { fsx.make_dirs(j.path[:i]) }
 		d.ok = fsx.write_atomic(j.path, j.data)
-	case .Write_Prefs:
-		d.ok = config.write_user_file(j.path, j.text)
-		if !d.ok { d.message = strings.clone("The preferences cannot be written") }
 	case .Read_Prefs:
 		prefs_open(&d.prefs, nil)
 		d.ok = true
+	case .Setup_Facts:
+		f := setup.facts(setup_config())
+		d.running_it = f.running_it
+		// (Windows: an install to offer; elsewhere `papier install` and Nix install papier)
+		when ODIN_OS == .Windows { d.setup_wanted = j.offer && setup.wanted(f, APP_VERSION, j.text) }
+		d.ok = true
+	case .Setup_Updated:
+		ok, why := setup.updated(setup_config(), j.text)
+		d.ok = ok
+		if !ok { d.message = strings.clone(why) }
 	case .Handlers:
 		// (the type is in the name: the file need not be written for its applications to be found)
 		d.handlers = desktop.handlers_for_file(j.path)

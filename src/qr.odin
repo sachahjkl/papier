@@ -59,7 +59,7 @@ qr_build :: proc(app: ^App, em: f32) {
 		ui.spacer(ui.px(em * 0.8))
 		if ui.tags("weak") {
 			ui.next({width = ui.fill(), font_size = em * 0.85, text_align = .Center})
-			ui.paragraph(fmt.tprintf("%s###qr_words", shown_text(one_line(app.qr.text, 160))))
+			ui.paragraph(fmt.tprintf("%s###qr_words", ui.text_shown(one_line(app.qr.text, 160))))
 		}
 		ui.spacer(ui.px(em * 1))
 	}

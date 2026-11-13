@@ -3,7 +3,7 @@
 Papier is one program in [Odin](https://odin-lang.org) on [gui_toolkit](https://github.com/sachahjkl/gui_toolkit) (the
 `ext/gui_toolkit` submodule, the collection `gt`). This page says how its parts fit, and why.
 
-## One process, five threads
+## One process, its threads
 
 ```
 papier --hidden ─┬─ the window's thread (app.odin, view.odin)
@@ -12,15 +12,21 @@ papier --hidden ─┬─ the window's thread (app.odin, view.odin)
                  ├─ the watcher thread (watcher.odin)
                  │     the clipboard (wlclip), the history it writes (history), the instance socket
                  │
-                 ├─ the reader thread (reader.odin)
+                 ├─ the reader (reader.odin)
                  │     the history as the window reads it, the search, the selected entry's text, the window's files
                  │
-                 ├─ the decoder thread (decoder.odin)
+                 ├─ the decoder (decoder.odin)
                  │     the picture of the selected image (and the QR code in it), the images' thumbnails
                  │
-                 └─ the slow worker (slow.odin)
-                       the text of an image (OCR), the system's thumbnails of copied files
+                 ├─ the slow worker (slow.odin)
+                 │     the text of an image (OCR), the system's thumbnails of copied files
+                 │
+                 └─ the toolkit's threads: the preferences' writer, the log's writer, the chores (the Save dialog)
 ```
+
+The reader, the decoder and the slow worker are each a `tasks.Job` on a `tasks.Pool` of one thread of its own (gt:tasks):
+an ask while a run waits adds nothing, an ask during a run makes one more run, and none of the three waits behind
+another.
 
 - **The watcher** sleeps in one `poll` on three descriptors: the Wayland connection of the data-control protocol, the
   instance socket (commands of other processes), an eventfd (commands of the window). It is the only writer of the
@@ -28,8 +34,8 @@ papier --hidden ─┬─ the window's thread (app.odin, view.odin)
   the list again when the version moves.
 - **The reader** owns the window's connection to the history. It reads the list again, computes the view of a search
   (the newest query wins), reads the selected entry's text (the newest selection wins), and does the window's jobs in
-  order: an entry saved or opened as a file, a program started, a drag's data, the preferences and the window's state
-  written. It puts each answer in a mailbox and wakes the window. A new list comes with its view, in one hold of the
+  order: an entry saved or opened as a file, a program started, a drag's data, the preferences read again, the window's
+  state written, what the install is (gt:setup). The preferences are written by gt:config's writer. It puts each answer in a mailbox and wakes the window. A new list comes with its view, in one hold of the
   mailbox: the window never shows the view of one list with another. An entry the user removes leaves the reader's list
   at once, and the view comes again without it.
 - **The decoder** decodes pictures, through a connection of its own to the store. It reads the preview's picture for a
@@ -48,7 +54,8 @@ and does no work in proportion to the history in a frame. What reads or writes g
 list (the search, the count of pinned entries, an entry by its id) is computed by the reader when the list changes, and
 kept. A request to the reader never waits: it takes the mailbox's mutex for a copy, never for a search. Two exceptions
 remain: the start, which reads the window's state and the preferences before the window exists (they give its size),
-and the system's own loops, which block by nature (the Save dialog, a drag out of the list).
+and a drag out of the list, a loop of the system that blocks by nature. The Save dialog runs on the toolkit's chores
+(`ui.file_dialog`).
 
 At rest every thread sleeps: 0 % CPU, hidden or shown (the caret's blink aside).
 

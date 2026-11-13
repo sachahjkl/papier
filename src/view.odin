@@ -26,6 +26,7 @@ import "gt:platform"
 import "gt:render"
 import syntax "gt:syntax"
 import prefs_page "gt:prefs_page"
+import timefmt "gt:timefmt"
 import "gt:ui"
 import "history"
 import lucide "gt:lucide"
@@ -238,6 +239,7 @@ view_build :: proc(h: ^host.Host, size: host.Vec2) {
 	em := ui.font_size()
 	app.room = size.x / max(ui.scale(), 0.01)
 	app_shortcut_follow(app)
+	app_crash_said(app)
 	// the keyboard is the search's, unless the edit view or the settings have it
 	dialog := app.palette.open || app.sheet_open || app.qr.open || app.setup.open
 	if !app.edit.active && !app.settings_open && !dialog && app.search_key != 0 && ui.focus_key() != app.search_key { ui.set_focus(app.search_key) }
@@ -273,16 +275,8 @@ glyph :: proc(app: ^App, g: string, width: f32, fg: Maybe(ui.Color) = nil) {
 
 // A small button with a Lucide icon; its tooltip says what it does.
 icon_action :: proc(app: ^App, id, g, tip: string, em: f32) -> bool {
-	ui.next({width = ui.px(em * 2.1), height = ui.px(em * 2.1), font = app.icons, radius = em * 0.4})
-	sig: ui.Signal
-	if ui.tags("ghost_button") { sig = ui.button(fmt.tprintf("%s###%s", g, id)) }
-	if ui.hovered_for(sig, 0.4) {
-		if ui.tooltip() {
-			ui.next({width = ui.text_size(em * 0.6), height = ui.px(ui.dense(em * 1.8))})
-			ui.label(fmt.tprintf("%s###tip", tip))
-		}
-	}
-	return sig.clicked
+	ui.next({width = ui.px(em * 2.1), height = ui.px(em * 2.1), radius = em * 0.4})
+	return ui.icon_button(id, g, tip = tip, icon_font = app.icons).clicked
 }
 
 @(private = "file")
@@ -390,7 +384,7 @@ build_list :: proc(app: ^App, em: f32) {
 				if ui.tags("weak") { glyph(app, KIND_ICONS[e.kind], em * MARK_EM) }
 			}
 			// (the search's words lit in the line)
-			line := shown_text(one_line(e.preview, 200))
+			line := ui.text_shown(one_line(e.preview, 200))
 			ui.next({width = ui.fill()})
 			ui.matched_label("###t", line, ui.word_ranges(line, app.query))
 			if e.pinned { glyph(app, lucide.PIN, em * 1.6, ui.color("accent")) }
@@ -402,7 +396,7 @@ build_list :: proc(app: ^App, em: f32) {
 			}
 			if ui.tags("weak") {
 				ui.next({width = ui.text_size(em * 0.5), height = ui.pct(1)})
-				if ui.style({font_size = em * 0.85}) { ui.label(fmt.tprintf("%s###a", age_text(now - e.time_ms))) }
+				if ui.style({font_size = em * 0.85}) { ui.label(fmt.tprintf("%s###a", timefmt.age(f64(now - e.time_ms)))) }
 			}
 		}
 		if i == app.vl.sel { app.sel_rect = row.box.rect }
@@ -556,7 +550,9 @@ build_view_body :: proc(app: ^App, em: f32) {
 			if ui.style({font_size = em * 0.88}) {
 				lang := loaded_for(app, e) ? form_label(app.loaded) : ""
 				if lang != "" { lang = fmt.tprintf("%s · ", lang) }
-				ui.label(fmt.tprintf("%s%s · %d type%s · %s ago###meta", lang, size_text(history.entry_size(e^)), len(e.reps), len(e.reps) == 1 ? "" : "s", age_text(now_ms() - e.time_ms)))
+				age := timefmt.age(f64(now_ms() - e.time_ms))
+				if age != "now" { age = fmt.tprintf("%s ago", age) }   // ("now": less than a minute)
+				ui.label(fmt.tprintf("%s%s · %d type%s · %s###meta", lang, size_text(history.entry_size(e^)), len(e.reps), len(e.reps) == 1 ? "" : "s", age))
 			}
 		}
 		if icon_action(app, "copy", lucide.COPY, action_tip(.Copy), em) { entry_copy(app, e.id) }
@@ -723,14 +719,6 @@ size_text :: proc(n: int, allocator := context.temp_allocator) -> string {
 	case n < 1024 * 1024: return fmt.aprintf("%.1f KB", f64(n) / 1024, allocator = allocator)
 	}
 	return fmt.aprintf("%.1f MB", f64(n) / (1024 * 1024), allocator = allocator)
-}
-
-// Text to show as it is: a "##" in it would end the shown part of a box's id string (ui's key rules), so a zero-width
-// space goes between the two signs.
-shown_text :: proc(text: string, allocator := context.temp_allocator) -> string {
-	if !strings.contains(text, "##") { return text }
-	out, _ := strings.replace_all(text, "##", "#​#", allocator)
-	return out
 }
 
 when PINS {

@@ -6,6 +6,7 @@ package papier
 import "core:strings"
 import config "gt:config"
 import "gt:platform"
+import prefs_page "gt:prefs_page"
 import "gt:ui"
 
 APP_NAME :: "papier"
@@ -13,18 +14,18 @@ APP_NAME :: "papier"
 
 // The preferences of every system; each system adds its own (settings_linux.odin, settings_windows.odin).
 PREF_DEFS := [?]config.Def{
-	{name = "paste.on_select", category = "paste", description = "An entry chosen (Enter, a double click, Alt+1…9) is pasted into the program papier was called from: the window hides and papier presses the paste keys there.", kind = .Bool, default = {b = true}, tags = {"auto paste", "insert", "type"}},
-	{name = "paste.keys", category = "paste", description = "The keys papier presses to paste: Ctrl+V in most programs, Ctrl+Shift+V in a terminal, Shift+Insert in both on many systems.", kind = .String, default = {s = "Ctrl+V"}, tags = {"ctrl+v", "terminal", "shortcut"}},
-	{name = "picker.close_on_copy", category = "window", description = "Close the picker when an entry is copied.", kind = .Bool, default = {b = true}, tags = {"hide", "dismiss"}},
-	{name = "picker.theme", category = "appearance", description = "The window's colours: Papier, or a theme of the toolkit by its name (Midnight, Nord, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine...).", kind = .String, default = {s = "Papier"}, tags = {"colours", "colors", "palette", "dark", "light", "look"}},
-	{name = "picker.mode", category = "appearance", description = "The theme's version: the system's (light or dark, followed as it changes), dark, or light.", kind = .String, default = {s = "system"}, choices = {"system", "dark", "light"}, tags = {"dark", "light", "night", "day"}},
-	{name = "picker.finish", category = "appearance", description = "How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines, in the dark and the light versions. Edged: the same reliefs drawn crisp, with square corners. Flat: plain surfaces and thin lines.", kind = .String, default = {s = "machined"}, choices = {"machined", "edged", "flat", "gradient", "glass"}, tags = {"style", "look", "bevel", "flat"}},
-	{name = "picker.system_title", category = "window", description = "The window's title bar drawn by the system (its buttons, its snapping) in place of papier's own; the search and the filters go under it.", kind = .Bool, default = {b = false}, tags = {"decorations", "native", "frame", "title bar"}},
-	{name = "picker.glow", category = "appearance", description = "The halos of the machined finish: a focused field's ring of light.", kind = .Bool, default = {b = true}, tags = {"halo", "light", "focus"}},
-	{name = "picker.width", category = "window", description = "The picker's width, in logical pixels.", kind = .Int, default = {i = 900}, min = 320, max = 4000, bounded = true, tags = {"size", "window"}},
-	{name = "picker.height", category = "window", description = "The picker's height, in logical pixels.", kind = .Int, default = {i = 560}, min = 240, max = 4000, bounded = true, tags = {"size", "window"}},
-	{name = "update.auto", category = "updates", description = "The installed papier checks for a newer one once a day and installs it, then gives way to it when its window is hidden. A copy installed by a package manager (Nix) is updated by it.", kind = .Bool, default = {b = true}, tags = {"upgrade", "version", "automatic"}},
-	{name = "picker.font_size", category = "appearance", description = "The picker's text size, in logical pixels.", kind = .Float, default = {f = 14}, min = 8, max = 40, bounded = true, tags = {"text size", "zoom", "bigger", "smaller"}},
+	{name = "paste.on_select", description = "An entry chosen (Enter, a double click, Alt+1…9) is pasted into the program papier was called from: the window hides and papier presses the paste keys there.", kind = .Bool, default = {b = true}, tags = {"auto paste", "insert", "type"}},
+	{name = "paste.keys", description = "The keys papier presses to paste: Ctrl+V in most programs, Ctrl+Shift+V in a terminal, Shift+Insert in both on many systems.", kind = .String, default = {s = "Ctrl+V"}, tags = {"ctrl+v", "terminal", "shortcut"}},
+	{name = "picker.close_on_copy", description = "Close the picker when an entry is copied.", kind = .Bool, default = {b = true}, tags = {"hide", "dismiss"}},
+	{name = "picker.theme", description = "The window's colours: Papier, or a theme of the toolkit by its name (Midnight, Nord, Gruvbox, Tokyo Night, Catppuccin, Rosé Pine...).", kind = .String, default = {s = "Papier"}, tags = {"colours", "colors", "palette", "dark", "light", "look"}},
+	{name = "picker.mode", description = "The theme's version: the system's (light or dark, followed as it changes), dark, or light.", kind = .String, default = {s = "system"}, choices = {"system", "dark", "light"}, tags = {"dark", "light", "night", "day"}},
+	{name = "picker.finish", description = "How surfaces are drawn. Machined: bevelled buttons, sunken fields, carved lines, in the dark and the light versions. Edged: the same reliefs drawn crisp, with square corners. Flat: plain surfaces and thin lines.", kind = .String, default = {s = "machined"}, choices = {"machined", "edged", "flat", "gradient", "glass"}, tags = {"style", "look", "bevel", "flat"}},
+	{name = "picker.system_title", description = "The window's title bar drawn by the system (its buttons, its snapping) in place of papier's own; the search and the filters go under it.", kind = .Bool, default = {b = false}, tags = {"decorations", "native", "frame", "title bar"}},
+	{name = "picker.glow", description = "The halos of the machined finish: a focused field's ring of light.", kind = .Bool, default = {b = true}, tags = {"halo", "light", "focus"}},
+	{name = "picker.width", description = "The picker's width, in logical pixels.", kind = .Int, default = {i = 900}, min = 320, max = 4000, bounded = true, tags = {"size", "window"}},
+	{name = "picker.height", description = "The picker's height, in logical pixels.", kind = .Int, default = {i = 560}, min = 240, max = 4000, bounded = true, tags = {"size", "window"}},
+	{name = "update.auto", description = "The installed papier checks for a newer one once a day and installs it, then gives way to it when its window is hidden. A copy installed by a package manager (Nix) is updated by it.", kind = .Bool, default = {b = true}, tags = {"upgrade", "version", "automatic"}},
+	{name = "picker.font_size", description = "The picker's text size, in logical pixels.", kind = .Float, default = {f = 14}, min = 8, max = 40, bounded = true, tags = {"text size", "zoom", "bigger", "smaller"}},
 }
 
 // The values the program reads, copied out of the registry (prefs_read).
@@ -49,10 +50,16 @@ Settings :: struct {
 	follow:         platform.Active_Monitor,   // Windows: picker.follow
 	update_auto:    bool,
 	system_title:   bool,     // picker.system_title
+	messages:       ui.Announce_Mode,   // general.messages: where "Copied", "Saved"... are said
 }
 
 prefs_file :: proc(allocator := context.temp_allocator) -> string {
 	return strings.concatenate({platform.user_dir(.Config, APP_NAME, context.temp_allocator), "/prefs"}, allocator)
+}
+
+// Where the window's state is (state.odin): the user's state folder, "window".
+state_path :: proc(allocator := context.temp_allocator) -> string {
+	return strings.concatenate({platform.user_dir(.State, APP_NAME, context.temp_allocator), "/window"}, allocator)
 }
 
 // Where the settings' foot says the file is: its path as this system writes it (path_shown).
@@ -61,8 +68,15 @@ prefs_shown :: proc(allocator := context.allocator) -> string {
 }
 
 // The registry with the user's file and `args`' --pref read in. Returns the arguments that are not preferences.
-prefs_open :: proc(p: ^config.Prefs, args: []string) -> (rest: [dynamic]string, problems: [dynamic]string) {
+// `descriptions`: where the toolkit's standard preferences make their descriptions, which the registry keeps and never
+// frees (a registry read for one turn of a loop gives its temporary allocator).
+prefs_open :: proc(p: ^config.Prefs, args: []string, descriptions := context.allocator) -> (rest: [dynamic]string, problems: [dynamic]string) {
 	p^ = config.prefs_make()
+	// (general.messages, where papier says what it did; general.menu and general.autostart come with it, and no page
+	// shows them: papier's Setup and `papier install` do that)
+	standard := prefs_page.STANDARD_DEFAULTS
+	standard.app_name = APP_NAME
+	prefs_page.standard_register(p, {.Session}, standard, descriptions)
 	config.register(p, PREF_DEFS[:])
 	config.register(p, PREF_DEFS_SYSTEM[:])
 	_, file_problems := config.load_file(p, prefs_file(), .User)
@@ -83,6 +97,7 @@ prefs_read :: proc(p: ^config.Prefs, allocator := context.allocator) -> (s: Sett
 	s.size = {int(config.int_of(p, "picker.width")), int(config.int_of(p, "picker.height"))}
 	s.font_size = f32(config.float_of(p, "picker.font_size"))
 	s.update_auto = config.bool_of(p, "update.auto")
+	s.messages = prefs_page.messages_mode(p)
 	prefs_read_system(p, &s, allocator)
 	return
 }

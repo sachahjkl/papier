@@ -3,6 +3,11 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.19.2] - 2026-11-13
+
+### Fixed
+- **Choosing an entry pastes it again** (Linux): papier pressed the paste keys as its window went, before the compositor gave the focus back to the other program (ShojiWM), so nothing was pasted. It now waits until another window has the focus, half a second at most. Also: the text read in an image and a QR code's content go on the clipboard with the window staying open (they were pasted, and the window closed); the preview says "Reading the text of the image…" with a moving bar while it reads; a right click on an image in the preview opens the entry's menu, the same as on its row, with "Copy the text of the image".
+
 ## [0.19.1] - 2026-11-12
 
 ### Changed
@@ -354,6 +359,7 @@ and the versions follow [semantic versioning](https://semver.org/).
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.19.2]: https://github.com/sachahjkl/papier/releases/tag/v0.19.2
 [0.19.1]: https://github.com/sachahjkl/papier/releases/tag/v0.19.1
 [0.19.0]: https://github.com/sachahjkl/papier/releases/tag/v0.19.0
 [0.18.1]: https://github.com/sachahjkl/papier/releases/tag/v0.18.1

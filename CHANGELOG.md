@@ -3,6 +3,11 @@
 All notable changes to papier are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the versions follow [semantic versioning](https://semver.org/).
 
+## [0.21.2] - 2026-11-14
+
+### Fixed
+- **papier starts on Windows**: 0.21.0 and 0.21.1 had no Windows download, because Windows refused to start the program (its manifest was broken). This version has it, and it starts.
+
 ## [0.21.1] - 2026-11-14
 
 ### Fixed
@@ -414,6 +419,7 @@ The command line is `--install`, `--uninstall`, `--status` and `--setup`, as in 
   `uninstall` and `status`.
 - **papiertool**: `build`, `test`, `check`, `live` (the real program in a headless sway), `shots`, `logo`, `package`,
   `notes`, `ship`, `site`.
+[0.21.2]: https://github.com/sachahjkl/papier/releases/tag/v0.21.2
 [0.21.1]: https://github.com/sachahjkl/papier/releases/tag/v0.21.1
 [0.21.0]: https://github.com/sachahjkl/papier/releases/tag/v0.21.0
 [0.20.2]: https://github.com/sachahjkl/papier/releases/tag/v0.20.2

@@ -108,7 +108,8 @@ the showing. An ordinary window is placed by the compositor, which a tiling one 
 their own to float it.
 
 - **The surface covers the output; the panel is drawn in it.** A click on the dimmed part hides the window, as Escape
-  does: the panel is `.Press_Stop`, so a press on it is never one on the dim under it. Refused: a layer surface the
+  does: the panel is `.Clickable` and `.Press_Stop` (the toolkit stops a press only on a clickable box), so a press on
+  it, where no control is, is never one on the dim under it. Refused: a layer surface the
   panel's size. The click beside it would reach the window below and papier would stay on top of it, and nothing
   would show that the desktop waits.
 - **The keyboard is exclusive** (`Overlay_Keyboard.Exclusive`): what is typed goes to the search with no click, and no

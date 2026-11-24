@@ -310,11 +310,12 @@ view_build :: proc(h: ^host.Host, size: host.Vec2) {
 	app.room = panel.x / max(ui.scale(), 0.01)
 	ui.next({width = ui.fill(), height = ui.fill(), bg = OVERLAY_DIM})
 	dim := ui.build_box({.Clickable, .Draw_Background}, "###overlay_dim")
-	// (a click beside the panel goes as a launcher's does; a press on the panel is the panel's: .Press_Stop)
+	// (a click beside the panel goes as a launcher's does; a press on the panel is the panel's: .Press_Stop, which takes
+	// a press only on a .Clickable box, as a dialog's panel)
 	if ui.signal(dim).clicked { app_hide(app) }
 	if ui.parent(dim) {
 		ui.next({fixed_x = math.round((size.x - panel.x) / 2), fixed_y = math.round((size.y - panel.y) / 2), width = ui.px(panel.x), height = ui.px(panel.y), axis = .Y})
-		box := ui.build_box({.Floating_X, .Floating_Y, .Press_Stop, .Draw_Background, .Draw_Border, .Draw_Shadow, .Plate}, "###overlay_panel")
+		box := ui.build_box({.Floating_X, .Floating_Y, .Clickable, .Press_Stop, .Draw_Background, .Draw_Border, .Draw_Shadow, .Plate}, "###overlay_panel")
 		if ui.parent(box) { build_window(app, em) }
 	}
 }

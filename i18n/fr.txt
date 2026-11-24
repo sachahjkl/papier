@@ -344,8 +344,8 @@ fr Types MIME, séparés par des virgules : une copie qui en propose un n'est pa
 en Overlay
 fr Superposition
 
-en Show the history above every window, as a launcher does: a panel of window.width by window.height in the middle of the screen, the desktop dimmed around it, the keyboard its own until it hides. A click outside it hides it. Needs a compositor with the layer shell (Hyprland, sway, KDE Plasma, niri…); without it, the ordinary window.
-fr Afficher l'historique au-dessus de toutes les fenêtres, comme un lanceur : un panneau de window.width sur window.height au milieu de l'écran, le bureau assombri autour, le clavier à lui jusqu'à ce qu'il se cache. Un clic en dehors le cache. Demande un compositeur avec la layer shell (Hyprland, sway, KDE Plasma, niri…) ; sans elle, la fenêtre ordinaire.
+en Show the history in a panel above every window, like a launcher.
+fr Afficher l'historique dans un panneau au-dessus de toutes les fenêtres, comme un lanceur.
 
 en Keep
 fr Garder

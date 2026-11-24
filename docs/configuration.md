@@ -64,7 +64,7 @@ On Windows, the system keeps the history (Settings > System > Clipboard): the `h
 | `window.close_on_copy` | boolean | true | Hide the window when an entry is copied. |
 | `window.width` | integer, 320 to 4000 | 900 | The width of the window at its first start, in logical pixels. |
 | `window.height` | integer, 240 to 4000 | 560 | The height of the window at its first start, in logical pixels. |
-| `window.overlay` | boolean | false | Linux: show the history above every window, as a launcher does: a panel of `window.width` by `window.height` in the middle of the screen the compositor chooses, the desktop dimmed around it, the keyboard its own until it hides. A click outside the panel hides it. Needs a compositor with the layer shell (Hyprland, sway, KDE Plasma, niri…); without it, the ordinary window. Applies at the next start. |
+| `window.overlay` | boolean | false | Linux: show the history in a panel above every window, like a launcher (needs the layer shell). Applies at the next start. |
 | `window.follow` | pointer, focus | pointer | Windows: the screen the window shows on. `pointer`: the one under the mouse pointer. `focus`: the one of the window in front. |
 | `window.shortcut` | text | Ctrl+Shift+ù | Windows: the keys that show the history from any program. In the settings, click the field and press the keys. As text: Ctrl, Shift, Alt, Win and a key (a letter, a digit, F1 to F12, Space…, or the character a key types: ù), joined by `+`. Win+V stays the system's. |
 

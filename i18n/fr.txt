@@ -453,6 +453,9 @@ en+ %s · %d pinned
 fr %s · %d épinglé
 fr+ %s · %d épinglés
 
+en %s, %s: the image is no longer in the history
+fr %s, %s : l'image n'est plus dans l'historique
+
 en %s, %s: no preview for this format
 fr %s, %s : pas d'aperçu pour ce format
 

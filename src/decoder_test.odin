@@ -10,6 +10,34 @@ import png "gt:png"
 import "gt:qr"
 import "history"
 
+// A missing blob is reported as missing (not as an unsupported format), and corrupt bytes of an image MIME as unsupported.
+@(test)
+missing_blob_is_distinct_from_unsupported_format :: proc(t: ^testing.T) {
+	dir := fmt.tprintf("%s/papier_test_decoder_missing_%d", fsx.temp_dir(context.temp_allocator), os.get_pid())
+	fsx.remove_tree(dir)
+	defer fsx.remove_tree(dir)
+	store: history.Store
+	testing.expect(t, history.open(&store, dir))
+	defer history.close(&store)
+	bad := transmute([]u8)string("not a png")
+	_, added := history.add(&store, {{"image/png", bad}}, 0, .Image, "", 1)
+	testing.expect(t, added)
+
+	d: Decoder
+	decoder_start(&d, nil)
+	defer decoder_stop(&d)
+
+	decoder_ask(&d, 1, dir, 0xdeadbeef, "image/png")
+	p, ok := decoder_wait(&d)
+	defer decoded_free(&p)
+	testing.expect(t, ok && !p.ok && p.missing, "absent hash reports missing")
+
+	decoder_ask(&d, 2, dir, history.hash_bytes(bad), "image/png")
+	q, qok := decoder_wait(&d)
+	defer decoded_free(&q)
+	testing.expect(t, qok && !q.ok && !q.missing, "unreadable format reports !missing")
+}
+
 // The preview's picture is read for a QR code: a picture of one gives its text, a picture without one gives "".
 @(test)
 a_qr_code_in_a_picture_is_read :: proc(t: ^testing.T) {

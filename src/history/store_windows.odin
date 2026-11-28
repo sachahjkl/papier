@@ -80,6 +80,15 @@ reload :: proc(s: ^Store) {
 // The bytes of a representation (nil when they are gone).
 blob_read :: proc(s: ^Store, hash: u64, allocator := context.allocator) -> []u8 { return blob_read_in("", hash, allocator) }
 
+// Matches Unix's Blob_Reader; Windows reads directly from the in-memory snapshot.
+Blob_Reader :: struct {}
+
+blob_reader_read :: proc(_: ^Blob_Reader, dir: string, hash: u64, allocator := context.allocator) -> []u8 {
+	return blob_read_in(dir, hash, allocator)
+}
+
+blob_reader_close :: proc(_: ^Blob_Reader) {}
+
 // The same, from any thread.
 blob_read_in :: proc(dir: string, hash: u64, allocator := context.allocator) -> []u8 {
 	sync.guard(&snapshot.mutex)

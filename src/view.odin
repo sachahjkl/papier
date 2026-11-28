@@ -728,7 +728,8 @@ view_decoded :: proc(app: ^App) -> bool {
 	if !p.ok {
 		if e != nil && e.id == p.id && app.view.image < len(e.reps) {
 			r := e.reps[app.view.image]
-			app.view.text = fmt.aprintf(i18n.tr("%s, %s: no preview for this format"), r.mime, size_text(r.size))
+			msg := p.missing ? i18n.tr("%s, %s: the image is no longer in the history") : i18n.tr("%s, %s: no preview for this format")
+			app.view.text = fmt.aprintf(msg, r.mime, size_text(r.size))
 		}
 		return true
 	}

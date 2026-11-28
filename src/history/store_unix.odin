@@ -323,6 +323,31 @@ blob_count :: proc(s: ^Store) -> int {
 // The bytes of a representation (nil when they are gone).
 blob_read :: proc(s: ^Store, hash: u64, allocator := context.allocator) -> []u8 { return read_blob(s.db, hash, allocator) }
 
+// A worker thread's persistent connection to the store's blobs: opened once per directory instead of on every read,
+// so thumbnails and previews avoid reopening SQLite and stay on the same database file even if the directory path is
+// remounted while papier runs.
+Blob_Reader :: struct {
+	dir: string,
+	db:  sqlite.DB,
+}
+
+blob_reader_read :: proc(r: ^Blob_Reader, dir: string, hash: u64, allocator := context.allocator) -> []u8 {
+	if r.db == nil || r.dir != dir {
+		blob_reader_close(r)
+		db, _ := sqlite.open(strings.concatenate({dir, "/", DB_FILE}, context.temp_allocator))
+		if db == nil { return nil }
+		r.db = db
+		r.dir = strings.clone(dir, runtime.heap_allocator())
+	}
+	return read_blob(r.db, hash, allocator)
+}
+
+blob_reader_close :: proc(r: ^Blob_Reader) {
+	if r.db != nil { sqlite.close(r.db) }
+	delete(r.dir, runtime.heap_allocator())
+	r^ = {}
+}
+
 // The bytes of a representation in the store of `dir`, through a connection of this call's own: for another thread
 // than the store's (a connection is one thread's). nil when they are gone or the store cannot be opened.
 blob_read_in :: proc(dir: string, hash: u64, allocator := context.allocator) -> []u8 {

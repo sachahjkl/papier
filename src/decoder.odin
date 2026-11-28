@@ -36,6 +36,7 @@ Decoder :: struct {
 	thumbs_wanted: [dynamic]Thumb_Ask,   // the rows in view without a thumbnail, first first (heap)
 	thumbs_done:   [dynamic]Thumb,       // thumbnails made, not yet taken (heap)
 	thumb_making:  u64,                  // the image being shrunk (0: none)
+	blobs:         history.Blob_Reader,  // worker thread's persistent SQLite handle
 }
 
 // The shorter side of a thumbnail, in pixels: a row's mark at twice the scale, cropped to a square when drawn.
@@ -64,10 +65,11 @@ Decode_Ask :: struct { id: u64, dir: string, hash: u64, mime: string }
 
 // A decoded picture: RGBA, straight alpha, `size.x * size.y * 4` bytes, owned by whoever took it (decoded_free).
 Decoded :: struct {
-	id:   u64,
-	rgba: []u8,
-	size: [2]int,
-	ok:   bool,
+	id:      u64,
+	rgba:    []u8,
+	size:    [2]int,
+	ok:      bool,
+	missing: bool,   // true when the blob could not be read from the store (distinct from an unsupported format)
 }
 
 decoder_start :: proc(d: ^Decoder, window: ^platform.Window) {
@@ -90,6 +92,7 @@ decoder_stop :: proc(d: ^Decoder) {
 	sync.mutex_unlock(&d.mutex)
 	// (a run under way ends at its next look at `stop`; one waiting is dropped)
 	tasks.stop(&d.pool, proc(_: rawptr) {})
+	history.blob_reader_close(&d.blobs)
 	d.up = false
 	heap := runtime.heap_allocator()
 	if d.asked { delete(d.ask.dir, heap); delete(d.ask.mime, heap) }
@@ -137,9 +140,9 @@ decoder_take_thumbs :: proc(d: ^Decoder) -> []Thumb {
 
 // A thumbnail of the image: decoded, then shrunk (thumb_of).
 @(private = "file")
-thumb_make :: proc(ask: Thumb_Ask) -> (t: Thumb) {
+thumb_make :: proc(blobs: ^history.Blob_Reader, ask: Thumb_Ask) -> (t: Thumb) {
 	t.hash = ask.hash
-	bytes := history.blob_read_in(ask.dir, ask.hash)
+	bytes := history.blob_reader_read(blobs, ask.dir, ask.hash)
 	if bytes == nil { return }
 	defer delete(bytes)
 	img, ok := platform.clipboard_image_decode(ask.mime, bytes, context.allocator)
@@ -248,7 +251,7 @@ decoder_work :: proc(data: rawptr) {
 			ordered_remove(&d.thumbs_wanted, 0)
 			d.thumb_making = ask.hash
 			sync.mutex_unlock(&d.mutex)
-			t := thumb_make(ask)
+			t := thumb_make(&d.blobs, ask)
 			delete(ask.dir)
 			delete(ask.mime)
 			sync.mutex_lock(&d.mutex)
@@ -265,7 +268,9 @@ decoder_work :: proc(data: rawptr) {
 
 		out := Decoded{id = ask.id}
 		gray: []u8
-		if bytes := history.blob_read_in(ask.dir, ask.hash); bytes != nil {
+		if bytes := history.blob_reader_read(&d.blobs, ask.dir, ask.hash); bytes == nil {
+			out.missing = true
+		} else {
 			if img, ok := platform.clipboard_image_decode(ask.mime, bytes, context.allocator); ok {
 				out.rgba, out.size, out.ok = img.rgba, img.size, true
 				// (the preview's picture only: a thumbnail is too small to hold a readable code)
